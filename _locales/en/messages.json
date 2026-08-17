@@ -1,0 +1,454 @@
+{
+  "appName": {
+    "message": "Sumcheck — PDF & Document to Markdown",
+    "description": "Extension name, shown in the Chrome Web Store and the extensions page."
+  },
+  "appDescription": {
+    "message": "Convert PDF, Word, Excel, PowerPoint, EPUB, images and web pages to Markdown, HTML, text or JSON — entirely on your device.",
+    "description": "Extension description, shown in the Chrome Web Store."
+  },
+  "commandOpen": {
+    "message": "Open Sumcheck",
+    "description": "Keyboard shortcut description."
+  },
+  "menuPage": {
+    "message": "Convert this page to Markdown",
+    "description": "Right-click menu item on a page."
+  },
+  "menuSelection": {
+    "message": "Convert selection to Markdown",
+    "description": "Right-click menu item on selected text."
+  },
+  "menuLink": {
+    "message": "Convert linked file with Sumcheck",
+    "description": "Right-click menu item on a link."
+  },
+  "menuOpen": {
+    "message": "Open Sumcheck…",
+    "description": "Menu item on the toolbar icon."
+  },
+  "popupTagline": {
+    "message": "Everything stays on this device",
+    "description": "Popup subtitle."
+  },
+  "popupOpen": {
+    "message": "Convert files…",
+    "description": "Popup button: open the app to choose files."
+  },
+  "popupOpenHint": {
+    "message": "PDF, Word, Excel, slides, EPUB, images",
+    "description": "Popup button hint."
+  },
+  "popupPage": {
+    "message": "Convert this page",
+    "description": "Popup button: convert the current tab."
+  },
+  "popupPageHint": {
+    "message": "Article text, tables and links",
+    "description": "Popup button hint."
+  },
+  "popupSelection": {
+    "message": "Convert selection",
+    "description": "Popup button: convert highlighted text."
+  },
+  "popupSelectionHint": {
+    "message": "Just what's highlighted",
+    "description": "Popup button hint."
+  },
+  "popupSettings": {
+    "message": "Settings",
+    "description": "Popup link to the settings panel."
+  },
+  "popupFailed": {
+    "message": "Something went wrong.",
+    "description": "Fallback error shown in the popup."
+  },
+  "appTitle": {
+    "message": "Sumcheck — Convert to Markdown",
+    "description": "Browser tab title for the app page."
+  },
+  "appTagline": {
+    "message": "Documents in, Markdown out — entirely on this device.",
+    "description": "App header subtitle."
+  },
+  "settings": {
+    "message": "Settings",
+    "description": "Button that opens the settings panel."
+  },
+  "dropzoneBrowse": {
+    "message": "choose files",
+    "description": "Link that opens the file picker."
+  },
+  "dropzoneAria": {
+    "message": "Drop files to convert",
+    "description": "Accessible label for the drop area."
+  },
+  "supportedFormats": {
+    "message": "Supports $1",
+    "description": "Lists supported file extensions. $1 is the list."
+  },
+  "queue": {
+    "message": "Queue",
+    "description": "Heading above the list of files."
+  },
+  "queueCount": {
+    "message": "Queue — $1 files",
+    "description": "Heading when several files are queued. $1 is the count."
+  },
+  "stop": {
+    "message": "Stop",
+    "description": "Button that halts the batch."
+  },
+  "stopping": {
+    "message": "Stopping…",
+    "description": "Button label while the batch is halting."
+  },
+  "downloadAll": {
+    "message": "Download all (.zip)",
+    "description": "Button that saves every result as a zip."
+  },
+  "clear": {
+    "message": "Clear",
+    "description": "Button that empties the queue."
+  },
+  "result": {
+    "message": "Result",
+    "description": "Heading above the converted output."
+  },
+  "copy": {
+    "message": "Copy",
+    "description": "Button that copies the output."
+  },
+  "copyFormat": {
+    "message": "Copy .$1",
+    "description": "Copy button with the format. $1 is the extension."
+  },
+  "download": {
+    "message": "Download",
+    "description": "Label before the download buttons."
+  },
+  "downloadAs": {
+    "message": "Download as $1",
+    "description": "Tooltip on a download button. $1 is the format name."
+  },
+  "preview": {
+    "message": "Preview",
+    "description": "Tab showing the rendered document."
+  },
+  "notes": {
+    "message": "Notes",
+    "description": "Heading above conversion warnings."
+  },
+  "whyThisFailed": {
+    "message": "Why this failed",
+    "description": "Heading above an error explanation."
+  },
+  "statusQueued": {
+    "message": "Queued",
+    "description": "Row status: waiting to start."
+  },
+  "statusReading": {
+    "message": "Reading",
+    "description": "Row status: loading the file."
+  },
+  "statusSkipped": {
+    "message": "Skipped",
+    "description": "Row status: the user skipped this file."
+  },
+  "statusFailed": {
+    "message": "Failed",
+    "description": "Row status: conversion failed."
+  },
+  "statusFailedDetail": {
+    "message": "Failed — see details",
+    "description": "Row status with a pointer to the reason."
+  },
+  "batchProgress": {
+    "message": "Converting $1 of $2 — $3",
+    "description": "Batch progress. $1 position, $2 total, $3 file name."
+  },
+  "batchDone": {
+    "message": "$1 of $2 converted",
+    "description": "Batch finished. $1 succeeded, $2 total."
+  },
+  "batchFailedSuffix": {
+    "message": " · $1 failed",
+    "description": "Appended when files failed. $1 is the count."
+  },
+  "expandedCount": {
+    "message": "$1 file(s) extracted",
+    "description": "Row label after an archive is expanded."
+  },
+  "passwordTitle": {
+    "message": "Password required",
+    "description": "Password dialog heading."
+  },
+  "passwordFor": {
+    "message": "“$1” is password protected.",
+    "description": "Password dialog message. $1 is the file name."
+  },
+  "passwordRetry": {
+    "message": "That password did not open “$1”. Try again, or skip it.",
+    "description": "Shown after a wrong password. $1 is the file name."
+  },
+  "passwordLabel": {
+    "message": "Password",
+    "description": "Label for the password field."
+  },
+  "passwordHint": {
+    "message": "The password is used to open this file and is never stored or sent anywhere.",
+    "description": "Reassurance under the password field."
+  },
+  "passwordUnlock": {
+    "message": "Unlock",
+    "description": "Button that submits the password."
+  },
+  "passwordSkip": {
+    "message": "Skip this file",
+    "description": "Button that skips a password-protected file."
+  },
+  "toastCopied": {
+    "message": "Copied $1",
+    "description": "Confirmation after copying. $1 is the file name."
+  },
+  "toastClipboardDenied": {
+    "message": "Clipboard access was denied.",
+    "description": "Shown when the browser blocks clipboard access."
+  },
+  "toastBuildingArchive": {
+    "message": "Building archive…",
+    "description": "Shown while a zip is being assembled."
+  },
+  "toastSaved": {
+    "message": "Saved $1",
+    "description": "Confirmation after saving. $1 is the file name."
+  },
+  "toastCaptureFailed": {
+    "message": "Could not load the captured page: $1",
+    "description": "Shown when a captured page cannot be read. $1 is the reason."
+  },
+  "toastDownloadFailed": {
+    "message": "Could not download that file: $1",
+    "description": "Shown when a linked file cannot be fetched. $1 is the reason."
+  },
+  "uiFilesToSave": {
+    "message": "Files to save",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiTextRecognitionOcr": {
+    "message": "Text recognition (OCR)",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiAutoOnlyPagesWithNoText": {
+    "message": "Auto — only pages with no text",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiAlwaysReReadEveryPage": {
+    "message": "Always — re-read every page",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiNever": {
+    "message": "Never",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiAutomaticMatchTheScanAtLeast200Dpi": {
+    "message": "Automatic — match the scan, at least 200 dpi",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiForce200Dpi": {
+    "message": "Force 200 dpi",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiForce300Dpi": {
+    "message": "Force 300 dpi",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiForce400DpiSlowest": {
+    "message": "Force 400 dpi (slowest)",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiNoneRecommended": {
+    "message": "None (recommended)",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiBoostLocalContrastForPhotos": {
+    "message": "Boost local contrast — for photos",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiVerification": {
+    "message": "Verification",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiPdfLayout": {
+    "message": "PDF layout",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiDetectAutomatically": {
+    "message": "Detect automatically",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiAlwaysSingleColumn": {
+    "message": "Always single column",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiHtmlComment": {
+    "message": "HTML comment",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiHorizontalRule": {
+    "message": "Horizontal rule",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiNone": {
+    "message": "None",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiImagesAmpFrontMatter": {
+    "message": "Images &amp; front matter",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiEmbedInlineDataUri": {
+    "message": "Embed inline (data URI)",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiSaveNextToTheFileZip": {
+    "message": "Save next to the file (ZIP)",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiKeepLinksOnly": {
+    "message": "Keep links only",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiRemove": {
+    "message": "Remove",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiGithubFlavored": {
+    "message": "GitHub Flavored",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiCommonmark": {
+    "message": "CommonMark",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiMarkdown": {
+    "message": "Markdown",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiHtml": {
+    "message": "HTML",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiPlainText": {
+    "message": "Plain text",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiStructured": {
+    "message": "Structured",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiCheckCurrencyColumnsAndTotals": {
+    "message": "Check currency columns and totals",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiMarkSuspectValuesInTheOutput": {
+    "message": "Mark suspect values in the output",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiDetectHeadingsFromTypeSize": {
+    "message": "Detect headings from type size",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiRebuildTablesFromColumnAlignment": {
+    "message": "Rebuild tables from column alignment",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiRemoveRepeatedHeadersAmpFooters": {
+    "message": "Remove repeated headers &amp; footers",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiKeepHyperlinks": {
+    "message": "Keep hyperlinks",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiAddYamlFrontMatter": {
+    "message": "Add YAML front matter",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiStripPageFurnitureFromWebPages": {
+    "message": "Strip page furniture from web pages",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiIncludeSpeakerNotes": {
+    "message": "Include speaker notes",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiDropFilesHere": {
+    "message": "Drop files here",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiOcrConfidenceFlaggedWordsAndUnreadableRegi": {
+    "message": "OCR confidence, flagged words and unreadable regions are always recorded\n          in the front matter.",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiMode": {
+    "message": "Mode",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiResolution": {
+    "message": "Resolution",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiPreProcessing": {
+    "message": "Pre-processing",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiColumns": {
+    "message": "Columns",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiPageMarkers": {
+    "message": "Page markers",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiImages": {
+    "message": "Images",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiMarkdownFlavor": {
+    "message": "Markdown flavor",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiWrapAtColumn": {
+    "message": "Wrap at column",
+    "description": "Settings and interface label in the app page."
+  },
+  "uiDropzoneOr": {
+    "message": "or",
+    "description": "Connector before the \"choose files\" button."
+  },
+  "uiDropzonePaste": {
+    "message": "or paste with",
+    "description": "Connector before the paste keyboard shortcut."
+  },
+  "uiSettingsNote": {
+    "message": "These boxes control what “Download all” writes. Every converted file can be viewed, copied and downloaded in $1 format from the tabs below, whatever is ticked here. Settings apply to the next conversion and are remembered on this device.",
+    "description": "Explains that the output checkboxes only affect \"Download all\". $1 is the emphasised word \"any\"."
+  },
+  "uiSettingsNoteEmphasis": {
+    "message": "any",
+    "description": "The emphasised word inside the settings note."
+  },
+  "uiLanguage": {
+    "message": "Language",
+    "description": "Label for the OCR language selector."
+  },
+  "appShortName": {
+    "message": "Sumcheck",
+    "description": "Short extension name, shown where space is tight."
+  },
+  "badgeError": {
+    "message": "Sumcheck — $1",
+    "description": "Toolbar tooltip when a conversion fails. $1 is the reason."
+  }
+}

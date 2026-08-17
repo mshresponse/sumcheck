@@ -1,0 +1,89 @@
+%PDF-1.4
+%ту╧╙
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 4 0 R /Annots [9 0 R] >>
+endobj
+4 0 obj
+<< /Length 1570 >>
+stream
+BT /F2 24 Tf 1 0 0 1 72 730 Tm (Quarterly Field Report) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 700 Tm (Prepared by the Operations team for internal distribution.) Tj ET
+BT /F2 16 Tf 1 0 0 1 72 660 Tm (Summary of Findings) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 636 Tm (Throughput rose across every region during the quarter, with the) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 622 Tm (largest gains recorded in the eastern corridor. Latency remained) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 608 Tm (flat despite the additional load.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 578 Tm (Х Eastern corridor exceeded its target by eleven percent.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 562 Tm (Х Western corridor met target with no incidents.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 546 Tm (Х Northern corridor remains under review.) Tj ET
+BT /F2 16 Tf 1 0 0 1 72 506 Tm (Regional Results) Tj ET
+BT /F2 11 Tf 1 0 0 1 72 480 Tm (Region) Tj ET
+BT /F2 11 Tf 1 0 0 1 220 480 Tm (Volume) Tj ET
+BT /F2 11 Tf 1 0 0 1 340 480 Tm (Change) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 462 Tm (East) Tj ET
+BT /F1 11 Tf 1 0 0 1 220 462 Tm (18,420) Tj ET
+BT /F1 11 Tf 1 0 0 1 340 462 Tm (+11%) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 444 Tm (West) Tj ET
+BT /F1 11 Tf 1 0 0 1 220 444 Tm (12,905) Tj ET
+BT /F1 11 Tf 1 0 0 1 340 444 Tm (+2%) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 426 Tm (North) Tj ET
+BT /F1 11 Tf 1 0 0 1 220 426 Tm (7,310) Tj ET
+BT /F1 11 Tf 1 0 0 1 340 426 Tm (-4%) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 386 Tm (Full methodology is published at ) Tj ET
+BT /F1 11 Tf 1 0 0 1 233 386 Tm (example.com/methodology) Tj ET
+BT /F1 9 Tf 1 0 0 1 72 60 Tm (Field Report  |  Page 1 of 2) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 812 >>
+stream
+BT /F2 16 Tf 1 0 0 1 72 730 Tm (Recommendations) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 706 Tm (Three changes are proposed for the coming quarter. Each has been) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 692 Tm (costed and reviewed by the regional leads.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 662 Tm (1. Extend the eastern corridor pilot by two months.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 646 Tm (2. Retire the legacy routing table in the west.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 630 Tm (3. Commission an audit of northern throughput.) Tj ET
+BT /F2 16 Tf 1 0 0 1 72 590 Tm (Risks) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 566 Tm (The northern review may extend past the reporting window, which) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 552 Tm (would delay consolidated figures by up to three weeks.) Tj ET
+BT /F1 9 Tf 1 0 0 1 72 60 Tm (Field Report  |  Page 2 of 2) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+8 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+9 0 obj
+<< /Type /Annot /Subtype /Link /Rect [233 383 350 397] /Border [0 0 0] /A << /S /URI /URI (https://example.com/methodology) >> >>
+endobj
+10 0 obj
+<< /Title (Quarterly Field Report) /Author (Operations Team) /Creator (Sumcheck fixtures) /CreationDate (D:20260401120000Z) >>
+endobj
+xref
+0 11
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000127 00000 n 
+0000000279 00000 n 
+0000001901 00000 n 
+0000002037 00000 n 
+0000002900 00000 n 
+0000002997 00000 n 
+0000003099 00000 n 
+0000003244 00000 n 
+trailer
+<< /Size 11 /Root 1 0 R /Info 10 0 R >>
+startxref
+3387
+%%EOF

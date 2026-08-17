@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "name": "East",
+    "volume": 18420
+  },
+  {
+    "id": 2,
+    "name": "West",
+    "volume": 12905
+  },
+  {
+    "id": 3,
+    "name": "North",
+    "volume": 7310
+  }
+]

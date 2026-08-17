@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title data-i18n-title="appTitle">Sumcheck — Convert to Markdown</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="1" y="1" width="26" height="26" rx="6" fill="currentColor" opacity=".12"/>
+      <path d="M10.6 8.4h11.2v3.1h-7.3l5.2 5.3-5.2 5.3h7.4v3.1H10.6v-2.6l6-5.8-6-5.8z" fill="currentColor" transform="translate(-2.5,-2.5) scale(0.92)"/>
+      <circle cx="24" cy="24" r="7" fill="#4ec98a"/>
+      <path d="M20.9 24.1l2.1 2.2 4.2-4.6" stroke="#0e2a1c" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <div>
+      <h1>Sumcheck</h1>
+      <p class="tagline"><span data-i18n="appTagline">Documents in, Markdown out — entirely on this device.</span></p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button id="toggle-settings" class="btn ghost" aria-expanded="false" data-i18n="settings">Settings</button>
+  </div>
+</header>
+
+<main>
+  <section id="dropzone" class="dropzone" tabindex="0" data-i18n-attr="aria-label:dropzoneAria" aria-label="Drop files to convert">
+    <input id="file-input" type="file" multiple hidden>
+    <div class="dropzone-inner">
+      <p class="dropzone-title" data-i18n="uiDropFilesHere">Drop files here</p>
+      <p class="dropzone-sub">
+        <span data-i18n="uiDropzoneOr">or</span> <button id="browse" class="linkish" type="button" data-i18n="dropzoneBrowse">choose files</button>,
+        <span data-i18n="uiDropzonePaste">or paste with</span> <kbd>⌘V</kbd>
+      </p>
+      <p class="dropzone-formats" id="format-list"></p>
+    </div>
+  </section>
+
+  <section id="settings" class="panel" hidden>
+    <div class="settings-grid">
+      <fieldset>
+        <legend data-i18n="uiFilesToSave">Files to save</legend>
+        <label><input type="checkbox" name="outputs" value="md" checked> <span data-i18n="uiMarkdown">Markdown</span> <code>.md</code></label>
+        <label><input type="checkbox" name="outputs" value="html"> <span data-i18n="uiHtml">HTML</span> <code>.html</code></label>
+        <label><input type="checkbox" name="outputs" value="txt"> <span data-i18n="uiPlainText">Plain text</span> <code>.txt</code></label>
+        <label><input type="checkbox" name="outputs" value="json"> <span data-i18n="uiStructured">Structured</span> <code>.json</code></label>
+      </fieldset>
+
+      <fieldset>
+        <legend data-i18n="uiTextRecognitionOcr">Text recognition (OCR)</legend>
+        <label><span data-i18n="uiMode">Mode</span>
+          <select name="ocrMode">
+            <option value="auto" data-i18n="uiAutoOnlyPagesWithNoText">Auto — only pages with no text</option>
+            <option value="always" data-i18n="uiAlwaysReReadEveryPage">Always — re-read every page</option>
+            <option value="never" data-i18n="uiNever">Never</option>
+          </select>
+        </label>
+        <label><span data-i18n="uiLanguage">Language</span> <select name="ocrLang"></select></label>
+        <label><span data-i18n="uiResolution">Resolution</span>
+          <select name="ocrResolution">
+            <option value="auto" data-i18n="uiAutomaticMatchTheScanAtLeast200Dpi">Automatic — match the scan, at least 200 dpi</option>
+            <option value="200" data-i18n="uiForce200Dpi">Force 200 dpi</option>
+            <option value="300" data-i18n="uiForce300Dpi">Force 300 dpi</option>
+            <option value="400" data-i18n="uiForce400DpiSlowest">Force 400 dpi (slowest)</option>
+          </select>
+        </label>
+        <label><span data-i18n="uiPreProcessing">Pre-processing</span>
+          <select name="ocrPreprocess">
+            <option value="off" data-i18n="uiNoneRecommended">None (recommended)</option>
+            <option value="contrast" data-i18n="uiBoostLocalContrastForPhotos">Boost local contrast — for photos</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend data-i18n="uiVerification">Verification</legend>
+        <label><input type="checkbox" name="validate" checked> <span data-i18n="uiCheckCurrencyColumnsAndTotals">Check currency columns and totals</span></label>
+        <label><input type="checkbox" name="reviewMarkers" checked> <span data-i18n="uiMarkSuspectValuesInTheOutput">Mark suspect values in the output</span></label>
+        <p class="settings-hint" data-i18n="uiOcrConfidenceFlaggedWordsAndUnreadableRegi">
+          OCR confidence, flagged words and unreadable regions are always recorded
+          in the front matter.
+        </p>
+      </fieldset>
+
+      <fieldset>
+        <legend data-i18n="uiPdfLayout">PDF layout</legend>
+        <label><input type="checkbox" name="pdfHeadings" checked> <span data-i18n="uiDetectHeadingsFromTypeSize">Detect headings from type size</span></label>
+        <label><input type="checkbox" name="pdfTables" checked> <span data-i18n="uiRebuildTablesFromColumnAlignment">Rebuild tables from column alignment</span></label>
+        <label><input type="checkbox" name="stripRunningHeads" checked> <span data-i18n="uiRemoveRepeatedHeadersAmpFooters">Remove repeated headers &amp; footers</span></label>
+        <label><input type="checkbox" name="pdfLinks" checked> <span data-i18n="uiKeepHyperlinks">Keep hyperlinks</span></label>
+        <label><span data-i18n="uiColumns">Columns</span>
+          <select name="pdfColumns">
+            <option value="auto" data-i18n="uiDetectAutomatically">Detect automatically</option>
+            <option value="single" data-i18n="uiAlwaysSingleColumn">Always single column</option>
+          </select>
+        </label>
+        <label><span data-i18n="uiPageMarkers">Page markers</span>
+          <select name="pageMarkers">
+            <option value="comment" data-i18n="uiHtmlComment">HTML comment</option>
+            <option value="rule" data-i18n="uiHorizontalRule">Horizontal rule</option>
+            <option value="none" data-i18n="uiNone">None</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend data-i18n="uiImagesAmpFrontMatter">Images &amp; front matter</legend>
+        <label><span data-i18n="uiImages">Images</span>
+          <select name="imageMode">
+            <option value="embed" data-i18n="uiEmbedInlineDataUri">Embed inline (data URI)</option>
+            <option value="extract" data-i18n="uiSaveNextToTheFileZip">Save next to the file (ZIP)</option>
+            <option value="link" data-i18n="uiKeepLinksOnly">Keep links only</option>
+            <option value="strip" data-i18n="uiRemove">Remove</option>
+          </select>
+        </label>
+        <label><input type="checkbox" name="frontMatter" checked> <span data-i18n="uiAddYamlFrontMatter">Add YAML front matter</span></label>
+        <label><input type="checkbox" name="readability" checked> <span data-i18n="uiStripPageFurnitureFromWebPages">Strip page furniture from web pages</span></label>
+        <label><input type="checkbox" name="includeSpeakerNotes" checked> <span data-i18n="uiIncludeSpeakerNotes">Include speaker notes</span></label>
+        <label><span data-i18n="uiMarkdownFlavor">Markdown flavor</span>
+          <select name="mdFlavor">
+            <option value="gfm" data-i18n="uiGithubFlavored">GitHub Flavored</option>
+            <option value="commonmark" data-i18n="uiCommonmark">CommonMark</option>
+          </select>
+        </label>
+        <label><span data-i18n="uiWrapAtColumn">Wrap at column</span>
+          <input type="number" name="wrap" min="0" max="200" step="10" value="0">
+        </label>
+      </fieldset>
+    </div>
+    <!-- Built in script from one message with a $1 placeholder: splitting the
+         sentence into fragments around the <em> would make it untranslatable,
+         and innerHTML is not used anywhere the text could come from a file. -->
+    <p class="settings-note" data-i18n-emphasis="uiSettingsNote:uiSettingsNoteEmphasis"></p>
+  </section>
+
+  <section id="workspace" hidden>
+    <div class="workspace-head">
+      <h2 id="queue-heading" data-i18n="queue">Queue</h2>
+      <div class="workspace-actions">
+        <button id="stop" class="btn ghost" hidden data-i18n="stop">Stop</button>
+        <button id="download-all" class="btn" disabled data-i18n="downloadAll">Download all (.zip)</button>
+        <button id="clear" class="btn ghost" data-i18n="clear">Clear</button>
+      </div>
+    </div>
+    <div id="batch" class="batch" hidden>
+      <div class="batch-bar"><div></div></div>
+      <p id="batch-label" class="batch-label"></p>
+    </div>
+    <ul id="queue" class="queue"></ul>
+  </section>
+
+  <section id="result" class="result" hidden>
+    <div class="result-head">
+      <div>
+        <h2 id="result-title" data-i18n="result">Result</h2>
+        <p id="result-meta" class="result-meta"></p>
+      </div>
+      <div class="result-actions">
+        <button id="copy" class="btn" data-i18n="copy">Copy</button>
+        <span class="download-label" data-i18n="download">Download</span>
+        <span id="downloads" class="downloads"></span>
+      </div>
+    </div>
+    <div id="warnings" class="warnings" hidden></div>
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <div id="pane-preview" class="pane doc-preview" role="tabpanel"></div>
+    <pre id="pane-source" class="pane source" role="tabpanel" hidden><code></code></pre>
+  </section>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<!-- Password prompt. A dialog rather than window.prompt(): prompt() blocks the
+     whole page, which in a 50-file batch means one locked document freezes
+     every other conversion until someone comes back to the tab. -->
+<div id="password-backdrop" class="modal-backdrop" hidden>
+  <div id="password-modal" class="modal" role="dialog" aria-modal="true"
+       aria-labelledby="password-title" aria-describedby="password-message">
+    <h2 id="password-title" data-i18n="passwordTitle">Password required</h2>
+    <p id="password-message" class="modal-message"></p>
+    <form id="password-form">
+      <label class="modal-label" for="password-input" data-i18n="passwordLabel">Password</label>
+      <input id="password-input" type="password" autocomplete="off" spellcheck="false">
+      <p id="password-hint" class="modal-hint">
+        <span data-i18n="passwordHint">The password is used to open this file and is never stored or sent anywhere.</span>
+      </p>
+      <div class="modal-actions">
+        <button type="button" id="password-skip" class="btn ghost" data-i18n="passwordSkip">Skip this file</button>
+        <button type="submit" id="password-submit" class="btn primary" data-i18n="passwordUnlock">Unlock</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Bundled third-party libraries (all MIT / Apache-2.0 / BSD-2 / MPL-2.0).
+     MV3 forbids remote code, so every one of these ships inside the package. -->
+<script src="../../vendor/jszip/jszip.min.js"></script>
+<script src="../../vendor/dompurify/purify.min.js"></script>
+<script src="../../vendor/turndown/turndown.js"></script>
+<script src="../../vendor/turndown/turndown-plugin-gfm.js"></script>
+<script src="../../vendor/marked/marked.umd.js"></script>
+<script src="../../vendor/mammoth/mammoth.browser.min.js"></script>
+<script src="../../vendor/papaparse/papaparse.min.js"></script>
+<script src="../../vendor/js-yaml/js-yaml.umd.min.js"></script>
+<script src="../../vendor/readability/Readability.js"></script>
+<script src="../../vendor/tesseract/tesseract.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

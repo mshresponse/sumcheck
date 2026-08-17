@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sumcheck — conversion tests</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin: 1.5rem; max-width: 70rem; }
+  h1 { font-size: 1.1rem; }
+  #summary { padding: .6rem .9rem; border-radius: 8px; font-weight: 700; margin-bottom: 1rem; }
+  .ok { background: #e5f6ec; color: #10613a; }
+  .bad { background: #fdeceb; color: #8c1d18; }
+  .case { border: 1px solid #8884; border-radius: 8px; margin-bottom: .75rem; padding: .6rem .9rem; }
+  .case h2 { font-size: .95rem; margin: 0 0 .35rem; }
+  .pass { color: #10613a; }
+  .fail { color: #8c1d18; font-weight: 700; }
+  ul { margin: .25rem 0; padding-left: 1.2rem; }
+  details pre { background: #8881; padding: .6rem; border-radius: 6px; max-height: 24rem; overflow: auto; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>Sumcheck conversion tests</h1>
+<div id="summary">Running…</div>
+<div id="cases"></div>
+
+<script src="../vendor/jszip/jszip.min.js"></script>
+<script src="../vendor/dompurify/purify.min.js"></script>
+<script src="../vendor/turndown/turndown.js"></script>
+<script src="../vendor/turndown/turndown-plugin-gfm.js"></script>
+<script src="../vendor/marked/marked.umd.js"></script>
+<script src="../vendor/mammoth/mammoth.browser.min.js"></script>
+<script src="../vendor/papaparse/papaparse.min.js"></script>
+<script src="../vendor/js-yaml/js-yaml.umd.min.js"></script>
+<script src="../vendor/readability/Readability.js"></script>
+<script src="../vendor/tesseract/tesseract.min.js"></script>
+<script type="module" src="harness.js"></script>
+</body>
+</html>

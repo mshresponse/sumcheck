@@ -1,0 +1,23 @@
+# Fetched by `npm run build` from pinned versions recorded in
+# vendor/VERSIONS.json, which IS committed — so the exact dependency set is in
+# the history without 6 MB of third-party binaries being in it.
+vendor/*
+!vendor/VERSIONS.json
+
+# Build output.
+dist/
+
+# Never used by this project (dependencies are vendored, not installed), but
+# ignored so a stray install cannot be committed.
+node_modules/
+
+# Corpus and audit artifacts live outside the repo by design. Listed anyway:
+# converted output carries document content, and a stray copy inside the tree
+# must not become a commit.
+mdforge-audit/
+corpus/
+*.words.json
+corpus-expectations.json
+
+.DS_Store
+*.log

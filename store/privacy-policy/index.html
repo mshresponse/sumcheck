@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sumcheck — Privacy Policy</title>
+<meta name="description" content="Sumcheck does not collect, store or transmit any user data. All document conversion happens locally in your browser.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f7f9; --surface: #ffffff; --fg: #17171b; --muted: #63636e;
+    --rule: #e3e3e8; --accent: #4b42d6; --ok: #1a7f4b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101013; --surface: #18181d; --fg: #e9e9ee; --muted: #9a9aa6;
+      --rule: #2c2c35; --accent: #8d84ff; --ok: #4ec98a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
+  header { display: flex; align-items: center; gap: .85rem; margin-bottom: .5rem; }
+  .logo { width: 40px; height: 40px; color: var(--accent); flex: none; }
+  h1 { font-size: 1.5rem; margin: 0; letter-spacing: -.01em; }
+  .updated { color: var(--muted); font-size: .85rem; margin: .25rem 0 2rem; }
+  h2 { font-size: 1.1rem; margin: 2rem 0 .5rem; }
+  p { margin: .75rem 0; }
+  .headline {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 1rem 1.25rem; font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0;
+  }
+  .headline .dot { color: var(--ok); }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .9rem; }
+  th, td { text-align: left; padding: .5rem .75rem; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--surface); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .85em;
+         background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: .1em .35em; }
+  a { color: var(--accent); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="2" y="2" width="28" height="28" rx="7" fill="currentColor" opacity=".14"/>
+      <text x="16" y="22" text-anchor="middle" font-family="inherit" font-size="18" font-weight="700" fill="currentColor">Σ</text>
+      <circle cx="25" cy="25" r="6" fill="#4ec98a"/>
+      <path d="M22.2 25 l2 2 3.6 -3.8" stroke="#0e2a1c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <h1>Sumcheck — Privacy Policy</h1>
+  </header>
+  <p class="updated">Applies to the Sumcheck browser extension ("Sumcheck — PDF &amp; Document to Markdown"). Last updated: August 16, 2026.</p>
+
+  <p class="headline"><span class="dot">●</span> Sumcheck does not collect, store or transmit any user data.</p>
+
+  <p>All document conversion happens locally in your browser. Files you convert, pages
+  you capture, and the resulting output never leave your device. The extension makes
+  no network requests while running, contains no analytics or telemetry, and has no
+  server component and no accounts.</p>
+
+  <h2>Settings and temporary storage</h2>
+  <p>Your conversion settings are stored locally in your browser
+  (<code>chrome.storage.local</code>) so they persist between sessions. A page you
+  capture is held briefly in session storage so the converter tab can read it, and is
+  discarded within five minutes. Neither is synced or transmitted.</p>
+
+  <h2>Optional site access</h2>
+  <p>If you use "Convert linked file", Chrome asks your permission for that site so the
+  file can be fetched and converted. That request is made to the site hosting the file,
+  by your browser, at your instruction — nothing is sent to us, because there is no
+  "us" to send it to.</p>
+
+  <h2>How these claims are enforced</h2>
+  <p>These are properties of the code, not promises about a server — there is no server:</p>
+  <table>
+    <tr><th>Claim</th><th>Enforcement</th></tr>
+    <tr><td>No remote code</td><td>Manifest V3 content security policy (<code>script-src 'self' 'wasm-unsafe-eval'</code>); the build's pre-publish check fails on any remote script reference.</td></tr>
+    <tr><td>No runtime network requests</td><td>Every dependency ships inside the package; verifiable by inspecting it.</td></tr>
+    <tr><td>No analytics</td><td>No analytics dependency is bundled; every third-party component is listed in the package's notices file.</td></tr>
+    <tr><td>No broad site access</td><td>The manifest declares no <code>host_permissions</code>; site access is optional and per-origin, and an automated test asserts the extension is refused page access without an explicit user gesture.</td></tr>
+  </table>
+
+  <h2>Changes</h2>
+  <p>If this policy ever changes, the change will be noted here with a new date. A change
+  that began collecting data would contradict the product's purpose; none is planned.</p>
+
+  <h2>Contact</h2>
+  <p><a href="mailto:mike@everythingvirtually.com">mike@everythingvirtually.com</a></p>
+
+  <footer>Sumcheck · Documents in, Markdown out — checked, entirely on your device.</footer>
+</main>
+</body>
+</html>

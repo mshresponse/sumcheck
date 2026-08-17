@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sumcheck</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<header>
+  <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+    <rect x="1" y="1" width="26" height="26" rx="6" fill="currentColor" opacity=".14"/>
+    <path d="M10.6 8.4h11.2v3.1h-7.3l5.2 5.3-5.2 5.3h7.4v3.1H10.6v-2.6l6-5.8-6-5.8z" fill="currentColor" transform="translate(-2.5,-2.5) scale(0.92)"/>
+    <circle cx="24" cy="24" r="7" fill="#4ec98a"/>
+    <path d="M20.9 24.1l2.1 2.2 4.2-4.6" stroke="#0e2a1c" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </svg>
+  <div>
+    <strong>Sumcheck</strong>
+    <span data-i18n="popupTagline">Everything stays on this device</span>
+  </div>
+</header>
+
+<div class="actions">
+  <button id="open" class="row primary">
+    <span class="label" data-i18n="popupOpen">Convert files…</span>
+    <span class="hint" data-i18n="popupOpenHint">PDF, Word, Excel, slides, EPUB, images</span>
+  </button>
+  <button id="page" class="row">
+    <span class="label" data-i18n="popupPage">Convert this page</span>
+    <span class="hint" data-i18n="popupPageHint">Article text, tables and links</span>
+  </button>
+  <button id="selection" class="row">
+    <span class="label" data-i18n="popupSelection">Convert selection</span>
+    <span class="hint" data-i18n="popupSelectionHint">Just what's highlighted</span>
+  </button>
+</div>
+
+<p id="status" class="status" hidden></p>
+<footer><button id="settings" class="linkish" data-i18n="popupSettings">Settings</button></footer>
+
+<script src="popup.js" type="module"></script>
+</body>
+</html>

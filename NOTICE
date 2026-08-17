@@ -1,0 +1,11 @@
+Sumcheck
+Copyright 2026 Michael Hintze
+
+This product includes software developed by Michael Hintze.
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file.
+
+Sumcheck bundles third-party components, each under its own permissive
+licence. Those components are not covered by the copyright above; they are
+listed with their licences and versions in THIRD_PARTY_NOTICES.md, which is
+distributed with the extension package.

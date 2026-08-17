@@ -1,0 +1,57 @@
+<svg width="880" height="560" viewBox="0 0 440 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#14141a"/>
+      <stop offset="1" stop-color="#101013"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4b42d6" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#4b42d6" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="440" height="280" fill="url(#bg)"/>
+  <circle cx="60" cy="52" r="150" fill="url(#glow)"/>
+
+  <!-- faint document lines, left motif -->
+  <g stroke="#2c2c35" stroke-width="2" stroke-linecap="round" opacity=".85">
+    <line x1="36" y1="196" x2="150" y2="196"/>
+    <line x1="36" y1="212" x2="126" y2="212"/>
+    <line x1="36" y1="228" x2="140" y2="228"/>
+  </g>
+  <!-- markdown motif, right -->
+  <g font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="13" fill="#63636e" opacity=".9">
+    <text x="292" y="200"># Heading</text>
+    <text x="292" y="219">| code | $40.00 |</text>
+    <text x="292" y="238" fill="#8d84ff">✓ sums check out</text>
+  </g>
+  <!-- arrow between motifs -->
+  <g stroke="#8d84ff" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".95">
+    <line x1="196" y1="214" x2="252" y2="214"/>
+    <path d="M243 206 l9 8 -9 8"/>
+  </g>
+
+  <!-- logo: sigma in accent square, check badge -->
+  <g transform="translate(36,40)">
+    <rect x="0" y="0" width="64" height="64" rx="14" fill="#4b42d6"/>
+    <text x="32" y="46" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="40" font-weight="700" fill="#ffffff">Σ</text>
+    <circle cx="55" cy="55" r="13" fill="#4ec98a"/>
+    <path d="M49 55 l4.5 4.5 8 -8.5" stroke="#0e2a1c" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="118" y="72" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="34" font-weight="700" fill="#e9e9ee" letter-spacing="-0.5">Sumcheck</text>
+  <text x="118" y="96" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="15" fill="#9a9aa6">PDF &amp; documents → Markdown, checked</text>
+
+  <!-- on-device badge -->
+  <g transform="translate(36,132)">
+    <rect x="0" y="0" width="248" height="30" rx="15" fill="none" stroke="#4b42d6" stroke-width="1.5"/>
+    <circle cx="17" cy="15" r="4.5" fill="#4ec98a"/>
+    <text x="32" y="20" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="13.5" font-weight="600" fill="#e9e9ee">100% on-device · no uploads</text>
+  </g>
+</svg>

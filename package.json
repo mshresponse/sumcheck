@@ -1,0 +1,24 @@
+{
+  "name": "sumcheck",
+  "version": "1.5.0",
+  "private": true,
+  "description": "Chrome extension that converts PDFs, Office documents, EPUB, images and web pages to Markdown, HTML, plain text or structured JSON \u2014 entirely on-device.",
+  "type": "module",
+  "scripts": {
+    "vendor": "node scripts/fetch-vendor.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "notices": "node scripts/make-notices.mjs",
+    "fixtures": "node scripts/make-fixtures.mjs",
+    "build": "npm run vendor && npm run icons && npm run notices",
+    "check": "node scripts/check.mjs",
+    "dev": "node scripts/dev-server.mjs 8931",
+    "test": "node scripts/run-tests.mjs",
+    "package": "npm run check && node scripts/package.mjs",
+    "audit": "node scripts/audit.mjs",
+    "score-export": "node scripts/score-export.mjs",
+    "verify-extension": "node scripts/verify-extension.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

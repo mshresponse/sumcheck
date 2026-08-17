@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sumcheck — corpus audit</title>
+<style>
+  body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin: 1.5rem; }
+  #status { font-weight: 700; margin-bottom: 1rem; }
+  .row { border-bottom: 1px solid #8884; padding: .3rem 0; }
+  .bad { color: #8c1d18; }
+</style>
+</head>
+<body>
+<h1>Corpus audit</h1>
+<div id="status">starting…</div>
+<div id="rows"></div>
+
+<script src="../vendor/jszip/jszip.min.js"></script>
+<script src="../vendor/dompurify/purify.min.js"></script>
+<script src="../vendor/turndown/turndown.js"></script>
+<script src="../vendor/turndown/turndown-plugin-gfm.js"></script>
+<script src="../vendor/marked/marked.umd.js"></script>
+<script src="../vendor/mammoth/mammoth.browser.min.js"></script>
+<script src="../vendor/papaparse/papaparse.min.js"></script>
+<script src="../vendor/js-yaml/js-yaml.umd.min.js"></script>
+<script src="../vendor/readability/Readability.js"></script>
+<script src="../vendor/tesseract/tesseract.min.js"></script>
+<script type="module" src="audit.js"></script>
+</body>
+</html>

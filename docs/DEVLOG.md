@@ -1,0 +1,1827 @@
+# MDForge development log
+
+Completion notes, newest first. One section per task, verbatim as reported.
+Format is set by `WORK_ORDER_OCR.md` § Reporting format: what was found (not just
+what changed), the before/after score table, fixtures added, and any invariant
+there was a temptation to break.
+
+---
+
+## 2026-08-17 · v1.5.0 cycle · R1 addendum, R1b, R2
+
+### APPENDED CORRECTION to the R1 note — icons are committed assets, not build products
+
+The R1 note describes `make-icons.mjs` as the thing that draws the mark. Owner
+ruling, and it is the right one: the four PNGs in `icons/` are the reviewer's
+approved renders and are now **committed canonical assets**. `npm run build`
+must never overwrite them — an icon is a design decision made by a human looking
+at it, and a build step that silently redraws one can undo that review without
+anyone noticing. Which is how this project shipped a malformed sigma once
+already.
+
+`make-icons.mjs` is now verify-first:
+
+- **Default** reads only. It checks each icon exists, decodes as 8-bit RGBA, has
+  the right dimensions, is not clipped at the canvas edge, and carries (or does
+  not carry) the badge as intended. It never writes to `icons/`. Confirmed by
+  hashing before and after: byte-identical.
+- **The 128's store geometry is asserted against the accent tile, not the ink
+  box.** The ink box is 109×109, because the badge deliberately overhangs the
+  square by 13px into the padding ring. The artwork the store spec is talking
+  about is the tile, and it measures **exactly 96×96 at (16,16)**.
+- **`docs/icon-inspection.png` is rebuilt from the committed PNGs**, decoded and
+  magnified nearest-neighbour in pure Node — so the strip a reviewer looks at is
+  the bytes that ship, not a re-render that might differ.
+- **`--force` still redraws**, as disaster recovery, behind a loud warning that
+  says it is not the source of truth and that a human has to look at the strip
+  before committing the result.
+
+One correction to my own expectations table: I had 32 dropping the badge. The
+canonical set carries it at 128/48/32 and drops it only at 16, and the verifier
+now asserts that. Caught because the check failed on the committed asset — which
+is the check working.
+
+The packaged zip carries the committed icons, verified by hashing repo against
+zip for all four sizes.
+
+---
+
+### R1b — `data-mdf-*` → `data-smc-*`
+
+The last trace of the old name in product output. These are the structure hints
+adapters encode for the emitters — page breaks, slide numbers, speaker notes,
+review flags — and they **survive into emitted HTML**, where the stylesheet
+selects on `[data-mdf-review]`. 27 occurrences across 11 files: five adapters,
+three emitters, the sanitizer, the validator, the app stylesheet and the
+harness.
+
+**The diff shows only attribute strings moved.** One scanned PDF and one deck,
+converted to all three formats before and after:
+
+| output | differing lines | what |
+| --- | --- | --- |
+| `scan.pdf.md` | **0** | Markdown consumes the attributes; nothing reaches the file |
+| `deck.pptx.md` | **0** | same |
+| `scan.pdf.html` | 6 | two CSS selectors and one `<span>` attribute, both names only |
+| `deck.pptx.html` | 10 | same shape, more slides |
+| `scan.pdf.json` | 2 | the `converted` timestamp — nothing else |
+| `deck.pptx.json` | 2 | the `converted` timestamp — nothing else |
+
+**Full corpus re-score:** all five metrics at baseline, marker invariant asserted
+by the scorer at 6/50 OK, lexicon flags 50/50. Against the R1 run, **0 of 50
+documents changed** ignoring timestamps — the expected result, since Markdown
+never carried these attributes.
+
+Left alone deliberately: the turndown rule *names* were already renamed in R1,
+and `data-smc-` is now the only prefix in the tree. `grep -rn "data-mdf"` over
+`src/`, `test/` and `scripts/` returns nothing.
+
+---
+
+### R2 — Apache 2.0
+
+`LICENSE` is the **canonical Apache 2.0 text**, fetched from apache.org and
+byte-verified: the only line differing from upstream is the Appendix's
+`Copyright [yyyy] [name of copyright owner]`, filled in as
+`Copyright 2026 Michael Hintze`. I deliberately did not use the reflowed copy a
+summarising fetch returned — a LICENSE file wants exact bytes, both for
+diff-ability and because licence-detection tooling matches on them.
+
+`NOTICE` follows Apache convention: product, copyright, the licence pointer, and
+one line directing to `THIRD_PARTY_NOTICES.md` for the bundled components, which
+are explicitly *not* covered by the copyright above.
+
+**Both ship in the package.** Apache §4(a) requires a copy of the licence with
+any distribution and §4(d) requires the NOTICE to travel with it; a packaged zip
+is a distribution. `scripts/package-contents.mjs` includes them and
+`npm run check` now fails if either is missing from the tree or the include list
+— the same guard that caught `_locales` being declared and not shipped.
+
+`docs/LICENSING.md`'s own-code section is rewritten. It used to document the
+proprietary stance and instruct "replace it with your EULA when you publish";
+that instruction has been executed in the other direction and the section now
+says so. It records what Apache 2.0 grants (use, modify, distribute, sell,
+including closed-source; plus the explicit patent grant that is the main reason
+to prefer it over MIT here), and what §6 withholds: **the trademark**. A fork
+gets the code, not the name or the Σ mark. It also states plainly that
+relicensing is one-way in practice — published versions cannot be recalled —
+because that is a consequence of the owner's decision worth having on the
+record rather than discovered later.
+
+README gains a License section. `store/LISTING.md` now says Sumcheck is open
+source and links the repository, so the listing's "verifiable by inspection"
+claim points at something a reader can actually open.
+
+**One placeholder, flagged rather than guessed:** the listing carries
+`https://github.com/OWNER/sumcheck`. I do not know the owner's GitHub account
+name, and inventing one would put a dead link in the store copy. It is called
+out inline in `store/LISTING.md` and is question 1 at the R3 stop.
+
+---
+
+### Gates
+
+`npm test` **41/41** · `verify-extension` **47/47** · `npm run check` green ·
+`npm run package` → **`dist/sumcheck-1.5.0.zip`, 6.2 MB** carrying `LICENSE`,
+`NOTICE`, `THIRD_PARTY_NOTICES.md`, `_locales` and the committed icons.
+
+Corpus: 50/50 · 49/49 · 52/52 · 50/50 · tables 49/50 · headline 44/50 · markers
+6/50 OK · lexicon 50/50.
+
+### Invariant I was tempted to break and didn't
+
+**Making the icon verifier pass by loosening it.** The first run failed on
+`icon-32` — my table said no badge, the asset had one. The quick fix is to
+delete the assertion. The right one was to find out which was wrong, and it was
+me: the owner's canonical set carries the badge at 32. An assertion that gets
+relaxed whenever it fires is not an assertion.
+
+---
+
+## 2026-08-17 · v1.5.0 cycle · Task R1 — rename, MDForge → Sumcheck
+
+### Corpus re-score under the new marker prefix
+
+`MDFORGE:` → `SUMCHECK:` is conversion-touching, so the full 50-document corpus
+was re-scored. Every metric identical, and the marker invariant holds under the
+new prefix:
+
+| metric | before | after |
+| --- | --- | --- |
+| grand totals matched | 50/50 | 50/50 |
+| all line-item codes found | 49/49 | 49/49 |
+| amount on its code's row | 52/52 | 52/52 |
+| `#Error` preserved | 50/50 | 50/50 |
+| documents with a table | 49/50 | 49/50 |
+| headline figure recovered | 44/50 | 44/50 |
+| **value-not-recovered markers** | **6/50 OK** | **6/50 OK** |
+| prose lexicon flags | 50/50 | 50/50 |
+
+The scorer's assertion is doing real work here: it parses `SUMCHECK: value not
+recovered` and compares against the documents actually missing a headline. Had
+the emitter and the scorer disagreed about the prefix, this would read 0/50 and
+fail — which is the check that makes "the invariant holds under the new prefix"
+a measurement rather than a hope.
+
+Diffed against the previous run, exactly two lines change per document: the
+`generator:` line and the marker prefix. Nothing else moved.
+
+### The icons were wrong, and only looking at them showed it
+
+The first attempt hand-authored Σ as four quads and drew each size at its target
+resolution. Magnified, it was visibly broken: uneven bars, stair-stepped
+diagonals, an off-centre vertex, and a 16px that was mud. Rebuilt on three
+rules, each of which is in the file as a comment because breaking it is what
+produced the failure:
+
+1. **One canonical rendering per variant, then downscale.** Each variant is
+   drawn once at 1024px and reduced by repeated halving with
+   `imageSmoothingQuality = 'high'`. Drawing at 16px puts every edge on a
+   half-pixel.
+2. **The sigma is a real glyph.** `fillText('Σ')` in a bold system face, with a
+   guard that fails the build if the face has no sigma rather than shipping a
+   tofu box. Correct letterform geometry for free — which is how the reference
+   tile got its clean sigma.
+3. **Simplify as it shrinks.** 128 and 48 carry the full mark; 32 drops the
+   badge; 16 drops the badge, uses the whole canvas and sets the sigma heavier
+   and larger. A check badge inside 16 pixels reads as dirt.
+
+Rendering runs in the headless Chrome this project already drives, so no
+graphics dependency was added — and it is build-time either way.
+
+One more fix came out of measuring rather than eyeballing: each master leaves
+slack around the mark (tile inset, room for the badge to overhang), and
+downscaling the whole canvas carried that slack into the icon. The 128 came out
+as **94×94 of artwork in uneven 18/16px padding**. Masters are now cropped to
+their ink before downscaling, and the 128 measures **exactly 96×96 at (16,16)** —
+the store spec, by construction rather than by luck.
+
+`docs/icon-inspection.png` is the magnified strip, regenerated by
+`npm run build`. Icons are the one artifact where a passing build proves
+nothing.
+
+The in-page logo was a separate leftover: both `app.html` and `popup.html` still
+drew the old "M" as inline SVG, so the first regenerated screenshot showed the
+new name under the old mark. Both now draw the sigma and badge.
+
+### Grep disposition
+
+`grep -ril mdforge` over source, then every hit decided:
+
+**Renamed — product output**
+
+| what | where |
+| --- | --- |
+| `MDFORGE:` review markers | `emit/markdown.js` (the one write site) |
+| `generator:` constant | `convert.js` |
+| HTML `<meta name="generator">` fallback | `emit/html.js` |
+| "MDForge can't read …" error | `convert.js` |
+| **JSON schema id** `mdforge.document/v1` → `sumcheck.document/v1` | `emit/json.js` |
+
+**Renamed — user-visible UI**
+
+`appName`, `appTitle`, `commandOpen`, `menuLink`, `menuOpen`, a new
+`appShortName`; page titles and headers; the toolbar error tooltip, which was
+also *not localized* and now is (`badgeError`); the export zip name.
+
+**Renamed — internal**
+
+Turndown rule names; context-menu ids (`mdforge-page` → `sumcheck-page`, with
+the harness that asserts them); temp-directory prefixes; the corpus env var
+`MDFORGE_CORPUS` → `SUMCHECK_CORPUS`; `dist/` artifact name; the fixture PDF's
+`/Creator` metadata; `.claude/launch.json`.
+
+**Renamed with a migration**
+
+`STORAGE_KEY` `mdforge.options.v1` → `sumcheck.options.v1`. Renaming a storage
+key is a data migration, not a find-and-replace: done naively, every existing
+install silently reverts to defaults. `loadOptions()` now reads the legacy key
+when the new one is absent.
+
+**Left alone — historical record**
+
+`DEVLOG.md`, `CHANGELOG.md`'s pre-1.5.0 entries, and the archived work orders
+keep the old name. They describe what happened, and editing them would falsify
+it. `STATUS.md` gains a dated rename note at the top rather than a rewrite.
+
+**Left alone — deliberately, and worth flagging**
+
+The `data-mdf-*` attributes (`data-mdf-review`, `data-mdf-page`,
+`data-mdf-slide`, `data-mdf-notes`, `data-mdf-chapter`). They do not contain
+"mdforge" so they never appeared in the sweep, but `mdf` is an MDForge
+abbreviation and **they survive into emitted HTML output**, where `emit/html.js`
+styles `[data-mdf-review]`. Renaming them would touch every adapter, the HTML
+emitter, the JSON emitter and the Markdown rules, and would change HTML output
+on a task authorised for one prefix change. Left as-is; **the owner may want
+this as a follow-up**, and it is the last visible trace of the old name in
+product output.
+
+### Fixtures
+
+No new fixtures — nothing changed behaviour. Existing ones were updated to
+assert the new prefix and schema id, which is the fixture-first rule working in
+the other direction: six harness assertions and two scorer regexes had to move
+in lockstep with the emitter, and a mismatch would have failed loudly.
+
+`sample.pdf` was regenerated because its `/Creator` metadata carried the old
+name.
+
+### Gates
+
+`npm test` **41/41** · `verify-extension` **47/47**, including the packaged zip
+installing and resolving its localized name as *Sumcheck — PDF & Document to
+Markdown* · `npm run check` green · `npm run package` → **`dist/sumcheck-1.5.0.zip`,
+6.2 MB**.
+
+Version 1.5.0 in both manifests. CHANGELOG entry written with the collision
+rationale — a Windows app with the same pitch, a dental platform on mdforge.com,
+a PyPI package, an arXiv project — so the history explains itself, and with the
+`MDFORGE:` → `SUMCHECK:` migration note for anyone grepping converted files.
+
+The repository root folder is unchanged at `~/mdforge`, per the work order.
+
+### Invariant I was tempted to break and didn't
+
+**Rewriting the DEVLOG and CHANGELOG to say "Sumcheck" throughout.** It would
+have taken one command and made the history read as though the product were
+always called this. The old entries record decisions made under the old name,
+including the measurements that justified them; a search for why the marker
+prefix changed should land on an entry that says `MDFORGE:`. The rename is a
+fact with a date, not a retroactive truth.
+
+---
+
+## 2026-08-16 · v1.4.0 cycle · Task 5 — store submission packet
+
+### The innerHTML sweep (Task 3 rider)
+
+Every HTML sink outside `src/core/` was audited, not just `innerHTML` —
+`outerHTML`, `insertAdjacentHTML`, `document.write`, `srcdoc`, `setHTML`,
+`createContextualFragment`. Six assignment sites, dispositioned individually:
+
+| site | disposition |
+| --- | --- |
+| `app.js` language `<option>` list | **converted.** The only remaining `${…}`-into-markup site. Values are bundled constants today, but a language list is exactly the sort of thing that later gets read from a file. Now `createElement` |
+| `app.js` queue row skeleton | **provably static**, comment added. No interpolation at all since Task 3; every value is set with `textContent` |
+| `app.js` preview pane (`result.preview`) | **documented invariant.** The one place document HTML is rendered as HTML, which is what a preview pane is. The value is post-`sanitizeHtml()` — DOMPurify applied in `convert.js` before any emitter or validator sees it, with `src/core/sanitize.js` the single chokepoint every adapter passes through. The guarantee is structural, not a property of the call site. Fallback is a literal |
+| `app.js` ×5 `innerHTML = ''` | **clears**, no interpolation |
+| `service-worker.js` ×2 | **reads**, not assignments — `container.innerHTML` and `documentElement.outerHTML` in the injected extractor |
+| result panel "Notes" and "Why this failed" | **converted in Task 4** |
+
+`grep -rnE 'innerHTML *= *`[^`]*\$\{' src/app src/popup src/ui` → **0**.
+
+### Store packet
+
+`store/`, four documents plus three screenshots:
+
+- **`LISTING.md`** — name (36 of 45 chars), summary (121 of 132), full
+  description, category, and what each screenshot shows.
+- **`PERMISSIONS.md`** — single-purpose statement, a justification for each of
+  the five permissions, and the remote-code declaration with its enforcement
+  mechanism. Also lists what is *not* requested: `host_permissions`, `tabs`,
+  `downloads`, `cookies`, `webRequest`, `management`, `<all_urls>`.
+- **`PRIVACY.md`** — nothing collected, so no data category applies. Includes
+  the one that invites a second look, `website content`: MDForge reads page and
+  file content *in order to convert it, on the device, at the user's request*,
+  and "collect" in this policy means gathering data off the device. Drafted
+  privacy-policy text included.
+- **`CHECKLIST.md`** — 36 items, each done / open / N/A-with-reason.
+
+### Checklist verified against live documentation, not memory
+
+Fetched on 16 August 2026. What that produced beyond what I would have assumed:
+
+- **Screenshots must be 1280×800 or 640×400**, square corners, full bleed, 1–5
+  of them. Ours are three at 1280×800.
+- **Store icon is 128×128** with 96×96 of artwork and 16px transparent padding.
+- **440×280 small promo tile**: optional, but the documentation states listings
+  without one rank lower in search. Recorded as an open decision rather than
+  quietly skipped.
+- **Package limit is 2 GB** — 6.2 MB is not close.
+- **Policy updates effective 1 August 2026**, already in force: Limited Use now
+  requires collection be *strictly necessary* to the declared single purpose,
+  and all collection to be prominently disclosed regardless of purpose. Both
+  hold trivially here, and the checklist says why rather than ignoring them.
+
+One thing I could not verify and said so instead of guessing: the exact wording
+and grouping of the data-usage category checkboxes is not in the public
+documentation. The checklist instructs reading them off the dashboard at
+submission time and notes the answer does not depend on it — nothing is
+collected, so nothing is checked.
+
+### Screenshots — and the one that matters
+
+`npm run verify-extension -- <a-scanned.pdf> --screenshots store/screenshots`,
+driving the real installed extension at 1280×800.
+
+1. `01-drop-zone.png` — the empty state.
+2. `02-batch-in-progress.png` — six scans mid-flight: "Converting 3 of 6", the
+   working row showing live OCR progress, finished rows above, queued below.
+3. `03-review-markers.png` — **the differentiator.** A converted scan showing
+   the Notes panel (five warnings, including *Check this value: "inchided" is
+   not a recognised word — it may be "included"*), the reconstructed five-column
+   table, `#Error` preserved as content, and the inline
+   `<!-- MDFORGE: … -->` marker in the Markdown.
+
+The first attempt at #3 was wrong and I looked at it rather than trusting the
+file size: I had scrolled the source pane but not the page, so the screenshot
+showed the queue with the result panel cut off at "Notes". Fixed by scrolling
+the result into view first. **A screenshot is the one artifact where "the code
+ran without error" proves nothing.**
+
+### Exclusions — asserted, not asserted-to
+
+`npm run check` now fails if anything on a must-not-ship list would reach the
+package. The interesting entry is `vendor/wordlist/src`: the tier JSONs live
+*inside* `vendor/`, which is packaged wholesale, and are deleted by the build
+step rather than excluded by the packager. If that deletion ever stops
+happening they ship silently and roughly double the cost of the lexicon.
+Verified by recreating the directory — the check failed with exactly that
+message.
+
+Audit of the shipped `mdforge-1.4.0.zip`:
+
+| excluded | entries |
+| --- | --- |
+| `store/` | 0 |
+| `test/` | 0 |
+| `scripts/` | 0 |
+| `docs/` | 0 |
+| `dist/` | 0 |
+| `vendor/wordlist/src/` | 0 |
+| throwaway test-extension build | 0 |
+
+Top-level: `manifest.json`, `_locales`, `icons`, `src`, `vendor`,
+`THIRD_PARTY_NOTICES.md`. From `vendor/wordlist/`, exactly three files ship:
+`english.txt`, `common.txt`, `LICENSE-scowl`.
+
+### A harness brittleness fixed on the way
+
+Running the harness with a different corpus PDF failed the end-to-end check:
+it asserted `$151.00`, which is one document's total. It now asserts what is
+true of any scanned estimate — substantial output, at least one currency
+amount, a reconstructed table, front matter — and passes on both `(37)` and
+`(47)`. A test that only works on the file it was written against is a test
+that will be deleted rather than fixed.
+
+### Release
+
+Version **1.4.0** in `package.json` and `manifest.json`. CHANGELOG written from
+this DEVLOG, including the `fast` trade-off stated plainly: it misreads
+`included` as `inchided` on every corpus document and `Tax ID:` as `TaxID:` on
+eight, and it *fixes* `Cenvical` → `Cervical`, which `best` got wrong. Neither
+pack is error-free; no extracted value differs between them.
+
+### Final gates
+
+| gate | result |
+| --- | --- |
+| `npm test` | **41/41** |
+| `npm run verify-extension` | **47/47**, including the packaged 1.4.0 zip installing and resolving its localized name |
+| `npm run check` | green |
+| `npm run package` | **`dist/mdforge-1.4.0.zip` — 6.2 MB** (6,474,147 bytes) |
+| corpus metrics | all five at 100%, marker invariant asserted by the scorer |
+
+### What stands between this and a submission
+
+None of it is code, and none of it is mine to do:
+
+1. **A hosted privacy policy URL** — required by the store. Text is drafted.
+2. **A contact email** for that policy.
+3. **Distribution decisions**: payment model, countries, visibility.
+4. **A registered developer account** and its one-time fee.
+5. Optionally, a **440×280 promo tile** — skipping it costs search ranking.
+
+### Invariant I was tempted to break and didn't
+
+**Writing the listing copy the way listings are usually written.** "Fast,
+powerful, accurate" costs nothing and is what the category is full of. The
+description instead says the conversion is *checked* and that a misreading which
+produces a different real word is invisible to every automated check — a
+limitation, in the sales copy. It is the same claim the README makes and the
+same one `docs/STATUS.md` makes, and a store listing that contradicted them
+would make all three untrustworthy.
+
+---
+
+## 2026-08-16 · v1.4.0 cycle · Task 4 — i18n scaffolding
+
+### The ship blocker this turned up
+
+**The packaged zip did not contain `_locales/`.** `package.mjs` shipped a
+hard-coded list — `manifest.json`, `icons`, `src`, `vendor`,
+`THIRD_PARTY_NOTICES.md` — and adding `default_locale: "en"` to the manifest
+does not add anything to it. The result passed `npm test`, passed
+`verify-extension` (which loads the working tree), passed `npm run check`, and
+produced a **zip Chrome refuses to install**, because `default_locale` without a
+`_locales/` directory is a load error.
+
+Nothing in the project looked at the artifact that actually ships. Two fixes,
+both aimed at the class rather than the instance:
+
+- `scripts/package-contents.mjs` now owns the include list, imported by both the
+  packager and `npm run check`. The check asserts that every path the manifest
+  depends on — `_locales` when `default_locale` is set, the service worker's
+  directory, the popup's — is in that list and exists on disk. Verified by
+  deleting `_locales` from the list: *"the manifest needs `_locales` but
+  scripts/package-contents.mjs does not ship it"*.
+- `verify-extension.mjs` now **unzips `dist/` and installs that**, on top of the
+  working-tree run. It asserts the packaged build installs, registers its
+  service worker, and resolves its localized name to
+  `MDForge — PDF & Document to Markdown` rather than `__MSG_appName__`.
+
+### What was found
+
+**The `generator:` line would have become localized.** `generatorString()` read
+`chrome.runtime.getManifest().name`, and `getManifest()` resolves `__MSG_`
+placeholders against the browser's UI language. The moment a second locale
+existed, converted documents would have carried a `generator:` line that depended
+on the language of whoever ran the conversion. That line is product output — it
+records which tool produced the file, and the answer is the same in every
+language. It is now pinned to a constant, with only the version read from the
+manifest, so today's output is byte-identical and immune to future locales.
+
+**Two strings could not be tagged without breaking them.** The drop-zone hint
+and the settings note both mix text with inline elements. Tagging their parent
+and setting `textContent` would have deleted a `<button>`, a `<kbd>` and an
+`<em>`. Handled differently by shape:
+
+- The drop-zone hint is two short connectors around a button and a keyboard
+  shortcut; each connector is its own message. Fragmenting a sentence is poor
+  i18n practice and this is recorded as a limitation, not a design.
+- The settings note is a real sentence, so it stays **one message with a `$1`
+  placeholder** for its emphasised word, rendered by building the `<em>` as a
+  DOM node. A translator gets a sentence with translatable word order rather
+  than three fragments to reassemble, and no `innerHTML` is involved.
+
+**Several UI strings were being written with `innerHTML`.** The result panel's
+"Notes" list and "Why this failed" block were assembled as markup strings. Both
+now build nodes. This is the pattern the Task 5 rider is about; these two are
+already done.
+
+### Exclusions — product output stays English
+
+Everything under `src/core/` is deliberately not localized, and the boundary is
+"does this string ship *inside* a converted document":
+
+| stays English | why |
+|---|---|
+| `MDFORGE:` review markers | written into the converted file |
+| `value not recovered`, `is not a recognised word` | same |
+| conversion warnings from adapters | travel with the result and quote document text |
+| front-matter keys and the `generator:` line | document metadata |
+| `#Error`, table headers recovered from the page | the document's own content |
+
+A converted document's contents must not depend on the locale of whoever
+converted it. Two people converting the same scan should get the same file.
+
+### What changed
+
+- `_locales/en/messages.json` — **111 messages**, each with a `description` for
+  translators.
+- `manifest.json` — `default_locale: "en"`; name, description and the command
+  description are `__MSG_` placeholders.
+- `src/ui/i18n.js` — `initI18n()`, `t(key, ...subs)`, `localizeDocument(root)`.
+  Uses `chrome.i18n` when installed and fetches the catalogue when not, because
+  the dev server has no `chrome` object and that is the runtime the whole test
+  suite uses.
+- `src/background/service-worker.js` — the four context menu titles.
+- `src/popup/popup.html` / `popup.js`, `src/app/app.html` / `app.js` — every
+  user-facing string, including the settings panel, queue row states, batch
+  labels, the password dialog and all six toasts.
+
+### The `npm run check` rule, and its limits
+
+Four new rules: `default_locale` has a catalogue; every `__MSG_` in the manifest
+resolves; every `data-i18n` key in the UI pages exists; and untagged text in
+those pages fails the build. It also notes unused messages.
+
+**Limits, stated in the code as the work order asks.** It is a regex over
+markup, not a parser. It sees text directly between tags on one line and nothing
+else — it cannot see strings built in JavaScript, text in attributes that are
+not tagged with `data-i18n-attr`, or text split across lines by an inline
+element. It is a regression guard for these pages as they are shaped today, not
+a proof of coverage. `src/core/` is out of scope by design.
+
+It earned its place immediately: it caught `uiLanguage`, a key I had written
+into `app.html` and never added to the catalogue. `chrome.i18n.getMessage`
+returns `''` for an unknown key, so that would have shipped as a **blank label**
+— worse than an untranslated one, because nothing looks wrong until a user sees
+an empty control.
+
+It also found a bug in itself. The unused-message detector read
+`data-i18n-emphasis="sentence:word"` and kept only the last segment, reporting
+the sentence key as dead. Both halves now count.
+
+### Fixtures added
+
+- **`i18n-fallback` harness case, 6 assertions** (`npm test` 40 → 41): a known
+  message resolves, messages are not blank, an unknown key shows **the key
+  rather than an empty element**, attributes are localized, `$1` substitution
+  works, and a missing substitution leaves the placeholder visible. This is the
+  no-`chrome` path — if it breaks, every page in development renders blank while
+  the installed extension looks fine.
+- **`verify-extension` i18n checks, 5 assertions** (39 → 44, then 47 with the
+  zip checks): 66 tagged elements in the app, **none empty**, none falling back
+  to showing its key, the localized document title applied, the inline-emphasis
+  message rendering real `<em>` markup, and the popup's entries resolving.
+
+### Invariant I was tempted to break and didn't
+
+**Localizing the conversion warnings.** They are user-facing, they appear in the
+result panel, and they were sitting right there in the same inventory. They also
+travel inside the conversion result into front matter and into the audit
+pipeline's output. Translating them would make a converted document's contents
+depend on the browser language of the machine that produced it — and would have
+changed the corpus output on a task that is not supposed to touch conversion.
+
+### Gates
+
+`npm test` 41/41 · `verify-extension` **47/47** · `npm run check` green ·
+`npm run package` → 6.2 MB, `_locales/` present, and the packaged zip verified
+to install. Not conversion-touching: the `generator:` line is byte-identical, so
+no corpus re-score required.
+
+---
+
+## 2026-08-16 · v1.4.0 cycle · Task 3 — queue rendering at batch scale
+
+### Measured, not asserted
+
+200-file batch, same files, same machine, through the real UI in the extension.
+Element nodes added under `#queue` counted with a `MutationObserver`; elapsed is
+wall-clock for the whole batch, conversion included.
+
+| | rows built | wall clock |
+|---|---|---|
+| before | **40,600** | 2,135 ms |
+| after | **200** | 1,316 ms |
+| | **203× fewer** | **−38%** |
+
+200 rows built for 200 files is the floor — each row is now constructed once and
+never again. Repeat runs after the change: 1,271 ms / 1,316 ms, both at 200
+nodes.
+
+The 40,600 is not an abstraction: `renderQueue()` emptied `#queue` and rebuilt
+every row on each item's completion, so a 200-file batch rebuilt the list ~203
+times. The cost is quadratic in batch size, and this pipeline is tuned for
+50-file batches.
+
+### What was found beyond the churn
+
+**Something worse than slowness was happening.** Rebuilding the list on every
+completion also discarded, roughly twice a second for the length of the batch:
+scroll position inside the queue, any text selection in it, and focus if it
+happened to be on a row. A long batch was not just slow, it actively fought
+anyone trying to read it while it ran.
+
+**Half of the problem had already been noticed.** `runItem()` carried the
+comment *"Move the 'working' marker without rebuilding 50 rows"* and hand-patched
+that one path — while the completion path three lines away rebuilt everything.
+The optimisation existed; it was just applied to the cheaper of the two callers.
+
+**An HTML injection on the way past.** The old row template interpolated the
+file's extension straight into `innerHTML`:
+
+```js
+<span class="icon">${(extOf(item.name) || 'txt').slice(0, 4).toUpperCase()}</span>
+```
+
+The extension comes from the file name, so a file called `report.<img src=x
+onerror=…>` put markup into the queue. The app's CSP (`script-src 'self'`)
+blocks the obvious payloads, and the string is capped at four characters, which
+is why this is a defect rather than an incident. It is now set with
+`textContent`, which removes the class of problem rather than the instance.
+Unrelated to the task and fixed in passing because the line was being rewritten
+anyway.
+
+### What changed
+
+- **One delegated click listener** on `#queue`, installed once at start-up.
+  Previously every row carried its own closure, re-created on every render —
+  40,600 listeners over the measured batch.
+- **`renderQueue()` reconciles** instead of rebuilding: rows are matched by id,
+  created only when new, moved only when out of order, and removed when their
+  item is gone. Reconciling in `state.items` order matters because a zip splices
+  its members into the middle of the list.
+- **`createQueueRow()`** holds the fixed parts; **`updateQueueRow()` is now the
+  only path** for everything that changes — name, sub-line, status, progress,
+  `working` highlight, `aria-selected`.
+
+### No visual behaviour change — checked, not assumed
+
+Added to `verify-extension.mjs` (30 → 39 checks), all against the real extension:
+
+- a 12-file batch completes
+- **each queue row is built exactly once** — 12 nodes for 12 rows, where
+  rebuilding would be ~144. This is the regression guard: it fails loudly if
+  anyone reintroduces a full rebuild.
+- the batch label reports `12 of 12 converted`
+- clicking a row selects it **through the delegated listener**
+- only one row is selected at a time
+- selecting a row shows that file in the result pane
+- a zip expands into queue rows
+- **the zip row stays ahead of its members**
+- **expanded members render in archive order** — observed
+  `["bundle.zip", "alpha.md", "gamma.csv", "beta.md"]`
+
+The last three exist because mid-list insertion is the one part of the
+reconciler that can silently produce a jumbled list, and nothing else covered
+it. `test/fixtures/bundle.zip` is now built by `make-fixtures.mjs` for that
+purpose — the harness's own zip is generated in memory and cannot be dropped
+into the UI.
+
+The harness's end-to-end case passes untouched: `npm test` 40/40.
+
+### One assertion I had to loosen, and why it was mine that was wrong
+
+`selecting a row shows that file` compared the result heading to the row's name
+and failed on `queue-05` vs `queue-05.txt`. The heading shows the document's
+*title*, which for a plain text file is its name without the extension. Both
+values were correct; the test was wrong, and it now matches on the stem. Worth
+recording because the tempting fix — changing the heading to match the test —
+would have been a real regression introduced to make a test pass.
+
+### Invariant I was tempted to break and didn't
+
+**Keeping `renderQueue()` as a rebuild and just calling it less often.** Debounce
+it, skip it while running, rebuild only at the end: all smaller diffs, and all of
+them leave a quadratic function in the code for the next person to call from a
+new place. The reconciler makes the cost proportional to what actually changed,
+which is the property that survives someone adding a caller.
+
+### Gates
+
+`npm test` 40/40 · `verify-extension` **39/39**, stable across repeat runs ·
+`npm run check` green. Not conversion-touching: no corpus re-score required.
+
+---
+
+## 2026-08-16 · v1.4.0 cycle · Task 2 — password modal, replacing `window.prompt()`
+
+### What was found
+
+**`window.prompt()` does not merely look dated — it stops the batch.** It blocks
+the page's entire event loop: no progress bars, no repaints, no other file
+converting, until somebody returns to the tab and answers it. On the 50-file
+batches this pipeline is tuned for, one locked PDF froze the other 49. It is
+also suppressed outright in some contexts, where the same code becomes a
+conversion that simply never finishes and never says why.
+
+**Declining had no voice.** The old path called `task.destroy()` and let
+`task.promise` reject with whatever pdf.js's teardown happened to throw. The
+queue showed a worker error — a bug report, not a decision. Skipping is a
+decision the person made, and the row now says so:
+`Skipped — this PDF is password protected and no password was entered.`
+
+**There was no encrypted PDF to test against, and no way to make one.** `qpdf`,
+`mutool` and `pdftk` are all absent from a stock Mac, and no Python PDF library
+is installed. A fixture that cannot be regenerated is a fixture that rots, so
+`make-fixtures.mjs` now builds one: standard security handler V1/R2, RC4 40-bit,
+~1 KB. Weak by design and exactly right — the point is to make pdf.js ask for a
+password, not to protect anything.
+
+### What changed
+
+- `src/app/app.html` — a real dialog (`role="dialog"`, `aria-modal`, labelled
+  and described), a password field, **Unlock** and **Skip this file**.
+- `src/app/app.css` — modal styling that follows the existing token set, light
+  and dark.
+- `src/app/app.js` — `askForPassword(fileName, retry)` returns
+  `Promise<string|null>`. Focus moves to the field on open and back to whatever
+  had it on close; Tab cycles the three controls (a hand-rolled trap, because
+  walking out of the dialog makes it a dead end for a keyboard user); Enter
+  submits; Escape and a backdrop click both skip; an empty field re-focuses
+  rather than silently skipping the file. The value is cleared from the DOM on
+  close.
+- `src/core/adapters/pdf.js` — tracks that the user declined, so the failure
+  carries a reason instead of a teardown error. A rejected `requestPassword`
+  is treated as a decline rather than crashing the conversion.
+- `scripts/make-fixtures.mjs` — `buildEncryptedPdf()` and `test/fixtures/locked.pdf`.
+
+### Fixtures added
+
+**`locked.pdf` harness case — 9 assertions** (`npm test`, 39 → 40 cases):
+the converter asks exactly once; the first ask is not flagged as a retry; the
+correct password decrypts and the text comes through; **a wrong password
+re-prompts with `retry = true` and the second attempt succeeds**; skipping fails
+the file rather than hanging; the reason says "skipped"; the reason is *not* a
+worker error; and **the next file in the batch still converts**.
+
+**Password modal in `verify-extension.mjs` — 8 assertions** (20 → 30 checks),
+because focus, Escape and event-loop behaviour only exist in a real browser:
+the dialog starts hidden, is a labelled modal dialog, uses a password input,
+takes focus on open, has Enter-submits/Skip-doesn't wiring, **the page keeps
+running while it is open** (a timer fires — the thing `prompt()` prevented), and
+**no blocking `prompt`/`alert`/`confirm` call remains in the app**.
+
+Then the whole journey, driven by the real file: drop `locked.pdf` into the app,
+**the dialog appears**, type `secret`, submit, **the document converts and the
+dialog closes**.
+
+### Two harness bugs found, both mine, both the same bug
+
+The blocking-API check failed on its first run: 1 call site. It was matching the
+doc comment explaining *why* `window.prompt()` is not used. A check that fails on
+its own explanation tests prose, not code; it now strips comments first.
+
+Then the corpus end-to-end case started reporting `251 chars · total MISSING`.
+Nothing was wrong with the conversion — three probes each opened
+`app.html`, and `openTab` takes the last matching tab, so the corpus check
+attached to the *locked PDF's* tab and read its result pane. Each probe now
+opens a distinguishable URL (`?probe=modal|locked|corpus`).
+
+Both are the same mistake as the `readyState` races in the v1.3.0 cycle:
+assuming the thing you are looking at is the thing you meant to look at.
+
+### Folded-in follow-ups
+
+**Scorer marker rows split (requested).** `score-export` printed
+`documents carrying a marker 50/50` after Task 1b, which reads exactly like 44
+documents silently losing a value. It now prints three rows:
+
+```
+headline figure recovered 44/50
+documents carrying any marker   50/50
+  value-not-recovered markers   6/50   OK — must equal the 6 document(s) missing a headline
+  prose lexicon flags           50/50
+```
+
+The invariant is a **scorer assertion** again, not a footnote: the scorer now
+computes how many documents are actually missing a headline figure and compares.
+On mismatch it prints `✗ marker invariant broken: …` and **exits 1**. Verified in
+both directions — stripping one marker from a corpus copy produced the failure
+and exit code 1; the real corpus exits 0. Headline recovery also moved out of my
+scratch script and into the scorer, where a reviewer can see it.
+
+The headline label is corpus-template-specific and marked as such in the code,
+in the same way the `#Error` string already was.
+
+**Dropping the frequency dependency (optional, declined).** SCOWL's own tiers
+cannot rank the suggestion. Measured: `included` and `inclined` are **both tier
+10**, and tier 10 has no ordering within it — sorted alphabetically, `inclined`
+comes first, so a SCOWL-only list suggests exactly the wrong word. The condition
+was "only if the suggestion quality holds — `inclined` must still lose", and it
+does not. `most-common-words-by-language` stays, and so does the caveat that it
+declares MIT without shipping a license file.
+
+### Invariant I was tempted to break and didn't
+
+**Letting Escape and the backdrop mean "cancel the batch".** Both skip one file,
+because that is what the surrounding text says they do and the queue is the
+user's, not the dialog's. An empty field submitting as a skip would have been
+one fewer branch, and would have turned a mistyped Enter into a silently
+unconverted document.
+
+### Gates
+
+`npm test` 40/40 · `verify-extension` **30/30**, stable across repeat runs ·
+`npm run check` green. Not conversion-touching: no corpus re-score required, and
+the scorer change was verified against the existing v1.4.0 emit.
+
+---
+
+## 2026-08-16 · v1.4.0 cycle · Task 1b — prose lexicon validator (owner condition on `fast`)
+
+### Acceptance
+
+**Met exactly.** On the 50-document corpus:
+
+| | flags raised |
+|---|---|
+| `fast` (shipping) | `inchided` → `included`, **50/50 documents**, one per document |
+| `best` (control, same 50 documents) | **none** |
+
+Zero correct words flagged in either arm. The control matters more than the
+detection: 50 documents of clinical prose — `appendicular`, `parotid`,
+`radiopharmaceutical`, `Cervical`, procedure descriptors, street addresses —
+and the validator says nothing about any of it.
+
+Both arms measured with the shipped predicates (`isCandidate`, `suggestionFor`
+imported from `src/core/lexicon.js`), not a prototype.
+
+### Corpus re-score
+
+| metric | v1.3.0 baseline | after 1b | |
+|---|---|---|---|
+| grand totals matched | 50/50 | 50/50 | = |
+| all line-item codes found | 49/49 | 49/49 | = |
+| amount on its code's row | 52/52 | 52/52 | = |
+| `#Error` preserved | 50/50 | 50/50 | = |
+| documents with a table | 49/50 | 49/50 | = |
+| silent cases | 0 | 0 | = |
+| headline recovered | 44/50 | 44/50 | = |
+| **value-not-recovered markers** | **6 (== 6 misses)** | **6 (== 6 misses)** | **=** |
+| flags at threshold 70 | 189 (`best`) → 183 (`fast`) | 183 | = |
+| `npm test` | 38/38 | **39/39** | +1 |
+| `verify-extension` | 20/20 | 20/20 | = |
+
+One number moved and it needs saying plainly: **score-export's "documents
+carrying a marker" reads 50/50, up from 6/50.** That row counts *any* `MDFORGE:`
+comment, and 50 documents now carry a lexicon marker. The invariant it is
+usually read as — value-not-recovered markers equal actual misses — is measured
+separately and is **unchanged at 6/6**. The scorer's row is not wrong; it is
+answering a question that now has a different answer.
+
+### What was found
+
+**The suggestion is a separate problem from the detection, and harder.**
+`inchided` is exactly two edits from `included` *and* from `inclined`. A
+dictionary cannot choose between them — both are ordinary English. The first
+build suggested `inclined`, which is worse than useless: a confidently wrong
+correction attached to a real error. Only word frequency separates them, so the
+package carries two lists that answer two different questions:
+
+- `english.txt` — 110,491 words, sorted. *Is this a word?* Includes
+  `appendicular` and `parotid`, which any top-10k list has never heard of.
+- `common.txt` — 8,906 words, **in frequency order, and the order is
+  load-bearing**. *What did they mean?* `included` is rank 871; `inclined` is
+  not in the list at all, so it can never be suggested.
+
+**Four exclusions, each added because it fired on correct text.** The work order
+said tighten the trigger rather than grow a whitelist, and that is what these
+are — none names a word:
+
+| rule | what it stopped | why it is principled |
+|---|---|---|
+| all-caps | `ABSORPTIOMETRY`, `TOMOSYNTHESIS` | procedure descriptors, never prose |
+| internal capital | `TaxID` | identifiers and run-togethers; prose words do not do this |
+| no vowel | `Blvd` → "band" | an abbreviation is not a misspelling |
+| mid-sentence capital | `Richmond` → "richmond", `Trenton` → "preston" | proper nouns, which no dictionary can adjudicate |
+
+Sentence-initial capitals are still checked, so the proper-noun rule costs less
+than a blanket "skip capitals" would. Tokens with digits, table cells and coded
+descriptor lines are excluded too — the value validators already own those.
+
+**A cost worth stating: `TaxID` is no longer surfaced.** It is a genuine `fast`
+regression (`Tax ID:` read as `TaxID:` on 8 documents, at exactly the 70
+confidence threshold, so unflagged). The internal-capital rule silences it.
+Kept anyway, because the alternative was shipping `"TaxID" may be "taxi"` on
+eight documents, and a marker layer that suggests nonsense is a marker layer
+people stop reading. The spacing error is documented in the Task 1 note.
+
+### Size
+
+| file | raw | in package |
+|---|---|---|
+| `vendor/wordlist/english.txt` | 1061 KB | |
+| `vendor/wordlist/common.txt` | 70 KB | |
+| `vendor/wordlist/LICENSE-scowl` | 11 KB | |
+| **total** | | **335 KB — budget 400 KB** |
+
+Package: **5.8 MB → 6.2 MB**. Against the 16.2 MB this cycle started at, the
+size win survives with 65 KB of headroom against the stated budget.
+
+The tier JSONs the lists are built from are deleted at build time rather than
+vendored — shipping both the source and the artifact would have doubled the cost
+of the feature for nothing.
+
+### Licensing
+
+Both sources permit commercial use, which this project requires:
+
+- `wordlist-english@1.2.1` — MIT; word lists are SCOWL, Copyright 2000-2016
+  Kevin Atkinson, whose terms explicitly grant permission to "use, copy, modify,
+  distribute and sell these word lists". `LICENSE-scowl` is vendored.
+- `most-common-words-by-language@3.0.14` — MIT **declared in `package.json`;
+  the package ships no LICENSE file**, so there is no license text to vendor.
+  Recorded in `VERSIONS.json` in exactly those words rather than as a bare
+  "MIT", so the notices do not imply a file that does not exist.
+
+### Cost when the check does not apply
+
+The lists load lazily and only for OCR'd documents — `validateDocument` now
+takes `ocr` and skips the whole path otherwise. A converted Word document never
+fetches a megabyte of word lists. `validateDocument` became async; there is one
+caller.
+
+### Fixtures added
+
+- `prose-lexicon` (11 assertions) — the real strings from the corpus. Asserts
+  `inchided` is flagged **with `included` as the suggestion**, that exactly one
+  prose flag is raised, that `Cervical`, `parotid`, `appendicular`, an all-caps
+  descriptor, `Richmond`, `Trenton` and a coded table row are all silent, that a
+  marker is attached at the flagged paragraph naming the token, that the text is
+  **not rewritten**, and that the check does not run when the document was not
+  OCR'd.
+
+### Invariants I was tempted to break and didn't
+
+**Growing a whitelist.** `Blvd`, `Richmond` and `Trenton` would each have been
+one line in an exceptions list, and the work order pre-emptively forbade it.
+Every one became a rule about the *shape* of the token instead, which is why the
+`best` control is silent on 50 documents rather than silent on the four cases I
+happened to see.
+
+**Shipping a suggestion I knew was wrong.** `inclined` passed the acceptance bar
+as literally written — `inchided` was flagged, 50/50, no correct words flagged.
+The bar did not mention suggestion quality. Attaching a wrong correction to a
+real error is worse than not flagging it, so this cost a second dependency.
+
+### The boundary, recorded
+
+README's "When to trust the output" gains **"What no automated check can
+catch"**: a misreading that produces a different *real* word is invisible to
+every validator here and always will be — "from" as "form", "1" as "7". Nothing
+looks unusual because nothing is unusual. The flag layer narrows the risk; it
+does not eliminate it, and **convert for reading, verify against the original**
+remains the last line of defense.
+
+### Gates
+
+`npm test` 39/39 · `verify-extension` 20/20 · `npm run check` green ·
+`npm run package` → 6.2 MB. Version remains 1.3.0; the bump is Task 5.
+
+---
+
+## 2026-08-16 · v1.4.0 cycle · Task 1 — tessdata_fast, verified
+
+### Verdict
+
+**Every specified number holds or improves, so by the work order's rule `fast`
+ships.** The install goes **16.2 MB → 5.8 MB** (−64%) and the test suite runs
+5.9s → 3.5s (−41%).
+
+But the specified metric set measures money, codes, tables, markers and flags —
+it does not measure prose, and prose changed. That is reported in full below
+rather than left to the numbers, because the rule's stated purpose is "do not
+ship a regression to hit a size target" and there is a regression the rule does
+not look at. The decision is the owner's; the evidence is here either way.
+
+### Before / after — the specified suite
+
+Both arms are full 50-document corpus runs on the same code, same corpus, same
+scorer. The only thing that differs between them is `eng.traineddata.gz`: of 228
+vendored files, exactly two changed (the pack and `VERSIONS.json`), verified by
+SHA-256 across the whole tree.
+
+| metric | v1.3.0 (`best`) | `fast` | |
+|---|---|---|---|
+| grand totals matched | 50/50 | 50/50 | = |
+| all line-item codes found | 49/49 | 49/49 | = |
+| amount on its code's row | 52/52 | 52/52 | = |
+| `#Error` preserved | 50/50 | 50/50 | = |
+| documents with a table | 49/50 | 49/50 | = |
+| `table_fallback` notes | 1 | 1 | = |
+| silent cases (no table, no note) | 0 | 0 | = |
+| headline total recovered | 44/50 | 44/50 | = |
+| documents carrying a marker | 6 | 6 | = |
+| markers == misses | yes (6/6) | yes (6/6) | = |
+| flags at threshold 70 | 189 | 183 | −6 |
+| mean OCR confidence | 94.3 | 94.6 | +0.3 |
+| missing conversions | 0 | 0 | = |
+| **packaged zip** | **16.2 MB** | **5.8 MB** | **−10.4 MB** |
+| `npm test` | 38/38 (5.9s) | 38/38 (3.5s) | = |
+| `verify-extension` | 20/20 | 20/20 | = |
+
+The marker set, the no-table set and the headline-miss set are the *same six
+files* in both arms — (37) (38) (39) (40) (41) (46). Nothing moved between
+categories.
+
+### What the metrics do not measure
+
+All 50 emitted documents differ textually between the two packs. Enumerated,
+they collapse to six distinct patterns — the corpus is one template repeated, so
+these are systematic differences, not 112 independent errors. Blast radius is
+still 100% where noted.
+
+**Regressions under `fast`:**
+
+| change | files | confidence | flagged? |
+|---|---|---|---|
+| `included` → `inchided` | 50/50 | 55–66 | **yes** |
+| `care;` → `care:` | 50/50 | 74–75 | no |
+| `Tax ID:` → `TaxID:` | 8/50 | 70 | no (exactly at threshold) |
+| `EXTREMITY` → `EXTREMITY:` | 3/50 | — | — |
+| `TOMOGRAPHY` → `TOMOGRAPHY,` | 1/50 | — | — |
+
+**Improvements under `fast`:**
+
+| change | files |
+|---|---|
+| `Cenvical` → **`Cervical`** | 1/50 |
+| `12:41PM` → `12:41 PM` | 1/50 |
+
+Three things worth stating plainly:
+
+1. **The one genuine word corruption is caught.** `inchided` scores 55–66,
+   under the shipped threshold of 70, so it ships flagged. The product's core
+   promise — that it tells you what it was unsure about — holds on the very
+   error this switch introduces.
+2. **`best` is not clean either.** `fast` *fixes* `Cenvical` → `Cervical`, which
+   the v1.3.0 Task 1 note logged as "a manifest misread of Cervical" and left
+   standing. That is a clinical term; `inchided` is boilerplate. Neither pack is
+   error-free, and they are not wrong about the same things.
+3. **The unflagged drift is punctuation and spacing**, not values: a semicolon
+   read as a colon, a lost space in a label. No amount, code, date or identifier
+   changed in any of the 50 documents — that is what the 52/52 and 50/50 rows
+   above are asserting.
+
+**Recommendation: ship `fast`.** The rule's condition is met, no extracted value
+moved, the one real word corruption is flagged, and 10.4 MB is the difference
+between a consumer install and a hostile one.
+
+**What would flip it:** if a 100%-blast-radius prose corruption is unacceptable
+in a product sold on conversion fidelity, revert. That is a legitimate call and
+the numbers do not make it for you. Reverting is one command —
+`rm vendor/tessdata/eng.traineddata.gz && node scripts/fetch-vendor.mjs --quality best`
+— and costs 10.4 MB, 2.4s of suite time, and `Cervical`.
+
+### The trap that would have made this measurement a lie
+
+`scripts/fetch-vendor.mjs` cached language data **by filename alone**. Running
+`--quality fast` over an existing `best` pack logged `(cached)`, kept the 12 MB
+`best` file, and rewrote `VERSIONS.json` to say `tessdata_fast`. The build would
+have shipped one pack while its manifest and third-party notices named another —
+an accuracy problem and a licensing problem at once, with nothing raising a hand.
+
+I hit this on the first attempt and only caught it because the reported download
+size (`1.97 MB`) is one of the few places the two packs are distinguishable at a
+glance. Had I not deleted the file by hand, every number in the table above would
+have been `best` measured twice and reported as a comparison.
+
+Fixed two ways:
+
+- The cache is now keyed by quality. `vendor/tessdata/.quality` records which
+  pack is on disk; a different `--quality` deletes the language data and
+  refetches. Verified by stamping `.quality=best` over `fast` data and running
+  `--quality fast`: it logged `quality changed (best -> fast) — refetching` and
+  re-downloaded.
+- `npm run check` now fails if the pack on disk disagrees with `VERSIONS.json`,
+  and prints `OCR pack: tessdata_fast` when they agree. Verified by editing the
+  manifest to claim `tessdata_best` against `fast` data — the check failed with
+  the fix instructions. Restored, green again.
+
+### Other vendor weight
+
+Requested during real conversions, logged at the HTTP layer so every context
+counts (the main page's resource timeline misses anything the pdf.js worker
+fetches, which is exactly the assets in question):
+
+| asset | size | requested? |
+|---|---|---|
+| `pdfjs/pdf.min.mjs` + `pdf.worker.min.mjs` | 1.65 MB | yes, every PDF |
+| `tesseract/*` core + worker | 3.1 MB | yes, every scan |
+| `tessdata/eng.traineddata.gz` | 1.9 MB | yes, every scan |
+| `pdfjs/cmaps` | 1.6 MB | **never** |
+| `pdfjs/standard_fonts` | 800 KB | **never** |
+| `pdfjs/wasm` | 1.5 MB | **never** |
+
+That is 3.9 MB — 24% of the *old* package, and now a much larger share of a
+5.8 MB one — untouched across 53 conversions: all 50 corpus scans, a text-layer
+`sample.pdf`, and a hand-built PDF referencing Helvetica without embedding it
+(which pdf.js rendered from a fallback rather than fetching the pack).
+
+**This is not proof they are dead.** All three are demand-loaded: cmaps for CJK
+and other non-Latin encodings, standard_fonts for the 14 base fonts when a
+producer omits them, wasm for JPEG2000/JBIG2 image streams. I could not build a
+document that triggers any of them, which bounds what I can claim: nothing in
+reach needs them, and I did not establish that nothing does. Removing them would
+trade 3.9 MB for "works on PDFs like ours" instead of "works on PDFs" —
+a product decision, not a cleanup. `--no-cmaps` already exists for whoever makes
+it. **Recommend leaving them in**; flagging the number because at 5.8 MB total it
+is now the largest remaining lever.
+
+### Fixtures added
+
+- `npm run check` pack-vs-manifest rule — the durable guard, verified in both
+  directions (deliberate mismatch fails with instructions; agreement passes).
+- `vendor/tessdata/.quality` + quality-keyed refetch in `fetch-vendor.mjs`,
+  verified by forcing a stale stamp.
+
+No harness case for the pack swap itself: it changes data, not code, and its
+test is the 50-document re-score above. The check rule is what stops the *wrong*
+pack shipping, which is the failure mode that actually threatened this task.
+
+### Invariants I was tempted to break and didn't
+
+**Reporting "all specified numbers hold" and stopping.** That sentence is true,
+it is what the work order asked for, and it would have shipped a change that
+corrupts a word in 100% of the corpus without the owner ever seeing it. A metric
+set is a lens, not the territory; when a change is invisible to every metric you
+have, that is a fact about the metrics.
+
+**Letting the size target pick the framing.** 16.2 → 5.8 MB is the headline this
+task wants, and I had it before I ran the text diff. The diff is the part of this
+note that could have gone unwritten.
+
+### Gates
+
+`npm test` 38/38 · `verify-extension` 20/20 · `npm run check` green ·
+`npm run package` → 5.8 MB. Version remains 1.3.0; the bump to 1.4.0 is Task 5.
+
+---
+
+## 2026-08-15 · v1.3.0 cycle · Task 5 — the extension loaded in Chrome
+
+### What was found
+
+**Chrome will no longer load an unpacked extension from the command line while
+remote debugging is on.** `--load-extension` is silently ignored on Chrome 151 —
+no error, the extension simply is not there. `--disable-features=DisableLoadExtensionCommandLineSwitch`
+and `--enable-unsafe-extension-debugging` do not restore it. The supported route
+is the CDP `Extensions.loadUnpacked` command, which is what the "Load unpacked"
+button calls. That is what the harness uses.
+
+**Everything in the MV3 wiring works.** This is the first time any of it has run:
+`npm test` serves the extension's real CSP through a dev server, which covers the
+conversion engine and the UI but cannot cover a service worker, a context menu,
+`chrome.storage.session`, or a permission gate, because none of those exist
+outside an installed extension.
+
+### Pass/fail per path
+
+| path | result | evidence |
+|---|---|---|
+| extension loads unpacked | PASS | installs, id assigned |
+| service worker registers | PASS | `service_worker` target for `src/background/service-worker.js` |
+| context menu `mdforge-page` | PASS | `contextMenus.update` resolves |
+| context menu `mdforge-selection` | PASS | `contextMenus.update` resolves |
+| context menu `mdforge-link` | PASS | `contextMenus.update` resolves |
+| context menu `mdforge-open` | PASS | `contextMenus.update` resolves |
+| `chrome.storage.session` read/write/remove | PASS | round trip, then cleared |
+| page capture denied without activeTab | PASS | Chrome refuses; no ambient host permission |
+| app consumes `?job=` from `storage.session` | PASS | handed-off HTML renders in the queue |
+| app clears the job after reading it | PASS | key gone from session storage |
+| optional host permission declared, not pre-granted | PASS | `contains=false`, `["http://*/*","https://*/*"]` |
+| "Convert linked file" gates on a user gesture | PASS | `permissions.request` refuses without one |
+| "Convert linked file" rejects non-http schemes | PASS | `ftp://` rejected |
+| popup renders all four entries | PASS | `open`/`page`/`selection`/`settings` present |
+| popup "Convert files…" | PASS | opens `app.html` |
+| popup "Settings" | PASS | opens `app.html?settings=1` |
+| popup "Convert this page" | PASS | reaches the worker, gets a reply |
+| popup "Convert selection" | PASS | reaches the worker, gets a reply |
+| tab capture writes a job | PASS | test build; 160 chars captured and stored |
+| **real corpus PDF end to end through the UI** | **PASS** | 2,210 chars, total and table present |
+
+**20/20**, stable across repeated runs.
+
+The end-to-end conversion is the one that matters most: GFE (47) dropped into the
+app produced output **byte-identical to the audit pipeline's** for the same file,
+except the `generator` line — the extension reads its name and version from the
+manifest, the audit harness has none. Same table, same five columns, same
+`$151.00`. The corpus numbers and what a user actually gets are the same thing.
+
+### The one path that cannot be driven headlessly, and what was done about it
+
+`chrome.scripting.executeScript` needs `activeTab`, which Chrome grants only on a
+real toolbar click or context-menu selection. CDP cannot synthesise either — a
+native menu is not in the page. Two things were done rather than leaving a hole:
+
+1. The assertion was **inverted into a security check**. The shipped manifest
+   requests no host permissions, so capture *must* be denied without a gesture.
+   If it ever succeeds, the extension has gained a host permission it should not
+   have. That is worth catching, and a plain FAIL row would not have caught it.
+2. The product logic behind the gate is proven against a **throwaway copy of the
+   extension** carrying `host_permissions: ["http://localhost/*"]`, built into a
+   temp directory by the harness itself. It captured 160 chars of a real page and
+   stored the job. This proves `extractDocument`, the `storage.session` write and
+   the app render; it does not prove the `activeTab` grant, which is Chrome's to
+   enforce and is stated as such.
+
+### What changed in the repo
+
+- `scripts/verify-extension.mjs` — the harness, committed rather than discarded.
+  STATUS §4 has said "the extension has never been loaded in Chrome by me" since
+  v1.0.0; a one-off run would have made that sentence false without making it
+  stay false. `node scripts/verify-extension.mjs <a.pdf>` reruns all 20 checks
+  and exits non-zero on any failure.
+
+### Harness bugs found and fixed — all the same bug
+
+Three checks failed on first run and **none of them were product defects**:
+
+- A service worker cannot `chrome.runtime.sendMessage` to itself; the reply is
+  "Receiving end does not exist". The message has to come from the popup, which
+  is where it comes from in the product.
+- The popup calls `window.close()` after each action, so its CDP target dies and
+  every later evaluate against it times out. Each entry now gets a fresh popup.
+- **Twice** — once on the app's file input, once on the popup's buttons — the
+  harness acted on a page whose scripts had not run yet. A `change` event
+  dispatched before `app.js` binds its listener is simply lost, and the file sat
+  in the input for three minutes looking exactly like a conversion that hangs. A
+  click on a button whose handler is not bound does nothing and looks exactly
+  like a broken button. `openTab` now waits for `readyState === 'complete'`, and
+  the file input waits for `init()` to finish.
+
+That is the cycle's lesson in a third form: the first two were a green suite that
+skipped its cases and an A/B whose variable never moved. All three are the same
+mistake — trusting that a step ran because nothing said it didn't.
+
+### Invariant I was tempted to break and didn't
+
+Adding `host_permissions` to the shipped manifest would have turned the one
+failing row green in a line. It would also have handed every install permanent
+read access to every page, to make a test pass. The permission stays optional and
+the test build stays a temp directory that is never packaged.
+
+---
+
+## 2026-08-15 · v1.3.0 cycle · Task 4 — table detection rebuilt around column clustering
+
+### What was found
+
+**The PSM 3 vs PSM 6 A/B cannot be run through the shipped engine, and the answer would have been "stay on 3" regardless.**
+
+I threaded `ocrPageSegMode` through `options -> pdf.js -> ocr.js` and ran the full
+corpus under PSM 6. Every metric came back identical to PSM 3 — including mean
+confidence to one decimal. That is not a result, so I checked: all 50 emitted
+files differed only in their `converted:` timestamp. Direct measurement on one
+corpus page, same pixels, fresh worker per arm:
+
+| worker configuration                                       | chars | text hash    |
+|------------------------------------------------------------|-------|--------------|
+| bare                                                        | 1630  | -2031342713  |
+| `tessedit_pageseg_mode: 6` only                             | 1630  | -2031342713  |
+| dpi + interword_spaces (what we ship)                       | 1970  | 1969530981   |
+| dpi + interword_spaces + `tessedit_pageseg_mode: 6`         | 1970  | 1969530981   |
+
+PSM is accepted and discarded by tesseract.js 6.0.1. Setting it as
+`createWorker`'s init config is inert too — same hash. `applyParameters` even
+reported `applied: true`. Only the dpi/interword pair moves the output.
+
+So I answered the question on the CLI (tesseract 5.5.3) over the same 50 page
+rasters:
+
+| mode  | "Tax ID:" read intact | "Tax ID" absent entirely | code-leading lines |
+|-------|-----------------------|--------------------------|--------------------|
+| PSM 3 | 48/50                 | 2/50                     | 93                 |
+| PSM 6 | 0/50                  | 50/50                    | 93                 |
+
+PSM 6 glues the token into `TaxID:` on all 50 and reads no more line-item codes.
+It makes the disputed token worse, not better. **Verdict: stay on PSM 3**, on two
+independent grounds. I removed the plumbing rather than ship a knob that
+provably does nothing, and recorded the measurement in a comment at
+`src/core/ocr.js:73` so it is not re-added.
+
+This also corrects an earlier attribution of mine: the 24→60 confidence swing I
+had ascribed to PSM cannot have come from PSM through `setParameters`.
+
+**GFE (49)'s table was corrupted by the rescue pass, not by clustering.**
+The crop that re-reads unread ink recognizes *every* pixel inside it, including
+ink the first pass had already read correctly. It returned `$1,932.00` a second
+time as `$1.9` + `32.00` at identical coordinates, and both were appended to the
+row. The `seen` set could not catch it because a misread does not equal what it
+duplicates. Corpus-wide: 1/50 files affected, 8 duplicate words, all in (49) —
+and all 8 of that file's rescue words were duplicates, so the rescue pass
+contributed nothing there but corruption.
+
+**47 of 50 documents produced no table despite clean geometry.** Two causes,
+both in code that predates this cycle:
+
+1. `isWrappedCell` bounded a wrapped continuation by the *previous fragment's*
+   right edge. Wrapped description text is ragged — on (47) the four wrapped
+   lines' right edges vary by 75 units — so a continuation one word longer than
+   the line above ended the table. The `runLeft` parameter that should have
+   answered this was passed in and never used.
+2. `buildTable` dropped any column occupying under 60% of the rows. A form's
+   service-date column is sparse by design (printed once, blank on the line
+   items below). Dropping it made that row's two cells both fall into the
+   description column, collapsing it to one filled cell, which failed the "a row
+   needs two columns" test and rejected the entire table.
+
+Cause 2 is also why (43) and (44) emitted their *first line item as the header
+row*: the run containing the real header failed, the scan resumed below it, and
+`rows.length > 2` promoted whatever came first.
+
+### What changed
+
+- `dropAlreadyRead(lines, readWords)` — discards recovered words sitting on more
+  than half their own area over an already-read word. Geometric, because text
+  comparison cannot see a misread duplicate.
+- `findUnrecognizedInk` — a gap region shorter than the page's own median word
+  height is not flagged. Derived from measurement, not tuned: (49)'s four false
+  slivers are the only regions in the corpus below one line height (0.73x); all
+  six real misses sit at 2.91x.
+- `isWrappedCell(line, previous, row)` — a fragment now belongs to the row above
+  when it starts under one of that row's cells and stops before the next one.
+  Ragged right edges become normal; crossing a column boundary does not. Prose
+  after the table is still excluded, because it starts at the page margin, left
+  of every cell.
+- `buildTable` — a column is a position where at least two cells align.
+- `detectTables` returns `unresolved`, surfaced as `table_fallback: N` in front
+  matter, so a lost table is never silent.
+
+### Before / after
+
+| metric                          | before (v1.3.0 start) | after  |
+|---------------------------------|-----------------------|--------|
+| grand totals matched            | 50/50                 | 50/50  |
+| all line-item codes found       | 49/49                 | 49/49  |
+| amount on its code's row        | 52/52                 | 52/52  |
+| `#Error` preserved              | 50/50                 | 50/50  |
+| documents with a table          | 3/50                  | 49/50  |
+| documents carrying a marker     | 6/50                  | 6/50   |
+| silent cases (no table, no note)| 47/50                 | 0/50   |
+
+Markers still equal misses exactly, at 6. `npm test` 38/38.
+
+Named targets: (47) tables, with both procedure descriptions intact across their
+four wrapped lines. (43), (44) and (49) survive row-for-row — every row they had
+is still present, plus the header and service-date rows they were previously
+missing. (49) is additionally clean of the `$1.9`/`32.00` corruption.
+
+### Fixtures added
+
+- `ocr-rescue-dedup` — the re-read money column, pinned at GFE (49)'s measured
+  coordinates, plus a genuinely new word that must survive and an empty-read-set
+  case that must drop nothing.
+
+The old table regression fixtures (`billing-form.pdf`, `suspect-invoice.html`,
+`shaded-callout.pdf`, `corpus-callout.pdf`) all pass against the new detector.
+
+### Invariants I was tempted to break and didn't
+
+**Clearing (49)'s false marker by trusting the rescue's own output.** My first
+fix treated "the crop returned only already-read words" as proof the region was
+not a gap. It cleared (49) — and also cleared GFE (46), whose crop returns only
+the already-read label because it fails to read the `$0.00` beside it. That took
+markers to 5 and left (46) as an unmarked miss: the value absent, the flag gone.
+The signal proves the crop found nothing new, not that there *is* nothing new. I
+reverted it and moved the decision to ink coverage, where it belongs.
+
+**Forcing a table onto GFE (46).** It is a zero-charge research scan with no line
+item — one total row, so its money columns appear exactly once and nothing can
+align to them. Making its header labels cluster with its data would have meant
+either an 8-column grid with labels and figures in different columns, or a
+2-column table merging `Total Estimated Costs 0 $0.00 $0.00` into one cell. It
+gets `table_fallback: 1` instead. 49/50 with one characterized exception, not
+50/50 with a fabricated grid.
+
+### Harness defect found and fixed
+
+While adding the fixture I mistyped a helper name. The suite printed
+**`✓ 30/30 cases passed`** — green, having silently skipped eight cases including
+every OCR document, because the cases were awaited in a straight line and one
+throw aborted the rest. Each hand-written case now runs isolated, and a case that
+fails to register is recorded as a failure. Verified by deliberately throwing in
+one case: 37/38 with the remaining cases still running. This is the "never trust
+a green npm test alone" ground rule made literal — the run I would have trusted
+was the run that skipped the tests that mattered.
+
+### Lesson for the record
+
+The PSM A/B produced identical numbers across 50 files and I nearly reported that
+as a finding. A measurement that shows *no* difference needs the same suspicion
+as one that shows a large one: the first thing to check is whether the
+independent variable moved at all. It had not.
+
+---
+
+## 2026-08-15 · v1.3.0 cycle · Task 3 follow-ups
+
+### Recovered-value validation — clean
+
+The crop rescue injects prominent standalone figures read at ~77 confidence,
+with nothing checking them. It now has a check: a headline figure that matches
+**none** of the totals stated elsewhere on the page is flagged. Never
+reconciled — picking a winner between two disagreeing figures would be
+rewriting a value.
+
+Reported once, as required:
+
+| | result |
+| --- | --- |
+| rescued headline values compared to ground truth | **43 / 43 exact** |
+| mismatches | **0** |
+| headline-vs-total flags raised on the corpus | **0** |
+
+GFE (49)'s figure is the 44th recovery but was read by the *primary* pass, so it
+carries no `rescue` tag — the 44 = 43 rescued + 1 primary.
+
+Scoping mattered: the first implementation treated **table cells** as headline
+figures and immediately broke `suspect-invoice` by flagging a correct `$40.00`
+against a `$95.00` total. A headline is a heading or a standalone paragraph;
+cells are the column and total checks' business.
+
+Fixtures: **`headline-mismatch.html`** (disagreement is flagged and the figure
+left untouched) and **`headline-agrees.html`** (agreement raises nothing — a
+validator that fires here would be worse than none).
+
+### GFE (46) — settled by owner ruling
+
+The `$0.00` is a **real printed value**: a zero-charge research scan quoted at
+zero by design. It is therefore a genuine printed value that went unread, and
+counts as a **miss**, correctly marked — exactly like the other five short-value
+misses. The headline denominator stays 50, the miss set stays 6, and no special
+case enters the code or the ground truth. Recorded so the next measurement does
+not reopen it.
+
+### Marker invariant restated
+
+Owner-confirmed and now binding: **markers == misses, exactly** — every genuine
+miss carries a marker, and no recovered page carries one. Today: 6 misses, 6
+markers. The superseded "must not drop below 49/50" floor is struck from the
+work order's Task 3 acceptance and from STATUS §3.3.
+
+### Documents corrected
+
+`STATUS.md` §3.3 and §3.4 were materially wrong — §3.3 asserted a contrast
+theory that has been disproven and a regression that never happened, §3.4 left
+the confidence gap unexplained. Both now summarise the findings and point here.
+
+Scored metrics after all of the above: **50/50 · 49/49 · 52/52 · 50/50 · 3/50**.
+`npm test`: **37/37**.
+
+---
+
+## 2026-08-15 · v1.3.0 cycle · Task 3 — the shaded-callout miss
+
+### What was found — three things, and two of them correct my own prior reports
+
+**1. The premise was wrong: it is not a shaded callout.** Cropping the flagged
+region from a corpus raster shows large crisp black text on near-white paper
+(background levels 247–251, text 0) reading `Total Estimated Costs:` / `$226.00`.
+Nothing about it is faint. The whole contrast theory — mine, from the isolated
+`#d8d8d8` experiment — does not apply to this corpus.
+
+**2. The real cause is page-level layout analysis, not pixels.** On the same
+saved raster:
+
+| read | emits the headline figure |
+| --- | --- |
+| tesseract.js 6.0.1, whole page | **no** |
+| CLI tesseract 5.5.3, whole page, PSM 3 | **yes** (`$226.00`, line 1) |
+| tesseract.js 6.0.1, **region cropped out** | **yes**, confidence 77 |
+
+Tesseract decides which blocks are text before recognizing any of them, and it
+discards that block. The same pixels handed over without the surrounding page
+read correctly. Cropping is the cure; contrast was never the disease.
+
+**3. A separate defect was inflating everything: the ink detector counts dark
+pixels.** The document title is reversed out — white text on a solid black bar.
+The bar is ~48% "ink", word boxes cover only the white glyphs, and the leftover
+was reported as a large unread region. Consequences, all now fixed: a
+"value not recovered" marker on **48 pages that were missing nothing**, and a
+**duplicate title line in all 50 files** when the rescue re-read the banner. The
+stray `Ho` token flagged at confidence 9 in Task 1 is the small white square at
+that bar's right end — a true positive, now explained.
+
+### Corrections to my own earlier reports
+
+- STATUS §3.3 said **0/50** headline recovery. Mid-task I "corrected" this to
+  48/50 and was **wrong** — that measurement counted the *table's* total row,
+  which in the 47 files without a Markdown table is an ordinary paragraph line
+  and slipped past a "not a `|` row" test. Measured from word geometry, the
+  pre-task figure is **1/50**. STATUS was right; my correction was not.
+- **There was no v1.1.0 → v1.2.0 regression.** Both builds recover exactly one
+  file (GFE 49, the widest headline). The reported "1 → 0" was the same broken
+  metric. The explanation of why (49) succeeds where others fail still holds and
+  now has a mechanism: it is the widest figure, so its unread-ink region is
+  large enough to survive the detector's thresholds.
+
+### Fix — one branch, as instructed
+
+Branch identified: *region flagged, re-read returns nothing*. Two changes:
+
+1. **Ink detector**: a region containing two or more already-recognized words is
+   text we read, and its surrounding dark is background. Containment, not area
+   coverage — glyphs are a small fraction of a filled bar however the ink is
+   counted, and area-based rules either kept the banner or dismissed a genuine
+   scrawl beside a paragraph.
+2. **Rescue**: crop each flagged region and re-read it in isolation, with
+   contrast boost only as a second attempt if the plain crop returns nothing.
+   Padding is proportional to region height — a fixed margin recovered `.00`,
+   then `26.00`, before landing on `$226.00`. Recovered text must contain two
+   alphanumerics and score ≥ 40, so a signature or smudge cannot "recover" a
+   region and silently remove its marker.
+
+### Results on the 50-document corpus
+
+| | before | after |
+| --- | --- | --- |
+| headline value read in the callout band | **1/50** | **44/50** (43 via the rescue) |
+| misses left unmarked | 0 | **0** |
+| files carrying a marker | 50/50 | 6/50 |
+| duplicate title line | 50/50 | **0/50** |
+
+The 6 remaining misses — GFE (37) (38) (39) (40) (41) (46) — are all *short*
+values (`$50.00`, `$40.00`, `$0.00`): the region is flagged, the crop is
+attempted, and it returns nothing. Characterized, not fixed. Note GFE (46)
+legitimately quotes `$0.00` per the ground truth's own caveat, so it may not be
+a miss at all.
+
+### Acceptance criterion I could not meet, and why
+
+The work order sets a floor: *"the marker rate must not drop below 49/50."* It
+is now **6/50**. That floor was written on the premise that 49 files are misses;
+the measurement shows 44 of them are now recoveries. Holding 49/50 would mean
+re-introducing 44 markers on pages that are missing nothing — the false-alarm
+problem Task 1 measured, which trains people to ignore flags.
+
+The invariant the floor protects is intact and asserted directly: **every miss
+is marked, 6/6, zero silent.** I did not weaken the assertion; I am reporting
+that its stated form no longer matches the corpus and asking for the substitute
+(*all misses marked*) to be confirmed.
+
+### Score table
+
+| metric | baseline | after Task 3 |
+| --- | --- | --- |
+| grand totals | 50/50 | **50/50** |
+| line-item codes | 49/49 | **49/49** |
+| amount on code's row | 52/52 | **52/52** |
+| `#Error` | 50/50 | **50/50** |
+| real tables | ≥3/50 | **3/50** |
+
+`npm test`: **35/35**.
+
+### Fixtures added
+
+- **`inverted-banner.pdf`** — white text on a black bar plus the stray white
+  block; asserts no unread-ink region, no spurious marker, and the title read
+  once rather than twice. Reproduced RED before the fix.
+- **`corpus-callout.pdf`** — a real corpus page
+  (`test/fixtures/callout-page.png`, synthetic documents per the owner). It has
+  to be the *whole* page: the failure is page-level layout analysis, so a
+  cropped fixture cannot reproduce it — cropping is the remedy. Reproduced RED,
+  now recovers the figure.
+- **§3.5 rider** — `shaded-callout.pdf` gained an unreadable-scrawl region so
+  the marker path is exercised deliberately rather than believed fixed "as a
+  side effect", plus the recovered-text quality gate that stops garbage from
+  clearing a marker.
+
+### Housekeeping answers from Task 1
+
+**Full 10-token flag table** (the earlier prose summed loosely; the table
+reconciles exactly to 266):
+
+| token | n | median | files | distinct bbox | tier |
+| --- | --- | --- | --- | --- | --- |
+| `Items` | 100 | 59 | 50 | 1 | 2 |
+| `Tax` | 50 | 24 | 50 | 1 | 2 |
+| `ID:` | 50 | 24 | 50 | 1 | 2 |
+| `Ho` | 50 | 9 | 50 | 1 | 2 |
+| `04-3642199` | 11 | 58 | 11 | 1 | 3 |
+| `Cenvical` | 1 | 60 | 1 | 1 | 3 |
+| `PAROTID),` | 1 | 62 | 1 | 1 | 3 |
+| `Quantity` | 1 | 33 | 1 | 1 | 3 |
+| `PM` | 1 | 56 | 1 | 1 | 1 |
+| `Cervical` | 1 | 56 | 1 | 1 | 3 |
+
+100+50+50+50+11+1+1+1+1+1 = **266**.
+
+**`Cenvical` reclassified.** Cropping its bbox from the raster shows the source
+reads **"Cervical Spine WO"** — a genuine misread, correctly flagged. Moved from
+unverifiable to **verified incorrect**. The same method settled `04-3642199`:
+the crop reads `Tax ID: 04-3642199`, so all 11 of its flags are **verified
+correct** (false positives). Revised: **correct 212 · incorrect 51 ·
+unverifiable 3** (`PAROTID),`, `Quantity`, `Cervical`).
+
+**CLI residual closed.** `tesseract 5.5.3` (leptonica 1.87.0), installed for the
+probe. On our own rasters at PSM 6 it emits **`TaxID:` as a single token at
+66.8** — it never produces `Tax` as a word at all. The reviewer's "Tax = 96" is
+therefore not a measurement of that token; the ~96 in that region belongs to
+`provider` (96.4). Where both engines emit the same token, CLI scores 8–25
+points higher (`U.S.` 94.5 vs 87, `Items` 84.8 vs 59), and it is not uniformly
+better — it reads `included` as `inchided` (74.5), which we get right. A
+finding, not a fix: nothing in the pipeline changed for it.
+
+**Confound noted for the record:** rasters dumped before this task were captured
+*after* the old whole-page contrast pass mutated the canvas, so those PNGs were
+contrast-normalized. Engine-vs-engine comparisons used the same PNG on both
+sides and are unaffected; the shipped-pipeline confidences came from the
+unmutated image. The new crop-based rescue no longer mutates the page canvas, so
+dumped rasters are now the true render.
+
+### Invariant I was tempted to break and didn't
+
+Accepting whatever the crop re-read returned. Dropping the quality gate would
+have "recovered" the scrawl fixture's region and pushed the marker count lower —
+better-looking numbers, achieved by deleting a warning that a human needs. The
+gate stays, and the scrawl stays flagged.
+
+---
+
+## 2026-08-15 · v1.3.0 cycle · Task 2 — spurious deep headings
+
+### What was found
+
+The fixture caught something before the guard existed: on my rendered fixture
+**the document title itself came out as `###`**. The work order's rule as
+written — "no heading deeper than `##` on an OCR'd page" — would have deleted
+legitimate titles wherever the size ratio only reaches h3, violating criterion 2.
+So depth is **clamped**, not rejected, and removal is done by shape predicates.
+All 6 corpus fragments are caught by the predicates alone; the clamp is a floor
+for everything else.
+
+Rules live as data in `OCR_HEADING_REJECTIONS`: `opens-mid-parenthetical`,
+`unbalanced-brackets`, `leading-date`, `uppercase-descriptor-fragment` (requires
+a bracket, so `DETAILS OF SERVICES AND CHARGES` survives).
+
+### Heading diff — every change accounted for
+
+```
+headings  before: 107   after: 101
+depth>=3  before:   6   after:   0
+
+-2  "#### MATERIAL(S)"
+-1  "#### 08-14-2026 CT Angiography Coronary (Coronary CTA/CCTA)"
+-1  "#### (EG, FOR FOLLICLES)"
+-1  "#### (Forearm)/Wrist/Heel (Appendicular)"
+-1  "#### HEEL)"
+```
+
+**6 removed, 0 added, 0 legitimate headings lost.** All fragment text survives as
+content — verified per file: `MATERIAL(S)`, `FOLLICLES`, `HEEL`,
+`CT Angiography Coronary` all still present.
+
+### Score table — unchanged
+
+| metric | before | after |
+| --- | --- | --- |
+| grand totals | 50/50 | **50/50** |
+| line-item codes | 49/49 | **49/49** |
+| amount on code's row | 52/52 | **52/52** |
+| `#Error` | 50/50 | **50/50** |
+| real tables | 3/50 | **3/50** |
+
+`npm test`: **33/33**.
+
+### Fixtures added
+
+- **`ocr-heading-rejection`** — the five observed corpus strings pinned
+  verbatim, asserting each is rejected *and* names its rule, plus six legitimate
+  headings that must survive. The rendered fixture can't reliably reproduce the
+  promotion (it depends on OCR mis-measuring glyph height), so the observed
+  strings *are* the reproduction.
+- **`fragment-headings.pdf`** — a rendered 96 dpi table with three awkward wrap
+  shapes, asserting no `###`, the title survives, and fragments remain as
+  content.
+
+### Runner defect (separate, as instructed)
+
+Reports now go to `<emit>/reports/`, not the repo root. Worth noting: my first
+attempt wrote them *beside* the conversions, and the heading diff immediately
+read `audit-report.md` as if it were a converted document — inflating the count
+by 51. The subdirectory is a direct consequence of that.
+
+### Invariant I was tempted to break and didn't
+
+Implementing the work order's depth rule literally. It would have made the 6
+fragments vanish and passed criterion 1 — while silently demoting real titles to
+paragraphs on any document where OCR sizes them lower. I changed the mechanism
+rather than weakening the assertion, and reported it.
+
+---
+
+## 2026-08-15 · v1.3.0 cycle · Task 1 — the confidence discrepancy
+
+### 1. The 1-vs-96 explanation
+
+**It is page-segmentation mode.** The pipeline genuinely scores `Tax`/`ID:` at
+19–26 on text it reads *correctly* — the number was never mis-plumbed.
+
+Everything below ran on **the same 50 saved rasters** (pixel-identical input,
+`~/mdforge-audit/out/default/*.png`):
+
+| configuration | `Tax` (median) |
+| --- | --- |
+| shipped — PSM 3, tessdata_best, params on | **24** |
+| bare worker — no `user_defined_dpi`, no `preserve_interword_spaces` | **24** |
+| **PSM 6**, tessdata_best | **60** |
+| PSM 3, standard tessdata | 19 |
+| **PSM 6**, standard tessdata | **60** |
+| reviewer's CLI (their render, their engine) | 96 |
+
+- **Parameters: eliminated.** Identical medians on all 8 tokens, shipped vs
+  bare. `preserve_interword_spaces` was the leading hypothesis and is not the
+  cause.
+- **Traineddata: eliminated.** best vs standard is noise. Independently useful:
+  ~11 MB is spent on `best` with no measured benefit on this corpus.
+- **PSM: confirmed, 24 → 60** on identical pixels — most of the gap.
+- **Residual 60 → 96 open at time of writing.** CLI tesseract was not installed,
+  leaving engine build and rasterizer uncontrolled. Rasters saved for exactly
+  that probe.
+- **The repetition is not a bug.** `distinct bbox = 1` across all 50 for `Tax`,
+  `ID:`, `Items`, `Code`, `04-3642199` — boilerplate at identical positions,
+  deterministic engine. Only the level needed explaining.
+
+Versions: tesseract.js **6.0.1**, core **6.1.2**, tessdata_best **4.1.0**.
+
+### 2. Flags at threshold 70, three tiers
+
+**12,881** words with a numeric confidence; **266 flagged (2.1%)** — down from
+417 at threshold 85. Only **10 distinct tokens**.
+
+| tier | flags | verdict |
+| --- | --- | --- |
+| 1 — ground-truth overlap | 1 | correct text (`PM`) |
+| 2 — boilerplate, bbox-identical in all 50 | 250 | **200 correct** (`Items` 100, `Tax` 50, `ID:` 50) + **50 genuinely wrong** (`Ho`, a spurious OCR fragment — a true positive) |
+| 3 — unverifiable | 15 | not extrapolated |
+
+**Correct 201 · incorrect 50 · unverifiable 15.** False-positive rate on
+verifiable flags: **201/251 ≈ 80%**, concentrated in three template tokens.
+
+### 3. Fixes landed
+
+| fix | fixture |
+| --- | --- |
+| `appliedDpi` → `WeakMap` keyed to the worker; `forgetWorker()` clears promise and configuration together | **`ocr-worker-parameters`** — reproduced RED first |
+| `w.confidence ?? 0` → `readWordConfidence()` returning **`null`**, counted and warned once | **`ocr-confidence-shape`** |
+
+### 4. Score table
+
+| metric | baseline | after Task 1 |
+| --- | --- | --- |
+| grand totals | 50/50 | **50/50** |
+| line-item codes | 49/49 | **49/49** |
+| amount on code's row | 52/52 | **52/52** |
+| `#Error` | 50/50 | **50/50** |
+| real tables | ≥3/50 | **3/50** |
+
+**Lesson for the log:** the cleanup verification used
+`find -name '*.md' | grep -iE "good faith"` — that matches **filenames, not
+contents**. A file named `notes.md` full of document text would have passed. The
+correct form is `grep -rilE "good faith|estimate" <dirs>`. Same family as the
+`const`-reassignment lesson: the check tested the thing that was easy to test,
+not the thing that mattered.
+
+---
+
+### APPENDED CORRECTION (2026-08-15, after Task 4) — the PSM attribution is retracted
+
+The original note above is left exactly as written. This corrects one of its
+findings.
+
+Task 4 established by hash comparison that `tessedit_pageseg_mode` is accepted
+and discarded by tesseract.js 6.0.1 — through `setParameters` **and** through
+`createWorker`'s init config. Nothing in this pipeline can vary PSM. The probe
+above therefore had **no controlled variable**: both of its arms set an inert
+parameter, so both arms were the same configuration. **Any difference between
+them is not a PSM effect, and the "PSM moves `Tax` from 24 to 60" finding is
+retracted as not reproducible.**
+
+The probe also has a reporting defect that made this easy to miss: it reads
+several rasters and prints one number per token per arm, so its "psm3 vs psm6"
+columns can differ simply by aggregating different pages. Rerun today over two
+corpus rasters it prints `Items` 81 vs 59 across arms that are configurationally
+identical.
+
+**The 24 → 60 swing itself is real and still reproduces**, so it is recorded here
+as OPEN rather than closed. What it is *not*, each eliminated by measurement:
+
+| candidate | verdict | evidence |
+|---|---|---|
+| page-segmentation mode | **not it** | inert in this engine; byte-identical output both routes |
+| worker parameters (`user_defined_dpi`, `preserve_interword_spaces`) | **not it** | production runs with `parameters: none` and `parameters: default` both read `Tax` at 24; the standalone probe reads 60 under both |
+| the rescue pass injecting a low-confidence re-read | **not it** | every `Tax`/`ID:` instance across all 50 dumps is `source=primary` |
+| PNG round-trip, alpha, or canvas background fill | **not it** | the decoded raster is fully opaque; no-fill and white-fill canvases differ in 0 of 3,446,784 pixels; canvas and blob routes both read 60 |
+
+What remains is that the two paths do not produce the same read at all: on
+GFE (49) the production pipeline recovers **260** primary words from the page it
+rendered, while reading that page's own saved raster standalone recovers **263**.
+Distribution in production is file-dependent — `Tax` scores 24 in 39 of 50
+files, 1 in 10, and 0 in 1 — which a fixed engine setting would not produce.
+
+Named candidate, untested and explicitly not a conclusion: canvas colour
+management. `toDataURL` and `createImageBitmap` are each entitled to apply a
+colour profile, and a ±1 luminance shift across a grayscale page is enough to
+move Tesseract's binarization at the margins. Testing that needs a bit-exact
+comparison of the OCR'd canvas against its own encoded raster, which is more
+than this timebox allows.
+
+**Status: open, with four hypotheses closed.** It is not load-bearing for
+anything shipped — the `Tax = 1` vs `96` closure rests on the CLI tokenization
+evidence (`TaxID:` as a single token at 66.8; the 96 belongs to `provider`),
+which stands on its own. STATUS §3.4 has been corrected to say so.

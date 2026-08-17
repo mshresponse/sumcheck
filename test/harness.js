@@ -1,0 +1,1821 @@
+/**
+ * End-to-end conversion tests.
+ *
+ * Served by scripts/dev-server.mjs under the extension's real CSP, so this
+ * exercises the same constraints the packaged extension runs under: no remote
+ * code, no eval, no blob workers, wasm allowed.
+ *
+ * Results are also left on window.__results for automated inspection.
+ */
+
+import { convertFile } from '../src/core/convert.js';
+import { terminateOcr } from '../src/core/ocr.js';
+
+const has = (needle) => (md) => md.includes(needle) || `missing ${JSON.stringify(needle)}`;
+const lacks = (needle) => (md) => !md.includes(needle) || `should not contain ${JSON.stringify(needle)}`;
+const matches = (re) => (md) => re.test(md) || `no match for ${re}`;
+
+const CASES = [
+  {
+    file: 'sample.pdf',
+    options: { outputs: ['md', 'json'] },
+    checks: {
+      'title from metadata': has('# Quarterly Field Report'),
+      'heading from type size': has('## Summary of Findings'),
+      'second heading': has('## Regional Results'),
+      'paragraph lines merged': has('largest gains recorded in the eastern corridor. Latency remained'),
+      'bullets became a list': matches(/^- Eastern corridor exceeded/m),
+      'numbered list on page 2': matches(/^1\. Extend the eastern corridor pilot/m),
+      'table reconstructed': matches(/\|\s*Region\s*\|/),
+      'table row': matches(/\|\s*East\s*\|\s*18,420\s*\|\s*\+11%\s*\|/),
+      'link annotation kept': has('https://example.com/methodology'),
+      'page marker': has('<!-- page 2 -->'),
+      'running footer removed': lacks('Page 1 of 2'),
+      'front matter': matches(/^---\ntitle: Quarterly Field Report/),
+      'author in front matter': has('author: Operations Team'),
+      'json blocks': (md, r) => {
+        const doc = JSON.parse(r.outputs.find((o) => o.format === 'json').content);
+        return (
+          (doc.schema === 'sumcheck.document/v1' &&
+            doc.blocks.some((b) => b.type === 'table') &&
+            doc.blocks.some((b) => b.type === 'heading' && b.level === 2) &&
+            doc.blocks.some((b) => b.page === 2)) ||
+          `unexpected JSON shape (${doc.blocks.length} blocks)`
+        );
+      },
+    },
+  },
+  {
+    file: 'sample.xlsx',
+    checks: {
+      'sheet heading': has('## Revenue'),
+      'second sheet': has('## Notes'),
+      'header row': matches(/\|\s*Quarter\s*\|\s*Region\s*\|\s*Revenue\s*\|\s*Closed\s*\|/),
+      'numbers preserved': has('18420.5'),
+      'date serial decoded': has('2024-04-01'),
+      'percent format applied': has('42.1%'),
+      'inline string sheet': has('Margin held at 42%.'),
+    },
+  },
+  {
+    file: 'sample.pptx',
+    checks: {
+      'slide title': has('## Platform Review'),
+      'second slide': has('## Reliability'),
+      'bullets': has('- **Headline numbers**'),
+      'nested bullet': matches(/\n\s+- Traffic up 18%/),
+      'speaker notes': has('Remember to mention the migration window.'),
+      'slide table': matches(/\|\s*Uptime\s*\|\s*99\.98%\s*\|/),
+    },
+  },
+  {
+    file: 'sample.epub',
+    checks: {
+      'book title': has('# The Small Book of Conversions'),
+      'author line': has('_A. Writer_'),
+      'chapter heading': has('Chapter One'),
+      'emphasis preserved': has('_malformed_'),
+      'second chapter list': has('- First point'),
+    },
+  },
+  {
+    file: 'sample.docx',
+    // textutil writes bold paragraphs and literal "•" bullets rather than Word
+    // styles — the same shape Pages and Google Docs exports have. This case
+    // exists to prove the structure-repair pass recovers them.
+    checks: {
+      'bold paragraph promoted to heading': matches(/^## Field Notes/m),
+      'second heading': matches(/^## Observations/m),
+      'bold run': has('**bold**'),
+      'italic run': has('_italic_'),
+      'bullet glyphs became a list': has('- The first observation.'),
+      'no stray bullet glyphs': lacks('•'),
+    },
+  },
+  {
+    file: 'sample.rtf',
+    checks: {
+      'body text': has('Field Notes'),
+      'bold survived': has('**bold**'),
+      'bullets recovered': has('- The first observation.'),
+    },
+  },
+  {
+    file: 'sample.odt',
+    checks: {
+      'body text': has('Field Notes'),
+      'observation': has('The first observation.'),
+    },
+  },
+  {
+    file: 'sample.csv',
+    checks: {
+      'header': matches(/\|\s*Region\s*\|\s*Volume\s*\|\s*Change\s*\|/),
+      'quoted comma cell': has('12,905'),
+      'row count': matches(/\|\s*North\s*\|\s*7310\s*\|/),
+    },
+  },
+  {
+    file: 'sample.md',
+    checks: {
+      'source passed through verbatim': has('A paragraph with a [link](https://example.com) and `code`.'),
+      'table untouched': has('| a | b |'),
+      'front matter regenerated': matches(/^---\ntitle:/),
+      'no double front matter': (md) => md.split('---').length <= 3 || 'front matter duplicated',
+    },
+  },
+  {
+    file: 'sample.html',
+    options: { outputs: ['md', 'html', 'txt'] },
+    checks: {
+      'title heading': has('# Article Title'),
+      'subheading': has('## A subheading'),
+      'boilerplate removed': lacks('Copyright notice'),
+      'nav removed': lacks('](/about)'),
+      'table converted': matches(/\|\s*alpha\s*\|\s*1\s*\|/),
+      'standalone html output': (md, r) => {
+        const html = r.outputs.find((o) => o.format === 'html').content;
+        return (
+          (html.startsWith('<!doctype html>') && html.includes('<title>Article Title</title>')) ||
+          'html output is not a standalone document'
+        );
+      },
+      'text output': (md, r) => {
+        const txt = r.outputs.find((o) => o.format === 'txt').content;
+        return (!/[<>]/.test(txt) && txt.includes('Article Title')) || 'text output still contains markup';
+      },
+    },
+  },
+  {
+    file: 'sample.json',
+    checks: {
+      'records became a table': matches(/\|\s*id\s*\|\s*name\s*\|\s*volume\s*\|/),
+      'row present': matches(/\|\s*2\s*\|\s*West\s*\|\s*12905\s*\|/),
+    },
+  },
+  {
+    file: 'sample.srt',
+    checks: {
+      'timestamp anchor': has('**00:00:01**'),
+      'cue lines merged': has('Today we are talking about file conversion.'),
+      'later paragraph split': has('**00:01:02**'),
+    },
+  },
+  {
+    file: 'sample.ipynb',
+    checks: {
+      'markdown cell verbatim': has('# Notebook'),
+      'code fence with language': has('```python'),
+      'stream output': has('hello'),
+    },
+  },
+];
+
+/**
+ * Formats whose fixtures are small enough to build inline. Each `make()`
+ * returns bytes (or a string, encoded as UTF-8).
+ */
+const SYNTHETIC_CASES = [
+  {
+    name: 'message.eml',
+    make: () =>
+      [
+        'From: Dana Ruiz <dana@example.com>',
+        'To: ops@example.com',
+        'Subject: =?utf-8?B?UXVhcnRlcmx5IHJlc3VsdHM=?=',
+        'Date: Tue, 2 Apr 2026 09:14:00 +0000',
+        'MIME-Version: 1.0',
+        'Content-Type: multipart/alternative; boundary="BOUND"',
+        '',
+        '--BOUND',
+        'Content-Type: text/plain; charset=utf-8',
+        '',
+        'Plain fallback that should lose to the HTML part.',
+        '--BOUND',
+        'Content-Type: text/html; charset=utf-8',
+        'Content-Transfer-Encoding: quoted-printable',
+        '',
+        '<h1>Quarterly results</h1><p>Revenue rose 12=25 percent.</p><ul><li>East</li><li>West</li></ul>',
+        '--BOUND--',
+        '',
+      ].join('\n'),
+    checks: {
+      'subject decoded from RFC 2047': has('Quarterly results'),
+      'header table': has('dana@example.com'),
+      'html part preferred': has('- East'),
+      'quoted-printable decoded': has('12% percent'),
+      'plain part not used': lacks('Plain fallback'),
+    },
+  },
+  {
+    name: 'page.mhtml',
+    make: () =>
+      [
+        'From: <Saved by Blink>',
+        'Snapshot-Content-Location: https://example.com/report',
+        'Subject: Saved page',
+        'MIME-Version: 1.0',
+        'Content-Type: multipart/related; boundary="B"; type="text/html"',
+        '',
+        '--B',
+        'Content-Type: text/html',
+        'Content-Transfer-Encoding: quoted-printable',
+        'Content-Location: https://example.com/report',
+        '',
+        '<html><head><title>Saved page</title></head><body><article><h1>Saved page</h1>' +
+          '<p>This paragraph is long enough to be treated as the primary content of the saved ' +
+          'document rather than discarded as navigation furniture by the extractor.</p>' +
+          '<p><a href=3D"/next">next</a></p></article></body></html>',
+        '--B--',
+        '',
+      ].join('\n'),
+    checks: {
+      'heading': has('# Saved page'),
+      'quoted-printable "=3D" decoded': has('](https://example.com/next)'),
+      'body text': has('primary content of the saved document'),
+    },
+  },
+  {
+    name: 'config.yaml',
+    make: () => 'service: billing\nreplicas: 3\nlimits:\n  cpu: "500m"\n  memory: 1Gi\nregions:\n  - east\n  - west\n',
+    checks: {
+      'scalars as a list': has('**service:** billing'),
+      'nested map became a section': has('## limits'),
+      'sequence became a list': has('- east'),
+    },
+  },
+  {
+    name: 'events.jsonl',
+    make: () =>
+      ['{"id":1,"event":"open"}', '{"id":2,"event":"click"}', 'not json', '{"id":3,"event":"close"}'].join('\n'),
+    checks: {
+      'records became a table': matches(/\|\s*id\s*\|\s*event\s*\|/),
+      'valid rows kept': has('click'),
+      'bad line reported': (md, r) => r.warnings.some((w) => /Line 3/.test(w)) || 'no warning for the bad line',
+    },
+  },
+  {
+    name: 'feed.xml',
+    make: () => '<?xml version="1.0"?><rss><channel><title>News</title><item><title>One</title></item></channel></rss>',
+    checks: {
+      'kept verbatim in a fence': has('```xml'),
+      'content preserved': has('<title>News</title>'),
+    },
+  },
+  {
+    name: 'notes.txt',
+    make: () => 'First paragraph line one\nline two\n\nSecond paragraph with * asterisks * and _underscores_.\n',
+    checks: {
+      'paragraph split': matches(/line two\n\nSecond paragraph/),
+      'markdown metacharacters escaped': has('\\_underscores\\_'),
+    },
+  },
+  {
+    name: 'script.py',
+    make: () => 'def main():\n    return "# not a heading"\n',
+    checks: {
+      'fenced as python': has('```python'),
+      'content untouched': has('return "# not a heading"'),
+    },
+  },
+  {
+    name: 'inline-image.html',
+    options: { imageMode: 'extract' },
+    make: () =>
+      '<html><head><title>With image</title></head><body><article><h1>With image</h1>' +
+      '<p>A paragraph long enough to survive article extraction, describing the small image ' +
+      'that follows it in this document so the extractor keeps the whole section.</p>' +
+      '<p><img alt="dot" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="></p>' +
+      '</article></body></html>',
+    checks: {
+      'image rewritten to a relative path': matches(/!\[dot\]\(inline-image_assets\/image-001\.png\)/),
+      'asset returned for the zip': (md, r) =>
+        (r.assets.length === 1 && r.assets[0].bytes.byteLength > 0) || `assets: ${r.assets.length}`,
+      'no data URI left in the markdown': lacks('data:image'),
+    },
+  },
+  {
+    // The confident-but-wrong cases: OCR scores these highly because "340.00"
+    // is a perfectly good number. Only structure catches them.
+    name: 'suspect-invoice.html',
+    make: () =>
+      '<html><head><title>Invoice</title></head><body><article>' +
+      '<p>This invoice is long enough to survive article extraction, and it carries a ' +
+      'services table whose figures are deliberately inconsistent so the validators have ' +
+      'something to find.</p>' +
+      '<table><tr><th>Item</th><th>Amount</th></tr>' +
+      '<tr><td>Consultation</td><td>$40.00</td></tr>' +
+      '<tr><td>Imaging</td><td>340.00</td></tr>' +
+      '<tr><td>Total</td><td>$95.00</td></tr></table></article></body></html>',
+    checks: {
+      'flags the amount missing its "$"': has('"340.00" may be "$40.00"'),
+      'names the likely cause': has('misread as "3"'),
+      'flags the total that does not reconcile': matches(/line items sum to \$380\.00 but the total row says \$95\.00/),
+      'marker is a comment, not visible prose': matches(/<!-- SUMCHECK: /),
+      'records the flags in front matter': matches(/needs_review: true/),
+      'counts them': matches(/review_flags: 2/),
+      'surfaces them in JSON': (md, r) => {
+        const doc = JSON.parse(
+          r.outputs.find((o) => o.format === 'json')?.content ||
+            JSON.stringify({ review: r.review })
+        );
+        return (doc.review?.length ?? r.review.length) >= 2 || 'JSON output carries no review array';
+      },
+      'leaves the correct amount alone': (md) =>
+        !/\$40\.00.*SUMCHECK/.test(md.split('\n').find((l) => /Consultation/.test(l)) || '') ||
+        'flagged a correct value',
+    },
+    options: { outputs: ['md', 'json'] },
+  },
+  {
+    // A headline figure recovered by OCR has nothing checking it — except the
+    // same number printed in the totals row. Disagreement means one of them is
+    // wrong, and the prominent one is the one a reader will act on.
+    name: 'headline-mismatch.html',
+    make: () =>
+      '<html><head><title>Estimate</title></head><body><article>' +
+      '<p>This estimate is long enough to survive article extraction and carries a headline ' +
+      'figure that disagrees with the total stated in its own services table below.</p>' +
+      '<h1>$620.00</h1>' +
+      '<table><tr><th>Item</th><th>Amount</th></tr>' +
+      '<tr><td>Imaging</td><td>$400.00</td></tr>' +
+      '<tr><td>Total</td><td>$600.00</td></tr></table></article></body></html>',
+    checks: {
+      'flags the headline that matches no stated total': has('headline figure $620.00 matches none'),
+      'names the totals it was compared against': has('$600.00'),
+      'the figure is flagged, never corrected': (md) =>
+        /\$620\.00/.test(md) || 'the headline value was altered rather than flagged',
+      'recorded in front matter': matches(/needs_review: true/),
+    },
+    options: { outputs: ['md'] },
+  },
+  {
+    // The same shape, agreeing. A validator that fires here is worse than none.
+    name: 'headline-agrees.html',
+    make: () =>
+      '<html><head><title>Estimate</title></head><body><article>' +
+      '<p>This estimate is long enough to survive article extraction and its headline figure ' +
+      'agrees exactly with the total stated in the services table below it.</p>' +
+      '<h1>$600.00</h1>' +
+      '<table><tr><th>Item</th><th>Amount</th></tr>' +
+      '<tr><td>Imaging</td><td>$600.00</td></tr>' +
+      '<tr><td>Total</td><td>$600.00</td></tr></table></article></body></html>',
+    checks: {
+      'no headline flag when the figures agree': lacks('matches none'),
+      'no review flag at all': lacks('needs_review'),
+    },
+    options: { outputs: ['md'] },
+  },
+  {
+    name: 'bundle.zip',
+    make: async () => {
+      const zip = new JSZip();
+      zip.file('docs/notes.md', '# Bundled notes\n\nInside a zip.\n');
+      zip.file('data/rows.csv', 'a,b\n1,2\n');
+      zip.file('skip-me.bin', new Uint8Array([1, 2, 3]));
+      return new Uint8Array(await zip.generateAsync({ type: 'arraybuffer' }));
+    },
+    expandsTo: ['notes.md', 'rows.csv'],
+  },
+  {
+    name: 'sheet.ods',
+    make: () =>
+      odf('application/vnd.oasis.opendocument.spreadsheet', `
+<office:body><office:spreadsheet>
+<table:table table:name="Budget">
+<table:table-row><table:table-cell office:value-type="string"><text:p>Item</text:p></table:table-cell><table:table-cell office:value-type="string"><text:p>Cost</text:p></table:table-cell></table:table-row>
+<table:table-row><table:table-cell office:value-type="string"><text:p>Server</text:p></table:table-cell><table:table-cell office:value-type="float" office:value="1200"><text:p>1,200</text:p></table:table-cell></table:table-row>
+</table:table>
+</office:spreadsheet></office:body>`),
+    checks: {
+      'sheet name as heading': has('## Budget'),
+      'table rendered': matches(/\|\s*Server\s*\|\s*1,200\s*\|/),
+    },
+  },
+  {
+    name: 'deck.odp',
+    make: () =>
+      odf('application/vnd.oasis.opendocument.presentation', `
+<office:body><office:presentation>
+<draw:page draw:name="Opening">
+<draw:frame><draw:text-box><text:p>Welcome to the review</text:p></draw:text-box></draw:frame>
+</draw:page>
+<draw:page draw:name="Numbers">
+<draw:frame><draw:text-box><text:p>Revenue is up</text:p></draw:text-box></draw:frame>
+</draw:page>
+</office:presentation></office:body>`),
+    checks: {
+      'slide names as headings': has('## Opening'),
+      'second slide': has('## Numbers'),
+      'slide text': has('Welcome to the review'),
+    },
+  },
+];
+
+/** Build a minimal OpenDocument package around a content.xml body. */
+async function odf(mimetype, body) {
+  const zip = new JSZip();
+  zip.file('mimetype', mimetype);
+  zip.file(
+    'content.xml',
+    `<?xml version="1.0" encoding="UTF-8"?>
+<office:document-content
+  xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+  xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+  xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"
+  xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0">
+${body}
+</office:document-content>`
+  );
+  return new Uint8Array(await zip.generateAsync({ type: 'arraybuffer' }));
+}
+
+async function runSynthetic({ name, make, options = {}, checks, expandsTo }) {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>${name}</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name, pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const made = await make();
+    const bytes = typeof made === 'string' ? new TextEncoder().encode(made) : made;
+    const started = performance.now();
+    const result = await convertFile({ bytes, name }, options, {});
+    record.ms = Math.round(performance.now() - started);
+
+    if (expandsTo) {
+      const got = (result.expand || []).map((f) => f.name).sort();
+      const want = [...expandsTo].sort();
+      record.md = JSON.stringify(got, null, 1);
+      renderChecks(
+        box,
+        record,
+        {
+          'archive expanded to its convertible members': () =>
+            JSON.stringify(got) === JSON.stringify(want) || `got ${JSON.stringify(got)}`,
+        },
+        record.md,
+        result
+      );
+      return;
+    }
+
+    record.warnings = result.warnings;
+    const md = result.outputs.find((o) => o.format === 'md').content;
+    record.md = md;
+    renderChecks(box, record, checks, md, result);
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error(name, err);
+  }
+}
+
+/**
+ * A fresh OCR worker must always be configured.
+ *
+ * The parameter cache lives at module scope, keyed only by dpi. If a worker
+ * fails to create — a missing language, a transient wasm failure — the promise
+ * is cleared but the cache is not, so the *next* worker can be told "already
+ * configured at this dpi" and never receive `user_defined_dpi` or
+ * `preserve_interword_spaces` at all. Silent, and it would have invalidated the
+ * configuration diff this instrumentation exists to run.
+ */
+async function runWorkerParameterCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>OCR worker is reconfigured after a failed worker</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'ocr-worker-parameters', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const { recognize, terminateOcr, __simulateLostWorker } = await import('../src/core/ocr.js');
+    const canvas = document.createElement('canvas');
+    canvas.width = 600;
+    canvas.height = 120;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+    ctx.font = '28px Helvetica, Arial, sans-serif';
+    ctx.fillText('Tax ID: 04-3642199', 20, 70);
+
+    await terminateOcr();
+    const started = performance.now();
+
+    const first = await recognize(canvas, { lang: 'eng', dpi: 192 });
+
+    // The state a failed worker creation leaves behind: promise dropped, and
+    // historically the parameter cache left intact.
+    __simulateLostWorker();
+
+    // Same dpi as the first call — the cache must not suppress configuring the
+    // worker that replaced the lost one.
+    const third = await recognize(canvas, { lang: 'eng', dpi: 192 });
+    record.ms = Math.round(performance.now() - started);
+    record.md = JSON.stringify(
+      { first: first.parametersApplied, third: third.parametersApplied },
+      null,
+      1
+    );
+    await terminateOcr();
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the first worker is configured': () =>
+          first.parametersApplied === true || 'parameters were not applied to the first worker',
+        'the replacement worker is configured too': () =>
+          third.parametersApplied === true ||
+          'the stale dpi cache suppressed setParameters on a fresh worker',
+        'it still reads the page': () => /3642199/.test(third.lines.map((l) => l.text).join(' ')) ||
+          'the replacement worker produced no usable text',
+      },
+      record.md,
+      { outputs: [], warnings: [], meta: {} }
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('worker parameters', err);
+  }
+}
+
+/**
+ * A word whose confidence cannot be read must say so, not report zero.
+ *
+ * The previous `w.confidence ?? 0` turned an unexpected engine output shape
+ * into a page full of words scoring 0 — every one of them flagged, with no
+ * error anywhere. That is the exact failure mode this cycle is investigating,
+ * so the guard is asserted rather than assumed.
+ */
+async function runConfidenceShapeCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>unreadable word confidence is reported, not zeroed</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'ocr-confidence-shape', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const { readWordConfidence, ocrDiagnostics, resetOcrDiagnostics } = await import(
+      '../src/core/ocr.js'
+    );
+    resetOcrDiagnostics();
+
+    const warnings = [];
+    const realWarn = console.warn;
+    console.warn = (...args) => warnings.push(args.join(' '));
+
+    const good = readWordConfidence({ text: 'Tax', confidence: 96 });
+    const missing = readWordConfidence({ text: 'Tax' });
+    const notANumber = readWordConfidence({ text: 'Tax', confidence: 'high' });
+    const nan = readWordConfidence({ text: 'Tax', confidence: NaN });
+
+    console.warn = realWarn;
+    const diagnostics = ocrDiagnostics();
+    resetOcrDiagnostics();
+    record.ms = 0;
+    record.md = JSON.stringify({ good, missing, notANumber, nan, diagnostics, warnings }, null, 1);
+
+    renderChecks(
+      box,
+      record,
+      {
+        'a real score passes through': () => good === 96 || `got ${good}`,
+        'a missing score is null, not 0': () =>
+          missing === null || `got ${JSON.stringify(missing)} — 0 would flag a correct word`,
+        'a non-numeric score is null': () => notANumber === null || `got ${notANumber}`,
+        'NaN is null': () => nan === null || `got ${nan}`,
+        'the run counts them': () =>
+          diagnostics.wordsWithoutConfidence === 3 || `counted ${diagnostics.wordsWithoutConfidence}`,
+        'and warns once, loudly': () =>
+          (warnings.length === 1 && /confidence/i.test(warnings[0])) ||
+          `warnings: ${JSON.stringify(warnings)}`,
+      },
+      record.md,
+      { outputs: [], warnings: [], meta: {} }
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('confidence shape', err);
+  }
+}
+
+/**
+ * The exact heading strings the real corpus produced, asserted against the
+ * rejection rules.
+ *
+ * The rendered fixture cannot reproduce the promotion reliably — it depends on
+ * OCR mis-measuring a fragment's glyph height — so the observed strings are the
+ * reproduction, and they are pinned here verbatim.
+ */
+async function runHeadingRejectionCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>corpus heading fragments are rejected</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'ocr-heading-rejection', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const { rejectedOcrHeading } = await import('../src/core/adapters/pdf.js');
+
+    // Observed as `####` headings across GFE (14), (15), (25), (28) and (47).
+    const fragments = [
+      'MATERIAL(S)',
+      '(EG, FOR FOLLICLES)',
+      '(Forearm)/Wrist/Heel (Appendicular)',
+      'HEEL)',
+      '08-14-2026 CT Angiography Coronary (Coronary CTA/CCTA)',
+    ];
+    // Real headings from the same corpus, plus ordinary ones that must survive.
+    const keep = [
+      'Good Faith Estimate for Health Care Items and Services',
+      'Total Estimated Costs:',
+      '$7,311.39',
+      'DETAILS OF SERVICES AND CHARGES',
+      'Summary of Findings',
+      'Regional Results',
+    ];
+
+    const rejected = fragments.map((t) => [t, rejectedOcrHeading(t)]);
+    const kept = keep.map((t) => [t, rejectedOcrHeading(t)]);
+    record.md = JSON.stringify({ rejected, kept }, null, 1);
+
+    renderChecks(
+      box,
+      record,
+      {
+        'every observed fragment is rejected': () => {
+          const missed = rejected.filter(([, why]) => !why).map(([t]) => t);
+          return missed.length === 0 || `not rejected: ${JSON.stringify(missed)}`;
+        },
+        'each rejection names the rule that caught it': () =>
+          rejected.every(([, why]) => typeof why === 'string' && why.length > 2) ||
+          'a rejection returned no rule name',
+        'legitimate headings are untouched': () => {
+          const lost = kept.filter(([, why]) => why).map(([t, why]) => `${t} (${why})`);
+          return lost.length === 0 || `wrongly rejected: ${JSON.stringify(lost)}`;
+        },
+        'an all-caps heading without brackets survives': () =>
+          !rejectedOcrHeading('DETAILS OF SERVICES AND CHARGES') ||
+          'the uppercase rule is too broad — it needs a bracket to fire',
+      },
+      record.md,
+      { outputs: [], warnings: [], meta: {} }
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('heading rejection', err);
+  }
+}
+
+/**
+ * The rescue crop that re-read a money column it had already read correctly.
+ *
+ * Coordinates are the ones measured in GFE (49): the crop returned "$1,932.00"
+ * a second time as "$1.9" + "32.00" at the same pixels, and both were appended
+ * to the row. Text comparison cannot catch that — the duplicate does not equal
+ * what it duplicates — so the geometry is the fixture.
+ */
+async function runRescueDedupCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>a rescue crop does not re-read what was already read</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'ocr-rescue-dedup', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const { dropAlreadyRead } = await import('../src/core/adapters/pdf.js');
+    const word = (text, x, x2) => ({ text, x, x2, top: 796, bottom: 817 });
+    const line = (words) => ({
+      text: words.map((w) => w.text).join(' '),
+      words,
+      x: Math.min(...words.map((w) => w.x)),
+      x2: Math.max(...words.map((w) => w.x2)),
+      top: 796,
+      bottom: 817,
+    });
+
+    const readWords = [
+      word('1', 1105, 1112),
+      word('$1,932.00', 1193, 1304),
+      word('$1,932.00', 1385, 1496),
+    ];
+    // Exactly what the crop returned, plus one genuinely new word off to the
+    // side — a rescue that recovers something must still survive.
+    const recovered = [
+      line([word('1', 1105, 1112), word('$1.9', 1193, 1248), word('32.00', 1248, 1305)]),
+      line([word('$1.9', 1385, 1440)]),
+      line([word('$597.71', 1600, 1700)]),
+    ];
+
+    const kept = dropAlreadyRead(recovered, readWords);
+    const keptText = kept.map((l) => l.text);
+    record.md = JSON.stringify({ keptText, kept }, null, 1);
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the re-read money column is dropped': () =>
+          !keptText.some((t) => /\$1\.9|32\.00/.test(t)) ||
+          `a duplicate survived: ${JSON.stringify(keptText)}`,
+        'the duplicated quantity is dropped': () =>
+          !keptText.includes('1') || 'the re-read "1" survived',
+        'genuinely new text is kept': () =>
+          keptText.includes('$597.71') || 'the rescue dropped a real recovery',
+        'a surviving line reports only the geometry it kept': () => {
+          const survivor = kept.find((l) => l.text === '$597.71');
+          return (survivor && survivor.x === 1600 && survivor.x2 === 1700) ||
+            'the kept line carries a box it no longer covers';
+        },
+        'nothing is dropped when no ink was read before': () =>
+          dropAlreadyRead(recovered, []).length === recovered.length ||
+          'an empty read set still dropped lines',
+      },
+      record.md,
+      { outputs: [], warnings: [], meta: {} }
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('rescue dedup', err);
+  }
+}
+
+/**
+ * The prose lexicon validator: catch a confident non-word, stay silent on
+ * correct clinical text.
+ *
+ * The strings are the real ones. "inchided" is what the `fast` language pack
+ * reads "included" as on all 50 corpus documents; "Cervical" is a word an
+ * earlier pack got wrong and a small dictionary would flag; the all-caps
+ * descriptor and the coded table row are the two shapes that produced false
+ * alarms before the exclusions existed.
+ */
+async function runProseLexiconCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>a confident non-word is flagged, correct clinical prose is not</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'prose-lexicon', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const { validateDocument } = await import('../src/core/validate.js');
+    const host = document.createElement('div');
+    host.innerHTML = [
+      '<p>Your provider may recommend additional services in the course of care: those',
+      'services are not inchided in this estimate and would be scheduled separately.</p>',
+      '<p>Cervical spine imaging was performed at the parotid and appendicular sites.</p>',
+      '<h3>DUAL-ENERGY X-RAY ABSORPTIOMETRY</h3>',
+      '<p>Prepared at 3310 Richmond Ave, Trenton. Tax ID: 04-3642199.</p>',
+      '<table><tr><td>77081 - DUAL-ENERGY X-RAY ABSORPTIOMETRY (DXA)</td><td>$51.00</td></tr></table>',
+    ].join(' ');
+
+    const flags = await validateDocument(host, { markers: true, ocr: true });
+    const messages = flags.map((f) => f.message);
+    const markers = [...host.querySelectorAll('[data-smc-review]')].map((m) => m.getAttribute('data-smc-review'));
+    record.md = JSON.stringify({ messages, markers }, null, 1);
+
+    // The same document with OCR off must produce nothing from this check.
+    const quiet = document.createElement('div');
+    quiet.innerHTML = host.textContent ? '<p>those services are not inchided here.</p>' : '';
+    const noOcrFlags = await validateDocument(quiet, { markers: false, ocr: false });
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the non-word is flagged': () =>
+          messages.some((m) => m.includes('"inchided"')) ||
+          `nothing flagged inchided: ${JSON.stringify(messages)}`,
+        'the flag names the right word': () =>
+          messages.some((m) => m.includes('"inchided"') && m.includes('"included"')) ||
+          `wrong or missing suggestion: ${JSON.stringify(messages)}`,
+        'exactly one prose flag is raised': () => {
+          const lex = messages.filter((m) => m.includes('is not a recognised word'));
+          return lex.length === 1 || `expected 1, got ${lex.length}: ${JSON.stringify(lex)}`;
+        },
+        'Cervical is not flagged': () =>
+          !messages.some((m) => /Cervical/i.test(m)) || 'a correct clinical word was flagged',
+        'parotid and appendicular are not flagged': () =>
+          !messages.some((m) => /parotid|appendicular/i.test(m)) ||
+          'a correct clinical word was flagged',
+        'the all-caps descriptor is not flagged': () =>
+          !messages.some((m) => /ABSORPTIOMETRY|ENERGY/i.test(m)) ||
+          'an all-caps descriptor was flagged',
+        'proper nouns are not flagged': () =>
+          !messages.some((m) => /Richmond|Trenton/i.test(m)) || 'a proper noun was flagged',
+        'the coded table row is not flagged': () =>
+          !messages.some((m) => /77081|DXA/i.test(m)) || 'a table descriptor was flagged',
+        'a marker is attached at the flagged paragraph': () => {
+          const marks = [...host.querySelectorAll('[data-smc-review]')];
+          if (marks.length !== 1) return `expected 1 marker, found ${marks.length}`;
+          return (
+            marks[0].getAttribute('data-smc-review').includes('inchided') ||
+            'the marker does not name the token it is about'
+          );
+        },
+        'nothing is rewritten': () =>
+          host.textContent.includes('inchided') ||
+          'the validator changed the text instead of flagging it',
+        'the check does not run when the document was not OCR\'d': () =>
+          noOcrFlags.length === 0 || `ran anyway: ${JSON.stringify(noOcrFlags)}`,
+      },
+      record.md,
+      { outputs: [], warnings: [], meta: {} }
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('prose lexicon', err);
+  }
+}
+
+/**
+ * The password path, end to end through the conversion core.
+ *
+ * `locked.pdf` is a real RC4-encrypted PDF built by `make-fixtures.mjs`; the
+ * password is "secret". The behaviour that matters in a batch is not that the
+ * right password works — it is that the wrong answer and the refusal both end
+ * the file cleanly and let the next one run.
+ */
+async function runPasswordCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>a password-protected PDF prompts, retries and can be skipped</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'locked.pdf', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const locked = new Uint8Array(await (await fetch('fixtures/locked.pdf')).arrayBuffer());
+    const plain = new Uint8Array(await (await fetch('fixtures/sample.pdf')).arrayBuffer());
+    const convert = (bytes, name, requestPassword) =>
+      convertFile({ bytes: bytes.slice(), name }, { outputs: ['md'] }, { requestPassword });
+
+    // 1. correct password
+    const prompts = [];
+    const ok = await convert(locked, 'locked.pdf', (retry) => {
+      prompts.push(retry);
+      return 'secret';
+    });
+    const okMd = ok.outputs[0].content;
+
+    // 2. wrong password, then the right one — pdf.js re-asks with retry = true
+    const retries = [];
+    const afterRetry = await convert(locked, 'locked.pdf', (retry) => {
+      retries.push(retry);
+      return retries.length === 1 ? 'wrong-password' : 'secret';
+    });
+
+    // 3. skipped, then the next file in the batch still converts
+    let skipError = null;
+    await convert(locked, 'locked.pdf', () => null).catch((err) => {
+      skipError = err.message;
+    });
+    const next = await convert(plain, 'sample.pdf', () => null);
+    const nextMd = next.outputs[0].content;
+
+    record.md = JSON.stringify(
+      { prompts, retries, skipError, unlockedText: okMd.slice(0, 120) },
+      null,
+      1
+    );
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the converter asks for a password': () =>
+          prompts.length === 1 || `asked ${prompts.length} time(s)`,
+        'the first ask is not flagged as a retry': () =>
+          prompts[0] === false || 'the first prompt claimed to be a retry',
+        'the correct password unlocks the document': () =>
+          /Locked document/.test(okMd) || `did not decrypt: ${JSON.stringify(okMd.slice(0, 80))}`,
+        'a wrong password re-prompts, flagged as a retry': () =>
+          (retries.length === 2 && retries[0] === false && retries[1] === true) ||
+          `retry sequence was ${JSON.stringify(retries)}`,
+        'the retry succeeds': () =>
+          /Locked document/.test(afterRetry.outputs[0].content) ||
+          'the second password did not unlock it',
+        'skipping fails the file rather than hanging': () =>
+          Boolean(skipError) || 'skipping resolved instead of failing',
+        'the skip reason says it was skipped': () =>
+          /skipped/i.test(skipError || '') ||
+          `unhelpful reason: ${JSON.stringify(skipError)}`,
+        'the skip reason is not a worker error': () =>
+          !/worker|destroy/i.test(skipError || '') ||
+          `leaked an internal error: ${JSON.stringify(skipError)}`,
+        'the next file in the batch still converts': () =>
+          nextMd.length > 200 || 'a skipped file poisoned the rest of the batch',
+      },
+      record.md,
+      { outputs: [], warnings: [], meta: {} }
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('password case', err);
+  }
+}
+
+/**
+ * The i18n fallback.
+ *
+ * Installed, `chrome.i18n` answers. Under the dev server there is no `chrome`
+ * at all, which is the runtime this whole suite uses — so if the fallback ever
+ * breaks, every page in development renders blank labels while the extension
+ * looks fine. That is a failure worth a test of its own.
+ */
+async function runI18nFallbackCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>UI strings resolve without chrome.i18n</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'i18n-fallback', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const { initI18n, t, localizeDocument } = await import('../src/ui/i18n.js');
+    record.warnings.push(typeof chrome === 'undefined' ? 'no chrome object — fallback path' : 'chrome present');
+    await initI18n();
+
+    const host = document.createElement('div');
+    host.innerHTML =
+      '<p data-i18n="popupOpen"></p>' +
+      '<p data-i18n="uiSettingsNoteEmphasis"></p>' +
+      '<p data-i18n="sumcheck_no_such_key"></p>' +
+      '<button data-i18n-attr="title:popupSettings"></button>';
+    localizeDocument(host);
+
+    const texts = [...host.querySelectorAll('p')].map((n) => n.textContent);
+    record.md = JSON.stringify(
+      { texts, title: host.querySelector('button').getAttribute('title'), substituted: t('supportedFormats', '.pdf .docx') },
+      null,
+      1
+    );
+
+    renderChecks(
+      box,
+      record,
+      {
+        'a known message resolves': () =>
+          texts[0] === 'Convert files…' || `got ${JSON.stringify(texts[0])}`,
+        'messages are not blank': () =>
+          texts[1] === 'any' || `got ${JSON.stringify(texts[1])}`,
+        'an unknown key shows the key, never an empty element': () =>
+          texts[2] === 'sumcheck_no_such_key' || `got ${JSON.stringify(texts[2])}`,
+        'attributes are localized': () =>
+          host.querySelector('button').getAttribute('title') === 'Settings' ||
+          'data-i18n-attr did not apply',
+        'placeholders are substituted': () =>
+          t('supportedFormats', '.pdf .docx') === 'Supports .pdf .docx' ||
+          `got ${JSON.stringify(t('supportedFormats', '.pdf .docx'))}`,
+        'a missing substitution leaves the placeholder visible': () =>
+          t('supportedFormats') === 'Supports $1' || `got ${JSON.stringify(t('supportedFormats'))}`,
+      },
+      record.md,
+      { outputs: [], warnings: [], meta: {} }
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('i18n fallback', err);
+  }
+}
+
+const summary = document.getElementById('summary');
+const container = document.getElementById('cases');
+const results = [];
+window.__results = results;
+window.__done = false;
+
+run();
+
+async function run() {
+  for (const testCase of CASES) {
+    await runCase(testCase);
+  }
+  for (const testCase of SYNTHETIC_CASES) {
+    await runSynthetic(testCase);
+  }
+  /**
+   * Run each hand-written case in isolation.
+   *
+   * These used to be awaited in a straight line, so a case that threw before
+   * registering its own record — a typo in a helper name was enough — aborted
+   * the run and took every case after it with it. The suite then reported
+   * "30/30 cases passed": green, having silently skipped eight cases including
+   * every OCR document. A skipped case now fails loudly instead.
+   */
+  const UNIT_CASES = [
+    ['ocr-worker-parameters', runWorkerParameterCase],
+    ['ocr-confidence-shape', runConfidenceShapeCase],
+    ['ocr-heading-rejection', runHeadingRejectionCase],
+    ['ocr-rescue-dedup', runRescueDedupCase],
+    ['prose-lexicon', runProseLexiconCase],
+    ['locked.pdf', runPasswordCase],
+    ['i18n-fallback', runI18nFallbackCase],
+    ['ocr.png', runOcrCase],
+    ['scanned.pdf', runScannedPdfCase],
+    ['billing-form.pdf', runBillingFormCase],
+    ['shaded-callout.pdf', runShadedCalloutCase],
+    ['fragment-headings.pdf', runFragmentHeadingCase],
+    ['inverted-banner.pdf', runInvertedBannerCase],
+    ['corpus-callout.pdf', runCorpusCalloutCase],
+  ];
+  for (const [name, fn] of UNIT_CASES) {
+    try {
+      await fn();
+    } catch (err) {
+      console.error(name, err);
+    }
+    // A case that never got as far as pushing its record did not run, and that
+    // must not read as an absence of cases.
+    if (!results.some((r) => r.name === name)) {
+      results.push({
+        name,
+        pass: false,
+        failures: [`the case did not run — it threw before registering (see console)`],
+        warnings: [],
+      });
+    }
+  }
+  await terminateOcr();
+
+  const failed = results.filter((r) => !r.pass);
+  summary.className = failed.length ? 'bad' : 'ok';
+  summary.textContent = failed.length
+    ? `${failed.length} of ${results.length} cases FAILED`
+    : `all ${results.length} cases passed`;
+  window.__done = true;
+}
+
+async function runCase({ file, options = {}, checks }) {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>${file}</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: file, pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const response = await fetch(`fixtures/${file}`);
+    if (!response.ok) throw new Error(`fixture missing (${response.status})`);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const started = performance.now();
+    const result = await convertFile({ bytes, name: file }, options, {});
+    record.ms = Math.round(performance.now() - started);
+    record.warnings = result.warnings;
+
+    const md = result.outputs.find((o) => o.format === 'md').content;
+    record.md = md;
+    renderChecks(box, record, checks, md, result);
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error(file, err);
+  }
+}
+
+/** OCR is verified against an image rendered here, so no binary fixture is needed. */
+async function runOcrCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>generated PNG (OCR)</h2><div class="body">running OCR — this takes a few seconds…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'ocr.png', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1000;
+    canvas.height = 420;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 58px Georgia, serif';
+    ctx.fillText('Annual Safety Notice', 60, 100);
+    ctx.font = '30px Georgia, serif';
+    ctx.fillText('All contractors must complete the refresher course', 60, 190);
+    ctx.fillText('before the first of March. Records are kept by the', 60, 240);
+    ctx.fillText('site office for a period of seven years.', 60, 290);
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const started = performance.now();
+    const result = await convertFile(
+      { bytes, name: 'ocr.png', mime: 'image/png' },
+      { outputs: ['md'], imageMode: 'strip' },
+      {}
+    );
+    record.ms = Math.round(performance.now() - started);
+    record.warnings = result.warnings;
+    const md = result.outputs[0].content;
+    record.md = md;
+
+    renderChecks(
+      box,
+      record,
+      {
+        'recognized the heading': (text) => /Annual Safety Notice/i.test(text) || 'heading not recognized',
+        'heading promoted by type size': matches(/^#{1,2} .*Annual Safety Notice/im),
+        'recognized body text': (text) =>
+          /contractors must complete the refresher/i.test(text) || 'body text not recognized',
+        'lines merged into a paragraph': (text) =>
+          /before the first of March\.?\s+Records/i.test(text) || 'OCR line breaks were not merged',
+      },
+      md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('ocr', err);
+  }
+}
+
+/**
+ * The scanned-document path: a PDF whose only content is a photograph of text.
+ * Built here rather than checked in, so the image and the expected text stay in
+ * one place.
+ */
+async function runScannedPdfCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>image-only PDF (OCR fallback)</h2><div class="body">building a scanned PDF and running OCR…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'scanned.pdf', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1224; // 8.5in at 144 dpi
+    canvas.height = 500;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#111';
+    ctx.font = 'bold 56px Georgia, serif';
+    ctx.fillText('Invoice Summary', 70, 110);
+    ctx.font = '32px Georgia, serif';
+    ctx.fillText('Payment is due within thirty days of receipt.', 70, 210);
+    ctx.fillText('Late payments accrue interest at one percent', 70, 260);
+    ctx.fillText('per month on the outstanding balance.', 70, 310);
+
+    const jpegBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+    const jpeg = new Uint8Array(await jpegBlob.arrayBuffer());
+    const bytes = buildImagePdf(jpeg, canvas.width, canvas.height);
+
+    const started = performance.now();
+    const result = await convertFile(
+      { bytes, name: 'scanned.pdf' },
+      { outputs: ['md'], ocrMode: 'auto' },
+      {}
+    );
+    record.ms = Math.round(performance.now() - started);
+    record.warnings = result.warnings;
+    const md = result.outputs[0].content;
+    record.md = md;
+
+    renderChecks(
+      box,
+      record,
+      {
+        'page had no text layer and was OCR-ed': (text, r) =>
+          r.meta.ocrPages === 1 || `ocrPages was ${r.meta.ocrPages}`,
+        'recognized the heading': (text) => /Invoice Summary/i.test(text) || 'heading not recognized',
+        'heading promoted on an OCR page': matches(/^#{1,3} .*Invoice Summary/im),
+        'recognized the body': (text) =>
+          /within thirty days of receipt/i.test(text) || 'body text not recognized',
+        'front matter records the OCR': has('ocr_pages: 1'),
+        'warns that OCR was used': (text, r) =>
+          r.warnings.some((w) => /OCR/.test(w)) || 'no OCR warning surfaced',
+      },
+      md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('scanned pdf', err);
+  }
+}
+
+/**
+ * The billing-form regression: a 96 dpi scan of a document whose *structure is
+ * the data*. Modelled on an audited 50-file batch of Good Faith Estimates that
+ * exposed the whole defect class:
+ *
+ *   - "$" eaten by resampling and read as "3", inflating a price ~8.5x
+ *   - a headline figure inside a shaded box dropped while its label survived
+ *   - a services table flattened into a run-on paragraph, so no charge could be
+ *     attributed to its procedure code
+ *   - a URL and a semicolon in a CPT descriptor corrupted
+ *
+ * Everything is drawn at 96 dpi with small type, which is the hard case: it is
+ * what a fax or an ABCpdf export actually looks like.
+ */
+async function runBillingFormCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>96 dpi billing form (structure-is-data)</h2><div class="body">rendering and OCR-ing…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'billing-form.pdf', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 816; // 8.5in at 96 dpi — the resolution of the audited corpus
+    canvas.height = 1056;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+    ctx.textBaseline = 'alphabetic';
+
+    ctx.font = 'bold 19px Helvetica, Arial, sans-serif';
+    ctx.fillText('Good Faith Estimate', 48, 56);
+    ctx.font = '12px Helvetica, Arial, sans-serif';
+    ctx.fillText('Northwest Imaging Center, 14835 Southwest Fwy, Suite 200', 48, 80);
+
+    // The shaded callout: label outside, headline figure inside.
+    // A medium-grey callout is the documented killer: Tesseract binarizes the
+    // box to one dark mass and drops label and value together. Only the rescue
+    // pass gets these two lines back.
+    ctx.fillStyle = '#d8d8d8';
+    ctx.fillRect(48, 100, 300, 54);
+    ctx.fillStyle = '#000';
+    ctx.font = '12px Helvetica, Arial, sans-serif';
+    ctx.fillText('Total Estimated Costs:', 58, 120);
+    ctx.font = 'bold 22px Helvetica, Arial, sans-serif';
+    ctx.fillText('$600.00', 58, 146);
+
+    // The services table: five columns, three body rows.
+    const cols = [48, 150, 470, 545, 660];
+    const header = ['Service Date', 'Description', 'Quantity', 'Charge', 'Total'];
+    ctx.font = 'bold 11px Helvetica, Arial, sans-serif';
+    header.forEach((h, i) => ctx.fillText(h, cols[i], 200));
+    ctx.font = '11px Helvetica, Arial, sans-serif';
+    // Descriptions that wrap to a second line are the shape that broke table
+    // detection on the real corpus: the continuation is a lone fragment that
+    // used to end the run and get printed after the numeric columns.
+    const rows = [
+      {
+        cells: ['08-13-2026', '74183 MR ABDOMEN; WITHOUT CONTRAST', '1', '$400.00', '$400.00'],
+        wrap: 'AND WITH CONTRAST MATERIAL(S)',
+      },
+      {
+        cells: ['08-13-2026', '77067 Screening mammography, bilateral', '1', '$140.00', '$140.00'],
+        wrap: '(2-view study of each breast)',
+      },
+      { cells: ['08-13-2026', '70551 MR brain w/o contrast', '1', '$60.00', '$60.00'] },
+    ];
+    let y = 224;
+    for (const row of rows) {
+      row.cells.forEach((cell, i) => ctx.fillText(cell, cols[i], y));
+      y += 18;
+      if (row.wrap) {
+        ctx.fillText(row.wrap, cols[1], y);
+        y += 18;
+      }
+    }
+    ctx.font = 'bold 11px Helvetica, Arial, sans-serif';
+    ['Total', '', '3', '$600.00', '$600.00'].forEach((cell, i) => {
+      if (cell) ctx.fillText(cell, cols[i], y + 6);
+    });
+
+    // Well clear of the table. Real forms leave roughly two rows of air before
+    // the following paragraph; drawing it tight against the last row made this
+    // fixture argue for a rule that broke every real document.
+    ctx.font = '11px Helvetica, Arial, sans-serif';
+    ctx.fillText('For questions about your rights, go to www.cms.gov/nosurprises', 48, y + 70);
+
+    const jpegBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+    const jpeg = new Uint8Array(await jpegBlob.arrayBuffer());
+    const bytes = buildImagePdf(jpeg, canvas.width, canvas.height, 96);
+
+    const started = performance.now();
+    const result = await convertFile({ bytes, name: 'billing-form.pdf' }, { outputs: ['md', 'json'] }, {});
+    record.ms = Math.round(performance.now() - started);
+    record.warnings = result.warnings;
+    const md = result.outputs.find((o) => o.format === 'md').content;
+    record.md = md;
+
+    const amounts = md.match(/\d+\.\d{2}/g) || [];
+    renderChecks(
+      box,
+      record,
+      {
+        'upscaled the 96 dpi scan past 180 dpi': (t, r) =>
+          Number(r.meta.ocrDpi) >= 180 || `OCR ran at ${r.meta.ocrDpi} dpi`,
+        'no "$" eaten into the number': () =>
+          !/(^|[\s|])\d{3}\.\d{2}/m.test(md.replace(/\$\d[\d,]*\.\d{2}/g, '')) ||
+          `bare amounts present: ${amounts.join(', ')}`,
+        'currency amounts kept their sigil': has('$400.00'),
+        'headline label recovered from the shaded box': has('Total Estimated Costs'),
+        'headline figure recovered from the shaded box': () =>
+          /\$600\.00/.test(md) || 'the shaded callout value was not recovered',
+        'services table is a table, not a paragraph': () =>
+          /^\|.*\|$/m.test(md) || /^```/m.test(md) || 'no table or aligned block emitted',
+        'charge stays on its procedure code row': () => {
+          const row = md.split('\n').find((l) => /74183/.test(l));
+          return (row && /400\.00/.test(row)) || `74183 row was "${row || 'missing'}"`;
+        },
+        'a second code keeps its own charge': () => {
+          const row = md.split('\n').find((l) => /77067/.test(l));
+          return (row && /140\.00/.test(row)) || `77067 row was "${row || 'missing'}"`;
+        },
+        'wrapped description rejoins its row, not the amounts': () => {
+          const row = md.split('\n').find((l) => /74183/.test(l)) || '';
+          if (!/MATERIAL\(S\)/.test(row)) return 'the wrapped continuation is not on its row';
+          // It must sit with the description, before the numeric columns.
+          return (
+            row.indexOf('MATERIAL(S)') < row.indexOf('400.00') ||
+            'the wrapped text landed after the money columns'
+          );
+        },
+        'semicolon in the CPT descriptor survived': has('ABDOMEN;'),
+        'URL is intact and unescaped': () =>
+          /www\.cms\.gov\/nosurprises/.test(md) || 'the URL was corrupted',
+        'footer prose stays out of the table': () => {
+          const total = md.split('\n').find((l) => /^\|\s*Total/.test(l)) || '';
+          return !/questions about your rights/.test(total) || 'the footer was absorbed into the total row';
+        },
+        'confidence recorded in front matter': matches(/ocr_confidence_mean: \d/),
+        'low-confidence words listed': (t, r) =>
+          r.meta.ocrFlaggedFields === 0 || /ocr_low_confidence:/.test(md) ||
+          'flagged words were counted but not listed',
+      },
+      md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('billing form', err);
+  }
+}
+
+/**
+ * The rescue pass, isolated.
+ *
+ * A figure printed inside a mid-grey callout is the documented way to lose the
+ * single most important number on a page: the box binarizes to one dark mass
+ * and its contents disappear, label and value together, silently. Measured on
+ * this exact input, the first OCR pass returns neither line.
+ *
+ * Asserts the second, contrast-boosted pass gets them back — and that it is
+ * credited, so a reader knows those lines came from a harder read.
+ */
+async function runShadedCalloutCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>shaded callout (OCR rescue)</h2><div class="body">running two OCR passes…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'shaded-callout.pdf', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 816;
+    canvas.height = 240;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#d8d8d8';
+    ctx.fillRect(30, 20, 320, 70);
+    ctx.fillStyle = '#000';
+    ctx.font = '11px Helvetica, Arial, sans-serif';
+    ctx.fillText('Total Estimated Costs:', 40, 45);
+    ctx.font = 'bold 20px Helvetica, Arial, sans-serif';
+    ctx.fillText('$7,311.39', 40, 80);
+    ctx.font = '11px Helvetica, Arial, sans-serif';
+    ctx.fillText('Tax ID: 04-3642199   Items included   Code', 40, 160);
+
+    // A signature-like scrawl: ink that OCR cannot turn into words, which is
+    // what forces the unrecognized-ink path and the rescue pass to actually
+    // run. Every earlier fixture had zero unread ink, so that whole branch went
+    // untested — and shipped with a fatal error that only fired on real scans.
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(430, 200);
+    for (let i = 0; i < 60; i++) {
+      ctx.lineTo(430 + i * 5, 200 + Math.sin(i / 2) * 18 + Math.cos(i / 5) * 10);
+    }
+    ctx.stroke();
+
+    const jpegBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+    const jpeg = new Uint8Array(await jpegBlob.arrayBuffer());
+    const bytes = buildImagePdf(jpeg, canvas.width, canvas.height, 96);
+
+    const started = performance.now();
+    const result = await convertFile({ bytes, name: 'shaded-callout.pdf' }, { outputs: ['md'] }, {});
+    record.ms = Math.round(performance.now() - started);
+    record.warnings = result.warnings;
+    const md = result.outputs[0].content;
+    record.md = md;
+
+    // The same page again, asking for the full per-word detail.
+    const detailed = await convertFile(
+      { bytes: buildImagePdf(jpeg, canvas.width, canvas.height, 96), name: 'shaded-callout.pdf' },
+      { outputs: ['md'], ocrDetail: 'full' },
+      {}
+    );
+    const detailedMd = detailed.outputs[0].content;
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the shaded label was recovered': has('Total Estimated Costs'),
+        'the shaded figure was recovered': has('7,311.39'),
+        // The rescue is a fallback: it fires only when the first pass leaves ink
+        // unaccounted for, so the assertion is on the outcome, not the path.
+        'nothing was silently dropped': () =>
+          !/ocr_unreadable_regions: [1-9]/.test(md) || /SUMCHECK: value not recovered/.test(md) ||
+          'an unread region was reported with no marker in the body',
+        'confidence scalars are always recorded': matches(/ocr_confidence_mean: \d/),
+        'the unread-ink path ran without throwing': (t, r) =>
+          !r.warnings.some((w) => /OCR failed/.test(w)) || `OCR errored: ${r.warnings.join('; ')}`,
+        'ink that is not text is reported, not ignored': (t, r) =>
+          (r.meta.ocrUnreadableRegions ?? 0) > 0 ||
+          /SUMCHECK: value not recovered/.test(md) ||
+          'the scrawl produced no unreadable-region signal',
+        'the per-word list is omitted by default': lacks('ocr_low_confidence:'),
+        'and is available on request': () =>
+          /ocr_flagged_fields: 0/.test(detailedMd) || /ocr_low_confidence:/.test(detailedMd) ||
+          'ocrDetail: full did not emit the word list',
+      },
+      md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('shaded callout', err);
+  }
+}
+
+/**
+ * Wrapped table-cell text must not become a heading.
+ *
+ * On a scan, heading depth is inferred from glyph height, and OCR measures that
+ * inconsistently — so the tail of a wrapped CPT descriptor gets promoted to an
+ * `####`. Observed on the real corpus as `#### MATERIAL(S)`,
+ * `#### (EG, FOR FOLLICLES)` and `#### 08-14-2026 CT Angiography Coronary…`;
+ * this fixture reproduces all three shapes.
+ */
+async function runFragmentHeadingCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>wrapped cell fragments are content, not headings</h2><div class="body">rendering and OCR-ing…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'fragment-headings.pdf', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 816;
+    canvas.height = 700;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+
+    ctx.font = 'bold 17px Helvetica, Arial, sans-serif';
+    ctx.fillText('Good Faith Estimate for Health Care Items and Services', 48, 50);
+
+    const cols = [48, 150, 470, 545, 660];
+    ctx.font = 'bold 11px Helvetica, Arial, sans-serif';
+    ['Service Date', 'Description', 'Quantity', 'Charge', 'Total'].forEach((h, i) =>
+      ctx.fillText(h, cols[i], 120)
+    );
+    ctx.font = '11px Helvetica, Arial, sans-serif';
+
+    // Each row's descriptor wraps to a fragment of a different awkward shape.
+    const rows = [
+      { cells: ['08-14-2026', '74183 MR ABDOMEN WITH CONTRAST', '1', '$400.00', '$400.00'], wrap: 'MATERIAL(S)' },
+      { cells: ['08-14-2026', '76817 US PELVIS LIMITED', '1', '$140.00', '$140.00'], wrap: '(EG, FOR FOLLICLES)' },
+      { cells: ['08-14-2026', '75574 CT Angiography Coronary', '1', '$60.00', '$60.00'], wrap: '08-14-2026 CT Angiography Coronary (Coronary CTA/CCTA)' },
+    ];
+    let y = 150;
+    for (const row of rows) {
+      row.cells.forEach((cell, i) => ctx.fillText(cell, cols[i], y));
+      y += 15;
+      ctx.fillText(row.wrap, cols[1], y);
+      y += 26;
+    }
+    ctx.font = 'bold 11px Helvetica, Arial, sans-serif';
+    ['Total', '', '3', '$600.00', '$600.00'].forEach((cell, i) => {
+      if (cell) ctx.fillText(cell, cols[i], y + 6);
+    });
+
+    const jpegBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+    const jpeg = new Uint8Array(await jpegBlob.arrayBuffer());
+    const bytes = buildImagePdf(jpeg, canvas.width, canvas.height, 96);
+
+    const started = performance.now();
+    const result = await convertFile({ bytes, name: 'fragment-headings.pdf' }, { outputs: ['md'] }, {});
+    record.ms = Math.round(performance.now() - started);
+    record.warnings = result.warnings;
+    const md = result.outputs[0].content;
+    record.md = md;
+    const headings = md.match(/^#{1,6} .*$/gm) || [];
+
+    renderChecks(
+      box,
+      record,
+      {
+        'no heading deeper than ## on a scanned page': () =>
+          !headings.some((h) => /^#{3,} /.test(h)) ||
+          `deep headings emitted: ${JSON.stringify(headings.filter((h) => /^#{3,} /.test(h)))}`,
+        'MATERIAL(S) is not a heading': () =>
+          !headings.some((h) => /MATERIAL\(S\)/.test(h)) || 'the wrapped fragment became a heading',
+        'the parenthetical fragment is not a heading': () =>
+          !headings.some((h) => /FOLLICLES/i.test(h)) || 'the parenthetical fragment became a heading',
+        'the date-leading fragment is not a heading': () =>
+          !headings.some((h) => /^#+\s*\d{2}-\d{2}-\d{4}/.test(h)) ||
+          'the date-leading fragment became a heading',
+        'the document title still is a heading': () =>
+          headings.some((h) => /^#{1,2} .*Good Faith Estimate/.test(h)) ||
+          `title lost; headings were ${JSON.stringify(headings)}`,
+        'the fragments survive as content': () =>
+          /MATERIAL\(S\)/.test(md) || 'the fragment text was dropped entirely',
+      },
+      md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('fragment headings', err);
+  }
+}
+
+/**
+ * A reversed-out banner is not unread content.
+ *
+ * The ink detector counts dark pixels and subtracts the areas covered by
+ * recognized words. A title set in white on a solid black bar defeats that
+ * completely: the bar is ~50% "ink", the word boxes cover only the white
+ * glyphs, and the band is reported as unread — which on the real corpus
+ * produced a spurious "value not recovered" marker in 48 files that were
+ * missing nothing, and a duplicate title line in all 50 when the rescue pass
+ * re-read the band it should never have been given.
+ */
+async function runInvertedBannerCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>reversed-out banner is not unread ink</h2><div class="body">rendering and OCR-ing…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'inverted-banner.pdf', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 816;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // The banner: white text on a solid black bar, with the stray white block
+    // that the real documents carry at the right-hand end.
+    ctx.fillStyle = '#000';
+    ctx.fillRect(40, 40, 736, 46);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(742, 46, 28, 34);
+    ctx.font = '20px Helvetica, Arial, sans-serif';
+    ctx.fillText('Good Faith Estimate for Health Care Items and Services', 60, 72);
+
+    ctx.fillStyle = '#000';
+    ctx.font = '13px Helvetica, Arial, sans-serif';
+    ctx.fillText('Estimate Prepared on: 08-14-2026 12:32 PM', 40, 140);
+    ctx.fillText('Tax ID: 04-3642199', 40, 170);
+
+    const jpegBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+    const jpeg = new Uint8Array(await jpegBlob.arrayBuffer());
+    const bytes = buildImagePdf(jpeg, canvas.width, canvas.height, 96);
+
+    const started = performance.now();
+    const result = await convertFile({ bytes, name: 'inverted-banner.pdf' }, { outputs: ['md'] }, {});
+    record.ms = Math.round(performance.now() - started);
+    record.warnings = result.warnings;
+    const md = result.outputs[0].content;
+    record.md = md;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    const titleCount = (body.match(/Good Faith Estimate for Health Care/g) || []).length;
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the banner is not reported as unread ink': (t, r) =>
+          (r.meta.ocrUnreadableRegions ?? 0) === 0 ||
+          `${r.meta.ocrUnreadableRegions} region(s) flagged — the black bar is being counted as ink`,
+        'no spurious not-recovered marker': () =>
+          !/SUMCHECK: value not recovered/.test(body) ||
+          'a marker fired on a page where nothing is missing',
+        'the banner title is read once, not twice': () =>
+          titleCount === 1 || `the title appears ${titleCount} times — the rescue duplicated it`,
+        'body text still reads': () => /3642199/.test(body) || 'the ordinary text was lost',
+      },
+      md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('inverted banner', err);
+  }
+}
+
+/**
+ * The headline figure, on a real corpus page.
+ *
+ * `test/fixtures/callout-page.png` is an actual rendered page from the audit
+ * batch (synthetic documents, confirmed by the owner). It has to be the whole
+ * page: the failure is Tesseract's *page-level* layout analysis discarding the
+ * block that holds the total, so a cropped fixture would not reproduce it —
+ * cropping is the cure, not the disease.
+ *
+ * Measured on this page: the whole-page pass never emits `$226.00` from the
+ * callout, while the same pixels cropped to the flagged region read it at 77.
+ */
+async function runCorpusCalloutCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>headline total on a real corpus page</h2><div class="body">converting…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'corpus-callout.pdf', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const png = new Uint8Array(await (await fetch('fixtures/callout-page.png')).arrayBuffer());
+    const bitmap = await createImageBitmap(new Blob([png], { type: 'image/png' }));
+    // Re-encode to JPEG so the PDF can carry it with /DCTDecode, at the same
+    // pixel dimensions the corpus page was rendered at.
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0);
+    const jpegBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.97));
+    const jpeg = new Uint8Array(await jpegBlob.arrayBuffer());
+    // The raster is 192 dpi; wrapping it at 192 reproduces the original page.
+    const bytes = buildImagePdf(jpeg, bitmap.width, bitmap.height, 192);
+
+    const started = performance.now();
+    const result = await convertFile({ bytes, name: 'corpus-callout.pdf' }, { outputs: ['md'] }, {});
+    record.ms = Math.round(performance.now() - started);
+    record.warnings = result.warnings;
+    const md = result.outputs[0].content;
+    record.md = md;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    const lines = body.split('\n');
+    const labelLine = lines.findIndex((l) => /Total Estimated Costs:/.test(l));
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the headline label is read': () => labelLine >= 0 || 'the label itself was not read',
+        'the headline value is recovered': () =>
+          /\$?226\.00/.test(lines.slice(Math.max(0, labelLine), labelLine + 4).join(' ')) ||
+          'the value next to the label was not recovered',
+        'or, failing that, the miss is marked': () =>
+          /226\.00/.test(body) || /SUMCHECK: value not recovered/.test(body) ||
+          'the value is missing with no marker — silence is the one unacceptable outcome',
+        'the reversed-out banner is still read once': () =>
+          (body.match(/Good Faith Estimate for Health Care/g) || []).length === 1 ||
+          'the banner was duplicated or lost',
+      },
+      md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('corpus callout', err);
+  }
+}
+
+/** Minimal single-page PDF whose only content is one full-bleed JPEG. */
+function buildImagePdf(jpeg, width, height, dpi = 144) {
+  const scale = 72 / dpi;
+  const w = Math.round(width * scale);
+  const h = Math.round(height * scale);
+  const content = `q ${w} 0 0 ${h} 0 0 cm /Im0 Do Q`;
+
+  const parts = [];
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R >>`,
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+    { image: true },
+  ];
+
+  let offset = 0;
+  const push = (text) => {
+    const bytes = new TextEncoder().encode(text);
+    parts.push(bytes);
+    offset += bytes.length;
+  };
+  const offsets = [];
+
+  push('%PDF-1.4\n');
+  objects.forEach((body, i) => {
+    offsets.push(offset);
+    if (body.image) {
+      push(
+        `${i + 1} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} ` +
+          `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`
+      );
+      parts.push(jpeg);
+      offset += jpeg.length;
+      push('\nendstream\nendobj\n');
+    } else {
+      push(`${i + 1} 0 obj\n${body}\nendobj\n`);
+    }
+  });
+
+  const xrefStart = offset;
+  let xref = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const o of offsets) xref += `${String(o).padStart(10, '0')} 00000 n \n`;
+  xref += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+  push(xref);
+
+  const total = parts.reduce((n, p) => n + p.length, 0);
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const part of parts) {
+    out.set(part, at);
+    at += part.length;
+  }
+  return out;
+}
+
+function renderChecks(box, record, checks, md, result) {
+  const rows = [];
+  for (const [label, check] of Object.entries(checks)) {
+    let outcome;
+    try {
+      outcome = check(md, result);
+    } catch (err) {
+      outcome = `check threw: ${err.message}`;
+    }
+    if (outcome === true) rows.push(`<li class="pass">✓ ${escapeHtml(label)}</li>`);
+    else {
+      record.failures.push(`${label}: ${outcome}`);
+      rows.push(`<li class="fail">✗ ${escapeHtml(label)} — ${escapeHtml(String(outcome))}</li>`);
+    }
+  }
+  record.pass = record.failures.length === 0;
+  box.querySelector('h2').innerHTML = `${escapeHtml(record.name)} <span class="${
+    record.pass ? 'pass' : 'fail'
+  }">${record.pass ? 'PASS' : 'FAIL'}</span> <small>${record.ms}ms</small>`;
+  box.querySelector('.body').innerHTML = `
+    <ul>${rows.join('')}</ul>
+    ${
+      record.warnings.length
+        ? `<details><summary>${record.warnings.length} warning(s)</summary><pre>${escapeHtml(
+            record.warnings.join('\n')
+          )}</pre></details>`
+        : ''
+    }
+    <details><summary>markdown output</summary><pre>${escapeHtml(md)}</pre></details>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+}
