@@ -45,7 +45,7 @@ Legend: **✅ done** · **⬜ open** (needs a human decision or an account) ·
 | 20 | Remote code declaration | ✅ "No, I am not using remote code", with the enforcement mechanism |
 | 21 | Data collection disclosure | ✅ nothing collected — no category applies. **Read the category list off the dashboard at submission**; the answer will not change |
 | 22 | Limited Use certifications (×3) | ✅ all affirmable; Sumcheck transfers no data anywhere |
-| 23 | Privacy policy URL, publicly reachable | ⬜ **blocker.** Text is drafted in `store/PRIVACY.md`; it needs hosting and a contact address |
+| 23 | Privacy policy URL, publicly reachable | ✅ **https://mshresponse.github.io/sumcheck/privacy/** — served by GitHub Pages from `docs/`, verified HTTP 200. Contact: mike@everythingvirtually.com |
 | 24 | Policy updates effective 1 Aug 2026 | ✅ Limited Use now requires collection be *strictly necessary* to the single purpose, and all collection be prominently disclosed. Nothing is collected, so both hold |
 
 ## Distribution tab
@@ -79,13 +79,20 @@ Legend: **✅ done** · **⬜ open** (needs a human decision or an account) ·
 
 ## Open items, honestly
 
-Three things stand between this build and a submission, and none of them is code:
+Everything that was blocking on 16 August is closed. What remains is the
+owner's to decide or to hold an account for — none of it is code:
 
-1. **A hosted privacy policy URL** (#23) — required. Draft text is written.
-2. **A contact email** in that policy.
-3. **Distribution decisions** (#25–27) and a **developer account** (#29–30).
+1. **Distribution decisions** (#25–27): payment model, countries, visibility.
+2. **A registered developer account** and its one-time fee (#29–30).
 
-The 440×280 promo tile (#16) is optional and costs search ranking to skip.
+The privacy policy is live at
+<https://mshresponse.github.io/sumcheck/privacy/>, served by GitHub Pages from
+`docs/` in the public repository, and the 440×280 promo tile is in
+`store/promo-440x280.png`.
+
+The source is public at <https://github.com/mshresponse/sumcheck>, which is
+what makes the listing's "verifiable by inspection" claim checkable rather than
+rhetorical.
 
 ## Sources
 
