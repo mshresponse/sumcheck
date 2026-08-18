@@ -7,6 +7,132 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-18 · Feedback infrastructure, and the candidate ledger migrated to issues
+
+Pre-submission polish. **No conversion changes** — the corpus was not re-scored
+because nothing in the conversion path was touched.
+
+### Issue templates
+
+`.github/ISSUE_TEMPLATE/` gains `bug_report.yml`, `feature_request.yml` and a
+`config.yml` routing questions to Discussions and security reports to
+`SECURITY.md`.
+
+The bug template's first screenful is not a form field. It is a request not to
+attach the document:
+
+> Sumcheck runs entirely on your device and never sends your files anywhere. A
+> GitHub issue is the opposite — it is public and permanent.
+
+It then gives three ways to report without one — describe the *shape*, reproduce
+with a synthetic file, or link something already public — and says plainly that
+a vague report we can act on beats a precise one the reporter should not have
+posted. A required checkbox confirms no private content is included, and the
+diagnostics field asks for counts and settings instead.
+
+This matters more here than in most projects. The people most likely to hit an
+interesting bug are the ones converting invoices, medical estimates and
+contracts; the conversion never leaves their machine and it would be a poor
+trade if the bug report did.
+
+Templates validated locally against GitHub's issue-form schema — element types,
+required `id`s, labels, non-empty option lists — using the vendored js-yaml.
+Anonymous fetch of the chooser redirects to login, so rendering could not be
+confirmed that way.
+
+### The app's Feedback link
+
+A footer in the app page linking to the issue chooser, with the caution beside
+the link rather than behind it:
+
+> Report a problem or suggest a feature · Opens GitHub. Please don't attach
+> private documents.
+
+The moment someone decides to report a bug is the moment they reach for the
+document that caused it, so the warning belongs at the click, not only in the
+template they reach afterwards.
+
+Both strings are localised (115 messages now). `verify-extension` counts 68
+tagged elements, none empty.
+
+### A false positive in `npm run check`, found and fixed
+
+Adding the link broke the build:
+
+```
+✗ src/app/app.html loads a remote or inline resource: https://github.com/…
+```
+
+The no-remote-loads rule matched any `src` or `href` with an `http(s):` prefix.
+An `href` on an `<a>` loads nothing — it opens a tab — so an outbound hyperlink
+was being reported as remote code.
+
+The rule now captures the owning tag and distinguishes a hyperlink from a
+subresource. `src` anywhere and `href` on `<link>` are still rejected when
+remote, and `javascript:`/`data:` are rejected everywhere including on anchors,
+since those navigate the page itself into attacker-controlled content.
+
+Verified in both directions: the link passes, and a planted
+`<script src="https://evil.example/x.js">` still fails the build. **Loosening
+the assertion to make the link pass would have removed the check that enforces
+the product's central privacy claim** — the fix had to make it more precise, not
+more permissive.
+
+### The candidate ledger, migrated
+
+Six candidates are now issues. Two of them — the split title and the
+size/token-savings display — existed only in the reviewer's
+`netzero-comparison.md`, which lives with the audit corpus **outside the
+repository**. Migrating them as-is would have produced issues linking to
+evidence nobody outside this machine can read, so those findings were recorded
+in the DEVLOG first and the issues point there.
+
+| # | title | labels |
+| --- | --- | --- |
+| 1 | Preserve nested key–value structure inside table cells | enhancement, conversion-quality |
+| 2 | Strip running headers and printed folio numbers | enhancement, conversion-quality |
+| 3 | Show size and token savings per conversion | enhancement |
+| 4 | Add page 600 of the Net Zero guide as a regression fixture | test-fixture, conversion-quality |
+| 5 | Record our own full-document wall-clock in the audit runner | tooling |
+| 6 | A wrapped display-size title splits into two headings | bug, conversion-quality |
+| 7 | Copy diagnostic info — zero document content | enhancement, privacy, **v1.6** |
+
+Each carries its measurements rather than a summary: #1 has the 17/17 vs 8/17
+row-attribution scores, #2 has the 1,368 folio lines and the 5/5 and 10/10
+retention counts, #4 has the full expected-token table so the fixture can be
+built from the issue alone.
+
+#7 is the queued v1.6 candidate. Its constraint is the feature: counts and
+settings, never a file name, never converted text, never a flagged word. The
+issue says the fixture should assert the *negative* — that the block contains no
+substring of the converted text — because the failure mode is inclusion, not
+omission.
+
+Discussions enabled. Seven labels created.
+
+### Screenshots refreshed
+
+The footer is visible in the drop-zone screenshot, so the three committed store
+screenshots were regenerated. A store packet depicting a build that no longer
+exists is the kind of small staleness that survives all the way to a reviewer.
+
+### Gates
+
+`npm test` **41/41** · `verify-extension` **47/47** · `npm run check` green.
+
+No corpus re-score: nothing in `src/core/` was touched. The only source change
+outside the app page is the check script, which is build tooling.
+
+### Invariant I was tempted to break and didn't
+
+**Making the failing check pass by relaxing it.** One character — dropping
+`href` from the pattern — and the build would have gone green. It would also
+have stopped detecting a remote stylesheet, which is precisely the class of
+thing the privacy claim in the store listing rests on. The check was wrong about
+*this* link and right about the rule; the fix was to teach it the difference.
+
+---
+
 ## 2026-08-18 · Candidate ledger — the netzero comparison findings, recorded
 
 Recorded so every open candidate has evidence in this file. Three of these came
