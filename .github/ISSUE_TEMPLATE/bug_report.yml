@@ -1,0 +1,96 @@
+name: Bug report
+description: Something converted wrongly, or the extension misbehaved.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Before anything else: please do not attach your document
+
+        Sumcheck runs entirely on your device and never sends your files
+        anywhere. A GitHub issue is the opposite — it is public and permanent.
+
+        **Do not attach or paste content from a private document**: no invoices,
+        medical records, contracts, statements, or anything with a name, an
+        address, an account number or a figure that belongs to someone.
+
+        Instead, do one of these:
+
+        - **Describe the shape of it.** "A two-column table where the right
+          column contains a nested label/value list" is more useful to us than a
+          screenshot, and costs you nothing.
+        - **Reproduce it with a synthetic file.** Retype the structure with
+          invented values. If a made-up document shows the same bug, that file is
+          the ideal attachment.
+        - **Attach a public document.** If the same problem happens with
+          something already published, link it.
+
+        If the bug only reproduces on a document you cannot share, say so and
+        describe it — we will work with that. A vague report we can act on beats
+        a precise one you should not have posted.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did the conversion produce, and what did you expect instead?
+      placeholder: |
+        The Details column ran all the field properties together into one
+        sentence instead of keeping them as separate labelled values.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: >
+        Steps, plus the shape of the input. A synthetic file that reproduces it
+        is the most useful thing you can attach.
+      placeholder: |
+        1. Convert a PDF containing a two-column table
+        2. The right cell contains a label on one line and its value indented below
+        3. Open the Markdown tab
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Source format
+      options:
+        - PDF (with a text layer)
+        - PDF (scanned / needs OCR)
+        - PDF (not sure which)
+        - Word / Excel / PowerPoint
+        - OpenDocument
+        - EPUB
+        - Image
+        - Web page or captured tab
+        - Other / several
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostic info
+      description: >
+        Paste the app's diagnostic info here. It carries the version, your
+        settings and the conversion's warning and flag counts — and no document
+        content whatsoever. Until the copy button ships (issue #7), paste your
+        Sumcheck version, browser version, and the `ocr_*`, `review_flags` and
+        `table_fallback` lines from the converted file's front matter.
+      render: text
+      placeholder: |
+        Sumcheck 1.5.0 · Chrome 151 · macOS
+        ocr: true · ocr_pages: 1 · ocr_dpi: 192
+        ocr_flagged_fields: 5 · review_flags: 1 · table_fallback: 0
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Confirmation
+      options:
+        - label: >
+            This report contains no content from a private document — I have
+            described the problem, used a synthetic file, or linked something
+            already public.
+          required: true

@@ -450,5 +450,13 @@
   "badgeError": {
     "message": "Sumcheck — $1",
     "description": "Toolbar tooltip when a conversion fails. $1 is the reason."
+  },
+  "footerFeedback": {
+    "message": "Report a problem or suggest a feature",
+    "description": "Footer link to the project's GitHub issue chooser."
+  },
+  "footerFeedbackNote": {
+    "message": "Opens GitHub. Please don't attach private documents.",
+    "description": "Caution beside the feedback link, shown in the app footer."
   }
 }

@@ -54,12 +54,30 @@ for (const page of pages) {
   }
   const html = read(page);
   const dir = path.dirname(page);
-  for (const match of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
-    const ref = match[1];
-    if (/^(https?:|data:|#)/.test(ref)) {
-      problems.push(`${page} loads a remote or inline resource: ${ref}`);
+  /**
+   * Every `src`/`href` in the page, with the owning tag captured.
+   *
+   * The distinction matters: a `src`, or an `href` on `<link>`, pulls a
+   * subresource *into* the page, and a remote one would be exactly the remote
+   * code MV3 forbids. An `href` on `<a>` loads nothing — it opens a tab — so a
+   * plain outbound hyperlink is legitimate and was previously being reported as
+   * a remote load. `javascript:` and `data:` stay rejected everywhere, because
+   * those navigate the page itself into attacker-controlled content.
+   */
+  for (const match of html.matchAll(/<([a-z]+)\b[^>]*?\b(src|href)="([^"]+)"/gi)) {
+    const [, tag, attribute, ref] = match;
+    const isHyperlink = tag.toLowerCase() === 'a' && attribute.toLowerCase() === 'href';
+
+    if (/^(javascript:|data:)/i.test(ref)) {
+      problems.push(`${page} has a ${ref.split(':')[0]}: URL: ${ref.slice(0, 60)}`);
       continue;
     }
+    if (/^https?:/.test(ref)) {
+      if (!isHyperlink) problems.push(`${page} loads a remote resource: ${ref}`);
+      continue; // an outbound link is fine; nothing to resolve on disk
+    }
+    if (ref.startsWith('#')) continue; // in-page anchor
+
     const resolved = path.normalize(path.join(dir, ref));
     if (!exists(resolved)) problems.push(`${page} references a missing file: ${ref}`);
   }

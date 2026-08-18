@@ -1,0 +1,50 @@
+name: Feature request
+description: Suggest something Sumcheck should do.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Two things worth knowing before you write, because they decide what can
+        be built:
+
+        - **Everything runs on the device.** Sumcheck makes no network requests
+          at runtime and has no server. Anything needing a cloud API, an account,
+          or a model too large to bundle is out of scope by design, not by
+          oversight.
+        - **It never silently rewrites a value.** Where the converter is unsure
+          it says so in the output. A request to "just fix" a misread figure will
+          become a request to *flag* it instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: >
+        The task, not the feature. Knowing what you are actually trying to
+        achieve often surfaces a better answer than the one either of us started
+        with.
+      placeholder: >
+        I feed converted documents into an LLM and need to know how much smaller
+        the Markdown is than the source before I decide what to send.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like it to do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What do you do today instead?
+      description: Existing workarounds, or other tools that get this right.
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This works without a network request or a server.
+          required: false

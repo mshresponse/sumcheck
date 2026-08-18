@@ -268,3 +268,18 @@ input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px;
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
 .modal .wrong { color: #c0392b; }
 @media (prefers-color-scheme: dark) { .modal .wrong { color: #ff8a80; } }
+
+/* ---------------------------------------------------------------- footer */
+
+.app-footer {
+  margin: 40px 0 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+.app-footer a { color: var(--accent); }
+.footer-note { color: var(--muted); }

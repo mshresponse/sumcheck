@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question or idea
+    url: https://github.com/mshresponse/sumcheck/discussions
+    about: >
+      For anything that is not a bug or a specific request — how to use it,
+      whether something is expected, or an idea still taking shape.
+  - name: Security vulnerability
+    url: https://github.com/mshresponse/sumcheck/blob/main/SECURITY.md
+    about: >
+      Please report privately by email rather than opening a public issue.

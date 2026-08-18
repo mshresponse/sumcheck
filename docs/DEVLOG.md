@@ -7,6 +7,72 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-18 · Candidate ledger — the netzero comparison findings, recorded
+
+Recorded so every open candidate has evidence in this file. Three of these came
+from the reviewer's `netzero-comparison.md` (Sumcheck 1.5.0 vs a pdftotext
+ingestion of the same 1,349-page guide), which lives with the audit corpus
+outside the repository — so its findings are restated here rather than linked,
+and the issues that track them point at this entry.
+
+**No work done.** This is the ledger being made complete before it is migrated
+to GitHub issues.
+
+### From the netzero comparison
+
+**Printed folio numbers survive — 1,368 bare page-number lines.** The
+running-head stripper detects text that *repeats*; an incrementing number never
+does. Candidate rule: a bare integer alone at a page's text edge, matching a
+monotone sequence across pages, is a folio.
+
+**Varying running headers survive** — `Chapter | CurrentObjectName`. The left
+half repeats and the right half changes per page, so the pair escapes a
+whole-line repetition test. Candidate rule: strip lines whose *prefix* repeats
+at the same page position.
+
+Both are the same defect seen from two angles, and both are why candidate 1 in
+the Docling bench note says *investigate why `stripRunningHeads` misses these
+before writing new rules*. Docling strips both, so the behaviour is achievable.
+
+**A display-size title wrapped across two lines becomes two sibling headings.**
+Page 1 emits `## Net Zero Cloud Developer` followed by `## Guide`. One heading
+was split into two because the source line wrapped.
+
+### Where the size/token-savings figure comes from
+
+The same comparison measured our output against the pdftotext artifact for the
+same document:
+
+| | Sumcheck `.md` | pdftotext `.txt` |
+| --- | --- | --- |
+| content tokens | 185,802 | 185,849 |
+| size | 1.8 MB | 3.5 MB (≈1.7 MB of it layout-as-whitespace) |
+| headings | 895 | 0 |
+| tables | 545 real Markdown tables + 11 declared `table_fallback` | none |
+
+Equal content, roughly half the bytes. The candidate is to *show* that in the
+app — a per-conversion figure for how much smaller the Markdown is than the
+source, which for anyone feeding an LLM is the number that matters. It is a
+display feature, not a conversion change, and nothing about it has been designed
+yet.
+
+### The ledger, as migrated
+
+Six candidates, now GitHub issues:
+
+1. Nested key-value structure inside table cells — Docling bench note
+2. Strip running headers and folio numbers — this entry + Docling bench note
+3. Show size and token savings per conversion — this entry
+4. Page 600 as a regression fixture — Docling bench note
+5. Record our own full-document wall-clock — Docling bench addendum
+6. A wrapped display-size title splits into two headings — this entry
+
+Plus one queued for v1.6: **Copy diagnostic info** — a button that copies
+version, settings and warning/flag counts, with zero document content, so a bug
+report can carry context without carrying anyone's document.
+
+---
+
 ## 2026-08-18 · Bench — Docling vs Sumcheck on the Net Zero Cloud guide (characterization only)
 
 **No fixes.** Findings go to the candidate list.
