@@ -132,6 +132,27 @@ this log.
 `~/mdforge-audit/docling-p1-5.md`, `docling-p598-602.md`,
 `docling-p1340-1349.md`; raw timings in `/tmp/docling-bench.json`.
 
+### Addendum — queued, and cleanup done (18 August 2026)
+
+**Queued as a fourth candidate: record our own full-document wall-clock.** The
+bench above extrapolates Docling at ~14 min for 1,349 pages and then declines to
+compare, because our own time for the same document was never measured. Next
+time `npm run audit` runs on the netzero guide, time it and record pages,
+wall-clock and s/page here. Until then the Docling figure has no denominator and
+should not be quoted as a speed comparison in either direction.
+
+**Cleanup.** The 2.4 GB the benchmark added is staged at
+`~/_to_delete/2026-08-18-docling-bench/` rather than deleted — venv (1.3 G),
+Hugging Face model cache (506 M), pip cache (572 M), and the three pre-rename
+`mdforge-1.0.0/1.1.0/1.2.0.zip` builds (49 M) that were still sitting in
+`dist/`. A `README.txt` in that directory lists what each item is and the single
+command that removes them. The three Docling `.md` outputs stay in
+`~/mdforge-audit/` — they are the artifact the exercise was for.
+
+Homebrew `python@3.12` (~80 M) is **still installed**: uninstalling is a
+deletion, so it is left for the owner, with the reason it was needed recorded in
+that README. Nothing in Sumcheck depends on it.
+
 ---
 
 ## 2026-08-17 · v1.5.0 cycle · R3 (open source) and R4 (final gates)
