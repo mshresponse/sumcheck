@@ -7,6 +7,133 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-18 · Bench — Docling vs Sumcheck on the Net Zero Cloud guide (characterization only)
+
+**No fixes.** Findings go to the candidate list.
+
+**Setup.** `docling 2.120.2`, `PdfPipelineOptions(do_ocr=False)` — the guide is
+born-digital and our own run used 0 OCR pages, so both sides read the text
+layer. Sampled ranges, because 1,349 pages on CPU is impractical.
+
+### Timing
+
+| range | pages | wall | s/page |
+| --- | --- | --- | --- |
+| 1–5 **cold** (includes model download) | 5 | **112.43 s** | 22.49 |
+| 1–5 warm (same range, re-run) | 5 | 4.77 s | 0.95 |
+| 598–602 | 5 | 1.53 s | **0.31** |
+| 1340–1349 | 10 | 6.47 s | 0.65 |
+
+Re-running range 1 warm is how the download is separated rather than estimated:
+**one-time model cost = 112.43 − 4.77 = 107.7 s**. Package import is a further
+38.4 s per process; converter construction is free (0.05 s).
+
+**Extrapolated full document, warm:** 20 sampled pages in 12.77 s = **0.64
+s/page → ~14.4 min** for 1,349 pages, plus ~108 s of first-run model load.
+
+That blended figure hides a 3× spread — 0.31 s/page on the dense object-reference
+pages against 0.95 s/page on the front matter — so the honest range is **7 to 21
+minutes** depending on page mix. The sample is 20 of 1,349 pages (1.5%) and is
+not random: it is three contiguous blocks chosen for content, so the
+extrapolation is indicative, not a measurement.
+
+**No speed comparison is claimed.** Our own full-document wall-clock was never
+recorded, so there is nothing to compare against. Worth capturing next time we
+run it.
+
+### Quality — page 600, the `RentalCarEnrgyUse` Field/Details table
+
+Physical page 600 = printed folio 592 (the document's folio runs 8 behind, and
+that mapping is consistent across the sampled block).
+
+Ground truth from the PDF text layer: `Details` is a **nested definition list** —
+a label (`Type`, `Properties`, `Description`, `Relationship Name`, `Relationship
+Type`, `Refers To`) on one line, its value indented beneath.
+
+**Does Docling emit a real table?** Yes, on part of the range — and then it stops.
+Within pages 598–602 it emits 4 tables, but **37 of its 48 headings are cell
+labels promoted to `##`**: `## Type`, `## Properties`, `## Description`,
+`## Field`, `## Details`. The table decomposes mid-object into a flat run of
+headings, and the field-to-value association is gone with it. This is specific to
+this table shape — the same run produced 0 mis-promoted labels on pages 1–5 and
+0 on 1340–1349.
+
+**Cell structure vs ours.** Both flatten the nested pairs into run-on text;
+neither preserves the definition list. That is our known weakness and it is
+Docling's too. The difference is what survives the flattening. Scoring each of
+the five fields on page 600 for the tokens ground truth says belong in its row:
+
+| | expected tokens in the correct row | cross-row contamination |
+| --- | --- | --- |
+| **Sumcheck** | **17 / 17** | **0** |
+| Docling | 8 / 17 | 1 |
+
+Docling's rows drift. `SuplScope3Emissions` carries StartDate's description
+("The date from when the values of this energy use record are valid"),
+`StartDate` opens with Scope3GhgCategory's trailing bullet
+("• EmployeeCommuting"), and `Scope3EmssnSrcId` truncates after
+"Type reference Properties" — losing its Properties value, Description,
+Relationship Name, Relationship Type and Refers To.
+
+So on this page we are flattened-but-faithful and Docling is
+flattened-and-lossy. For a document where the whole point is which value belongs
+to which field, that difference matters more than the flattening both share.
+
+**Header and folio.** Docling **strips both** — 0 occurrences of the running
+header "Net Zero Cloud Standard Objects" and 0 bare folio lines across the whole
+598–602 range. We keep both, on 5/5 pages of that range and 10/10 of pages
+1340–1349. (On pages 1–5 we keep a header on 1/5 and no folios, because the front
+matter has neither.) This confirms the reviewer's finding, and Docling
+demonstrates the behaviour we would want.
+
+### Candidate list
+
+1. **Strip running headers and folio numbers.** Confirmed against a second
+   implementation that does it. Detectable the way we already detect repeated
+   headers elsewhere: a line recurring at the same position across most pages,
+   and a bare integer alone at the page foot. Our `stripRunningHeads` option
+   exists and did not catch these — worth finding out why before adding
+   anything.
+2. **Preserve nested key-value structure inside a table cell.** Both converters
+   fail this. The source is a definition list; a faithful rendering is a nested
+   list or `label: value` pairs inside the cell, not a run-on sentence. This is
+   the larger prize and the harder one.
+3. **Do not chase Docling's table detection here.** On the page that matters it
+   scored 8/17 against our 17/17 and misattributed content across rows. Whatever
+   we change, this page is now a regression fixture candidate with ground truth
+   already extracted.
+
+### Environment — for cleanup
+
+The task anticipated a ~3 GB venv. Actual footprint is larger and in four
+places, because **system Python 3.9.6 could not install Docling at all**:
+`pyobjc-core` has no cp39 wheel for this platform and its source build fails on
+current clang (`-Wdefault-const-init-var-unsafe` is now an error). Docling itself
+is `py3-none-any`; the blocker was a transitive macOS dependency. I installed
+`python@3.12` via Homebrew and rebuilt the venv on it.
+
+| what | size | note |
+| --- | --- | --- |
+| `~/dl` | 1.3 G | the venv, safe to delete |
+| `~/.cache/huggingface` | 506 M | layout models, safe to delete |
+| `~/Library/Caches/pip` | 572 M | wheel cache, safe to delete |
+| `/opt/homebrew/Cellar/python@3.12` | 80 M | `brew uninstall python@3.12` if unwanted |
+
+**~2.4 GB total.** Disk is at 89% with 22 GiB free.
+
+Also worth recording as a method note: the first install reported `rc=0` while
+having failed, because the exit code came from the `tail` at the end of a
+pipeline rather than from `pip`. The install log had to be read to discover it
+had not worked. Same family as every other "green but didn't run" finding in
+this log.
+
+### Artifacts
+
+`~/mdforge-audit/docling-p1-5.md`, `docling-p598-602.md`,
+`docling-p1340-1349.md`; raw timings in `/tmp/docling-bench.json`.
+
+---
+
 ## 2026-08-17 · v1.5.0 cycle · R3 (open source) and R4 (final gates)
 
 ### The R3 questions were not answered, and most of them did not need to be
