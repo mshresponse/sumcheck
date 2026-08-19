@@ -7,6 +7,80 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.0 cycle · Q3 characterization — why headings duplicate their own text (#11)
+
+**Measured before changing anything**, per the work order. No fix in this entry.
+
+### The cause: faux-bold, drawn twice
+
+The PDF draws the string **twice**, at the same baseline, offset horizontally by
+**0.28 pt**:
+
+```
+bbox=(64.8, 52.5, 151.2, 70.5)  size=14.0  SalesforceSans-Regular  'August 2026 '
+bbox=(65.1, 52.5, 151.5, 70.5)  size=14.0  SalesforceSans-Regular  'August 2026 '
+```
+
+That is the standard way to fake a bold weight when a bold face is not embedded:
+print the glyphs, nudge a fraction of a point, print them again. The font name
+says `-Regular` on both copies, which is the tell.
+
+Our line assembler groups glyph runs by baseline and concatenates them, so the
+two copies land in one line with nothing between them — `August 2026August
+2026`. Nothing in the pipeline is duplicating anything; we are faithfully
+reporting ink that is genuinely on the page twice.
+
+### Census across all 1,010 pages
+
+| | |
+| --- | ---: |
+| overprinted duplicate pairs | **86** |
+| distinct horizontal offsets | **1** — always 0.28 pt |
+| distinct type sizes | **1** — always 14.0 pt |
+
+| text | pairs |
+| --- | ---: |
+| `August 2026` | 79 |
+| `September 2026` | 2 |
+| `October 2026` | 2 |
+| `New Classes` | 1 |
+| `New or Changed Methods in Existing Classes` | 1 |
+| `Actions` | 1 |
+
+**86 overprints, 86 doubled headings** — a one-to-one match, and the text
+distribution is identical to the heading census taken from our own output. The
+cause accounts for the defect exactly, with nothing left over.
+
+### A correction to the bench, and to issue #11
+
+Both said "the PDF draws the string exactly once at that position, so the
+duplication is ours", citing `pdftotext -bbox`. That was wrong, and the tool
+misled rather than the reasoning: **pdftotext silently drops overlapping
+duplicate text**, so it reports one word where the file has two. PyMuPDF reports
+both. The lesson is the one this project keeps relearning — a single tool's
+output is not evidence about a file, and the check should have been run against
+two readers before the claim was published. Issue #11 and
+`winter27-comparison.md` are corrected.
+
+It changes the fix, not the severity. This is not a bug in our extraction to be
+hunted down; it is a real-world PDF idiom we do not yet recognise.
+
+### What this implies for the fix
+
+Collapse a glyph run that repeats the run immediately before it at the same
+baseline within a fraction of its own type size. The tolerance has to be
+relative — 0.28 pt is 2% of 14 pt — and the test has to require the *same text*,
+because two different words a fraction of a point apart are kerning, not
+overprint.
+
+The guardrail the work order names is real and the fixture must carry it:
+**legitimately repeated words must survive.** `had had`, a product name like
+`Sales Sales Cloud`, a table cell repeating its neighbour — these are separated
+by a space and by a full advance width, not by 2% of a glyph. Deduplicating on
+text alone would eat them; deduplicating on position will not.
+
+---
+
 ## 2026-08-19 · v1.7.0 cycle · Q2 — a decorative glyph must not decide its line is a heading (#10)
 
 ### Which fix, and why that one
