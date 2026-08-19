@@ -7,6 +7,52 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.0 cycle · Q3 — collapsing faux-bold overprint (#11)
+
+The cause is in the characterization note below, written before this fix: the
+PDF prints those glyphs twice, 0.28 pt apart, because no bold face is embedded.
+86 pairs across 1,010 pages, one distinct offset, one distinct size.
+
+### The fix, and why it tests position rather than text
+
+`dropOverprints()` runs on each baseline group after it is sorted by x, and
+drops a run that repeats the run before it at nearly the same place. The
+tolerance is **6% of the type size**, floored at 0.4 pt.
+
+That number sits in a wide gap. The idiom uses 2% — 0.28 pt at 14 pt. The
+narrowest real glyph advance is around a fifth of the type size, and a repeated
+*word* carries a space as well. So 6% is three times what the defect needs and a
+third of the closest thing it could damage.
+
+Deduplicating on text alone was never an option, and the fixture says so out
+loud: `had had to be restated`, `that that decision was reversed`, and two
+`Total` cells a column apart. All three repeat text; none repeat position. They
+were green before the change and are green after it.
+
+### Results
+
+| Winter '27 | before Q1 | after Q2 | **after Q3** |
+| --- | ---: | ---: | ---: |
+| headings | 2,630 | 2,015 | **2,011** |
+| bullet list items as headings | 713 | 0 | **0** |
+| headings doubling their own text | 86 | 86 | **0** |
+| table rows | 1,162 | 1,162 | 1,162 |
+
+Target was 86 → 0 with no corpus movement. Both met.
+
+Net Zero: 864 headings, 5 residual chrome lines, 3,122 table rows — unchanged
+from Q2. Corpus: every metric at baseline, marker invariant 6 = 6. Gates: check
+clean, **48/48** harness cases, **51/51** packaged-extension checks.
+
+### Worth noting for later
+
+This idiom is invisible to `pdftotext`, which drops overlapping duplicates
+silently. Any future characterization that asks "what does the file actually
+contain" should read it with two independent libraries before publishing an
+answer — this cycle published the wrong cause once for exactly that reason.
+
+---
+
 ## 2026-08-19 · v1.7.0 cycle · Q3 characterization — why headings duplicate their own text (#11)
 
 **Measured before changing anything**, per the work order. No fix in this entry.

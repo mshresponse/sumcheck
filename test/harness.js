@@ -1558,6 +1558,68 @@ async function runOversizedBulletCase() {
   }
 }
 
+/**
+ * The same glyphs printed twice to fake a bold weight (Q3, #11).
+ *
+ * Measured on a 1,010-page reference document: 86 headings arrive as
+ * `August 2026August 2026` because no bold face is embedded and the producer
+ * nudges 0.28 pt and reprints. Both copies are real ink; the assembler groups
+ * runs by baseline and concatenates them.
+ *
+ * The three controls all repeat text and none repeat position — `had had` and
+ * `that that` are ordinary English, and the two `Total` cells sit a column
+ * apart. Deduplicating on text would eat them, which is why the fix rests on
+ * position.
+ */
+async function runOverprintCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>faux-bold overprint collapses, real repetition survives</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'overprint-heading', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/overprint-heading.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'overprint-heading.pdf' }, { outputs: ['md'] }, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the overprinted heading is emitted once': () =>
+          !body.includes('August 2026August 2026') || 'the doubled heading survived',
+        'and it is still there': () =>
+          /August 2026/.test(body) || 'the heading was dropped rather than collapsed',
+        'exactly one copy of it': () =>
+          (body.match(/August 2026/g) || []).length === 1 ||
+          `${(body.match(/August 2026/g) || []).length} copies`,
+        'a legitimately repeated word survives': () =>
+          body.includes('had had to be restated') || '"had had" was collapsed',
+        'and another one': () =>
+          body.includes('that that decision was reversed') || '"that that" was collapsed',
+        'a repeated table label a column away survives twice': () =>
+          (body.match(/Total/g) || []).length === 2 ||
+          `${(body.match(/Total/g) || []).length} occurrence(s) of Total, expected 2`,
+        'body text is untouched': () =>
+          body.includes('Both columns above are labelled identically by design.') ||
+          'the closing paragraph was damaged',
+      },
+      record.md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('overprint-heading', err);
+  }
+}
+
 const summary = document.getElementById('summary');
 const container = document.getElementById('cases');
 const results = [];
@@ -1595,6 +1657,7 @@ async function run() {
     ['diagnostics', runDiagnosticsCase],
     ['outline-headings', runOutlineHeadingCase],
     ['oversized-bullet', runOversizedBulletCase],
+    ['overprint-heading', runOverprintCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],

@@ -1,0 +1,42 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 497 >>
+stream
+BT /F1 14 Tf 1 0 0 1 72 700 Tm (August 2026) Tj ET
+BT /F1 14 Tf 1 0 0 1 72.28 700 Tm (August 2026) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 670 Tm (The auditor noted that the figure had had to be restated twice.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 654 Tm (The minutes record that that decision was reversed the same week.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 620 Tm (Total) Tj ET
+BT /F1 11 Tf 1 0 0 1 200 620 Tm (Total) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 590 Tm (Both columns above are labelled identically by design.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Title (Audit Minutes) /Creator (Sumcheck fixtures) >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000789 00000 n 
+0000000886 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R /Info 6 0 R >>
+startxref
+959
+%%EOF

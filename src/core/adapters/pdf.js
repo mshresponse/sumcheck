@@ -235,8 +235,9 @@ function buildLines(pdfjs, textContent, viewport, links = []) {
   }
   groups.push(current);
 
-  const lines = groups.map((group) => {
-    group.sort((a, b) => a.x - b.x);
+  const lines = groups.map((rawGroup) => {
+    rawGroup.sort((a, b) => a.x - b.x);
+    const group = dropOverprints(rawGroup);
     const segments = [];
     let cursor = null;
     let prevEnd = null;
@@ -316,6 +317,40 @@ function dominantSize(group) {
     for (let i = 0; i < weight; i++) weighted.push(item.size);
   }
   return median(weighted) || Math.max(...group.map((g) => g.size));
+}
+
+/**
+ * Drop the second impression of glyphs printed twice to fake a bold weight.
+ *
+ * When no bold face is embedded, a producer prints the glyphs, nudges a
+ * fraction of a point, and prints them again. Measured on a 1,010-page
+ * reference document: 86 headings arrive that way, always 0.28 pt apart, always
+ * at 14 pt. Both impressions are real ink, so the assembler was right to
+ * concatenate them and the output read `August 2026August 2026`.
+ *
+ * The test is position, never text. Legitimately repeated words — `had had`, a
+ * label repeated in the next column — are separated by a space and a full
+ * advance width; the narrowest glyph advance is around a fifth of the type
+ * size, so a sixteenth is far below anything real and comfortably above the 2%
+ * this idiom uses.
+ */
+function dropOverprints(group) {
+  const out = [];
+  for (const item of group) {
+    const prev = out[out.length - 1];
+    const near = prev ? Math.max(0.4, item.size * 0.06) : 0;
+    if (
+      prev &&
+      prev.text === item.text &&
+      item.text.trim() &&
+      Math.abs(item.x - prev.x) <= near &&
+      Math.abs(item.y - prev.y) <= near
+    ) {
+      continue;
+    }
+    out.push(item);
+  }
+  return out;
 }
 
 /** Split a line wherever the horizontal gap is wide enough to be a column. */

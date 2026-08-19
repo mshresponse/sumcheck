@@ -541,6 +541,61 @@ function buildOversizedBulletPdf() {
   return Buffer.from(out, 'latin1');
 }
 
+/**
+ * Faux-bold overprint, plus the repetitions a fix for it must not eat.
+ *
+ * `August 2026` is drawn twice at the same baseline, 0.28 pt apart — measured
+ * from a real 1,010-page document, where 86 headings arrive this way because no
+ * bold face is embedded and the producer nudges and reprints instead.
+ *
+ * The controls are legitimate repetition at legitimate distance: `had had` and
+ * `that that` are ordinary English, and the two `Total` cells sit a column
+ * apart. All of them repeat text; none of them repeat position. That is the
+ * distinction the fix has to rest on, because text alone cannot tell them apart.
+ */
+function buildOverprintHeadingPdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const content = [
+    // The overprint pair: same glyphs, same baseline, 0.28 pt apart.
+    line('F1', 14, 72, 700, 'August 2026'),
+    line('F1', 14, 72.28, 700, 'August 2026'),
+
+    line('F1', 11, 72, 670, 'The auditor noted that the figure had had to be restated twice.'),
+    line('F1', 11, 72, 654, 'The minutes record that that decision was reversed the same week.'),
+
+    // Repetition at a full column's distance, which is not overprint.
+    line('F1', 11, 72, 620, 'Total'),
+    line('F1', 11, 200, 620, 'Total'),
+
+    line('F1', 11, 72, 590, 'Both columns above are labelled identically by design.'),
+  ].join('\n');
+
+  const objects = [];
+  const add = (body) => { objects.push(body); return objects.length; };
+  add('<< /Type /Catalog /Pages 2 0 R >>');
+  add('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      '/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>');
+  add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  const info = add('<< /Title (Audit Minutes) /Creator (Sumcheck fixtures) >>');
+
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 /* ------------------------------------------------------------------- PDF */
 
 function buildPdf() {
@@ -856,6 +911,7 @@ write('split-title.pdf', buildSplitTitlePdf());
 write('diagnostics.pdf', buildDiagnosticsPdf());
 write('outline-headings.pdf', buildOutlineHeadingsPdf());
 write('oversized-bullet.pdf', buildOversizedBulletPdf());
+write('overprint-heading.pdf', buildOverprintHeadingPdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own
