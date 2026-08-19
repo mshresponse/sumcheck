@@ -297,3 +297,22 @@ input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px;
 .result-savings:empty {
   display: none;
 }
+
+/* The reassurance sits beside the button, not in a tooltip: someone about to
+   paste this into a public issue should be able to read what it contains
+   without clicking anything first. */
+.diagnostics {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.75rem;
+}
+.diagnostics-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.btn.small {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+}

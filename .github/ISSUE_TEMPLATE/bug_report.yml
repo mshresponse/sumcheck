@@ -72,16 +72,20 @@ body:
     attributes:
       label: Diagnostic info
       description: >
-        Paste the app's diagnostic info here. It carries the version, your
-        settings and the conversion's warning and flag counts — and no document
-        content whatsoever. Until the copy button ships (issue #7), paste your
-        Sumcheck version, browser version, and the `ocr_*`, `review_flags` and
-        `table_fallback` lines from the converted file's front matter.
+        Click **Copy diagnostic info** in the result panel and paste it here.
+        The button produces exactly what this field wants: version, browser,
+        page and OCR counts, flag counts by type, and any setting you changed
+        from its default. It contains no file name, no title and no document
+        text — by construction, and there is a test that fails if that ever
+        stops being true. The button is also available when a conversion fails,
+        which is when it is most useful.
       render: text
       placeholder: |
-        Sumcheck 1.5.0 · Chrome 151 · macOS
-        ocr: true · ocr_pages: 1 · ocr_dpi: 192
-        ocr_flagged_fields: 5 · review_flags: 1 · table_fallback: 0
+        Sumcheck 1.6.0 · Chrome 151 · macOS
+        source_format: pdf · pages: 2
+        ocr: yes · ocr_pages: 2 · ocr_dpi: 192 · ocr_confidence_mean: 94.6 · ocr_flagged_fields: 4
+        review_flags: 3 · by_type: total-mismatch=1, not-a-word=2
+        settings: outputs=md · ocrMode=always · (18 other settings at defaults)
     validations:
       required: true
   - type: checkboxes

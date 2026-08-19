@@ -338,6 +338,64 @@ function buildSplitTitlePdf() {
   return Buffer.from(out, 'latin1');
 }
 
+/**
+ * A document built to be recognisable in a haystack.
+ *
+ * Every distinctive string here exists so the diagnostics fixture can assert a
+ * negative: `Zquarnix` cannot occur by chance, and `recieved` is a misspelling
+ * the prose validator flags, so if a flag's message ever reached the payload
+ * the word would come with it. The amounts give the arithmetic checks something
+ * to disagree about.
+ */
+function buildDiagnosticsPdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const content = [
+    line('F2', 20, 72, 720, 'Zquarnix Holdings Statement'),
+    line('F1', 11, 72, 690, 'Prepared for the quarter ending in March.'),
+    line('F1', 11, 72, 664, 'Payment was recieved against the following items.'),
+    line('F2', 11, 72, 630, 'Item'),
+    line('F2', 11, 300, 630, 'Amount'),
+    line('F1', 11, 72, 608, 'Frobnicator maintenance'),
+    line('F1', 11, 300, 608, '$1,240.00'),
+    line('F1', 11, 72, 590, 'Widget recalibration'),
+    line('F1', 11, 300, 590, '$310.00'),
+    // 1,240 + 310 is 1,550. The printed total is wrong on purpose: it makes the
+    // arithmetic check fire, and its message quotes both amounts — so if a flag
+    // message ever reached the diagnostic payload, these digits would be in it.
+    line('F2', 11, 72, 566, 'Total'),
+    line('F2', 11, 300, 566, '$1,560.00'),
+  ].join('\n');
+
+  const objects = [];
+  const add = (body) => { objects.push(body); return objects.length; };
+
+  add('<< /Type /Catalog /Pages 2 0 R >>');
+  add('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  add(
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      '/Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>'
+  );
+  add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const info = add('<< /Title (Zquarnix Holdings Statement) /Creator (Sumcheck fixtures) >>');
+
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 /* ------------------------------------------------------------------- PDF */
 
 function buildPdf() {
@@ -650,6 +708,7 @@ write('sample.pdf', buildPdf());
 write('locked.pdf', buildEncryptedPdf('secret', 'owner-secret'));
 write('field-details.pdf', buildFieldDetailsPdf());
 write('split-title.pdf', buildSplitTitlePdf());
+write('diagnostics.pdf', buildDiagnosticsPdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own

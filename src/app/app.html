@@ -166,6 +166,13 @@
       </div>
     </div>
     <div id="warnings" class="warnings" hidden></div>
+    <!-- Counts and settings only. The button is here rather than tucked in a menu
+         because the moment someone decides to report a bug is the moment they
+         reach for the document that caused it, and this is the alternative. -->
+    <div class="diagnostics">
+      <button id="copy-diagnostics" class="btn ghost small" data-i18n="copyDiagnostics">Copy diagnostic info</button>
+      <span class="diagnostics-note" data-i18n="diagnosticsNote">Counts and settings only — no file name, no document text.</span>
+    </div>
     <div class="tabs" id="tabs" role="tablist"></div>
     <div id="pane-preview" class="pane doc-preview" role="tabpanel"></div>
     <pre id="pane-source" class="pane source" role="tabpanel" hidden><code></code></pre>

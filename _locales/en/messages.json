@@ -552,5 +552,17 @@
         "example": "12.4 MB → 5.1 MB · 59% smaller · ~1.2M tokens (estimated)"
       }
     }
+  },
+  "copyDiagnostics": {
+    "message": "Copy diagnostic info",
+    "description": "Button that copies version, settings and counts for a bug report."
+  },
+  "diagnosticsNote": {
+    "message": "Counts and settings only — no file name, no document text.",
+    "description": "Sits beside the Copy diagnostic info button and states what the block contains."
+  },
+  "toastDiagnosticsCopied": {
+    "message": "Diagnostic info copied — counts and settings only",
+    "description": "Confirmation shown after the diagnostic block is copied."
   }
 }

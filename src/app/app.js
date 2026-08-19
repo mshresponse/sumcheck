@@ -11,6 +11,7 @@ import { OUTPUT_FORMATS, DEFAULT_OPTIONS, loadOptions, saveOptions } from '../co
 import { BUNDLED_LANGUAGES, terminateOcr } from '../core/ocr.js';
 import { KIND_LABELS } from '../core/detect.js';
 import { humanSize, uid, safeFileName, baseName, extOf } from '../core/util/misc.js';
+import { buildDiagnostics } from '../core/diagnostics.js';
 import { getJSZip } from '../core/vendor.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -39,6 +40,7 @@ const el = {
   panePreview: $('#pane-preview'),
   paneSource: $('#pane-source'),
   copy: $('#copy'),
+  copyDiagnostics: $('#copy-diagnostics'),
   downloads: $('#downloads'),
   toast: $('#toast'),
 };
@@ -169,6 +171,7 @@ function wireEvents() {
   });
 
   el.copy.addEventListener('click', copyActive);
+  el.copyDiagnostics.addEventListener('click', copyDiagnostics);
   el.downloadAll.addEventListener('click', downloadAll);
 }
 
@@ -806,6 +809,31 @@ function activeOutput() {
   const item = state.items.find((i) => i.id === state.selectedId);
   if (!item?.result) return null;
   return { item, output: ensureOutput(item, targetFormat()) };
+}
+
+/**
+ * Diagnostic context for a bug report, with nothing of the document in it.
+ *
+ * Available on a failure as well as a success, because a conversion that threw
+ * is exactly when someone needs to describe what happened — and the reason it
+ * threw is the one string here that could quote the document, so it is the one
+ * string not included. The payload says the conversion failed and stops there.
+ */
+async function copyDiagnostics() {
+  const item = state.items.find((i) => i.id === state.selectedId);
+  const payload = buildDiagnostics({
+    meta: item?.result?.meta,
+    review: item?.result?.review,
+    options: state.options,
+    kind: item?.result?.detected?.kind || item?.detected?.kind,
+    failed: item?.status === 'error',
+  });
+  try {
+    await navigator.clipboard.writeText(payload);
+    toast(t('toastDiagnosticsCopied'));
+  } catch {
+    toast(t('toastClipboardDenied'));
+  }
 }
 
 async function copyActive() {

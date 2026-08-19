@@ -10,6 +10,8 @@
 
 import { convertFile } from '../src/core/convert.js';
 import { terminateOcr } from '../src/core/ocr.js';
+import { buildDiagnostics } from '../src/core/diagnostics.js';
+import { DEFAULT_OPTIONS } from '../src/core/options.js';
 
 const has = (needle) => (md) => md.includes(needle) || `missing ${JSON.stringify(needle)}`;
 const lacks = (needle) => (md) => !md.includes(needle) || `should not contain ${JSON.stringify(needle)}`;
@@ -1278,6 +1280,128 @@ async function runSplitTitleCase() {
   }
 }
 
+/**
+ * "Copy diagnostic info" leaks nothing (issue #7).
+ *
+ * The failure mode here is inclusion, not omission, so most of this case
+ * asserts absences. `diagnostics.pdf` is built to make an absence provable: it
+ * carries a word that cannot occur by chance (`Zquarnix`), a misspelling
+ * (`recieved`), and a printed total that disagrees with its own line items — so
+ * the arithmetic check fires and its message quotes `$1550.00`, `$1560.00` and
+ * `$10.00`. If a flag's message ever reached the payload, those digits would
+ * arrive with it.
+ *
+ * The last assertion is the general one: no twelve-character run of the
+ * converted body appears anywhere in the block. Twelve is long enough that a
+ * shared word like "settings" cannot collide, and short enough that any real
+ * leak — a file name, a quoted phrase, a marker — is caught many times over.
+ */
+async function runDiagnosticsCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>diagnostic info carries counts and settings, never content</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'diagnostics', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/diagnostics.pdf')).arrayBuffer());
+    const options = { outputs: ['md'] };
+    const result = await convertFile({ bytes, name: 'diagnostics.pdf' }, options, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+
+    const payload = buildDiagnostics({
+      meta: result.meta,
+      review: result.review,
+      options: { ...DEFAULT_OPTIONS, ...options },
+      kind: result.detected?.kind,
+    });
+    record.md = payload;
+
+    // The haystack is the document body. Front matter keys are the converter's
+    // own vocabulary, not the document's, and `source_format` legitimately
+    // appears in both.
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    const flat = body.replace(/\s+/g, ' ');
+    const windows = [];
+    for (let i = 0; i + 12 <= flat.length; i++) windows.push(flat.slice(i, i + 12));
+    const leaked = windows.filter((w) => payload.includes(w));
+
+    renderChecks(
+      box,
+      record,
+      {
+        'names the product and version': () =>
+          /^Sumcheck \S+/.test(payload) || `first line was ${JSON.stringify(payload.split('\n')[0])}`,
+        'names the browser': () => /Chrome/.test(payload) || 'no browser recorded',
+        'reports the source format': () => payload.includes('source_format: pdf') || 'format missing',
+        'reports the page count': () => payload.includes('pages: 1') || 'page count missing',
+        'reports the OCR state': () => /ocr: (yes|no)/.test(payload) || 'OCR state missing',
+        'reports the flag count': () => payload.includes('review_flags: 1') || 'flag count missing',
+        'reports flag counts by type': () =>
+          payload.includes('total-mismatch=1') || `by-type missing from ${JSON.stringify(payload)}`,
+        'reports the output set and how many settings are default': () =>
+          (payload.includes('settings: outputs=md') && /\(\d+ other settings at defaults\)/.test(payload)) ||
+          `settings line was ${JSON.stringify(payload.split('\n').pop())}`,
+        /**
+         * A bug report's signal is what is unusual about the run. Twenty
+         * default values printed in full bury the one that matters, so only
+         * deviations are named — and a deviation must actually be named.
+         */
+        'names a setting that differs from its default': () => {
+          const changed = buildDiagnostics({
+            meta: result.meta,
+            review: result.review,
+            options: { ...DEFAULT_OPTIONS, ocrMode: 'always', validate: false },
+            kind: 'pdf',
+          });
+          if (!changed.includes('ocrMode=always')) return 'a changed setting was not reported';
+          if (!changed.includes('validate=off')) return 'a disabled check was not reported';
+          if (changed.includes('pdfTables=')) return 'a default setting was reported anyway';
+          return true;
+        },
+
+        'no file name': () => !payload.includes('diagnostics.pdf') || 'the file name leaked',
+        'no document title': () => !payload.includes('Zquarnix') || 'the title leaked',
+        'no word from the body': () => !payload.includes('recieved') || 'body text leaked',
+        'no amount from the document': () =>
+          !/1[,.]?5[0-9]0/.test(payload) || 'a currency amount leaked',
+        'no flag message': () =>
+          !payload.includes('line items sum to') || 'a validator message leaked',
+        'no run of converted text appears in the payload': () =>
+          leaked.length === 0 || `${leaked.length} run(s) leaked, e.g. ${JSON.stringify(leaked[0])}`,
+
+        /**
+         * A conversion that threw is when this is needed most, and it is also
+         * when the one string that could quote the document — the error
+         * message — is closest to hand. The failed payload says the conversion
+         * failed and nothing about why.
+         */
+        'a failed conversion still produces a payload': () => {
+          const failedPayload = buildDiagnostics({
+            options: { ...DEFAULT_OPTIONS, ...options },
+            kind: 'pdf',
+            failed: true,
+          });
+          if (!/^Sumcheck \S+/.test(failedPayload)) return 'no version on the failed payload';
+          if (!failedPayload.includes('status: conversion failed')) return 'failure not recorded';
+          if (!failedPayload.includes('settings: outputs=md')) return 'settings missing';
+          const leakedOnFail = windows.filter((w) => failedPayload.includes(w));
+          return !leakedOnFail.length || `failed payload leaked ${JSON.stringify(leakedOnFail[0])}`;
+        },
+      },
+      record.md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('diagnostics', err);
+  }
+}
+
 const summary = document.getElementById('summary');
 const container = document.getElementById('cases');
 const results = [];
@@ -1312,6 +1436,7 @@ async function run() {
     ['field-details.pdf', runFieldDetailsCase],
     ['page-chrome', runPageChromeCase],
     ['split-title', runSplitTitleCase],
+    ['diagnostics', runDiagnosticsCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],

@@ -220,6 +220,23 @@ async function appEval(popc) {
   return JSON.parse(r.value || '{}');
 }
 
+/** The diagnostics control as the installed app renders it. */
+async function appEval2(c) {
+  const r = await c.eval(
+    `(() => {
+       const button = document.getElementById('copy-diagnostics');
+       const note = document.querySelector('.diagnostics-note');
+       return JSON.stringify({
+         present: Boolean(button),
+         label: button ? button.textContent.trim() : null,
+         note: note ? note.textContent.trim() : null,
+       });
+     })()`,
+    false
+  );
+  return JSON.parse(r.value || '{}');
+}
+
 /** Open a fresh page target and attach to it. */
 async function openTab(swc, url, match) {
   await swc.eval(`chrome.tabs.create({ url: ${JSON.stringify(url)} })`);
@@ -738,6 +755,23 @@ try {
       !S.batchHidden && /12/.test(S.batch || '') && /tokens/.test(S.batch || ''),
       S.batch || '(hidden)'
     );
+
+// --- "Copy diagnostic info" is reachable and says what it contains (#7) ---
+// The payload's contents are proved in the harness, where a planted leak can
+// be shown to trip the assertions. What only the installed app can show is
+// that the control exists in the result panel and that its label and its
+// reassurance both resolve to real text rather than to a message key.
+const diag = await appEval2(appc);
+record(
+  'the result panel offers Copy diagnostic info',
+  diag.present && /diagnostic/i.test(diag.label || ''),
+  diag.present ? `labelled "${diag.label}"` : 'control missing'
+);
+record(
+  'the control states what the block contains',
+  /no document text/i.test(diag.note || ''),
+  diag.note || '(empty)'
+);
 
 fs.rmSync(batchDir, { recursive: true, force: true });
     appc.socket.close();

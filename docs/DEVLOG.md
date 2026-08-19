@@ -7,6 +7,106 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.6.0 cycle · T5 — "Copy diagnostic info", with zero document content (#7)
+
+### What it copies
+
+```
+Sumcheck 1.6.0 · Chrome 151 · macOS
+source_format: pdf · pages: 2
+ocr: yes · ocr_pages: 2 · ocr_dpi: 300 · ocr_confidence_mean: 94.6 · ocr_flagged_fields: 4
+review_flags: 3 · by_type: total-mismatch=1, not-a-word=2
+settings: outputs=md+json · ocrMode=always · ocrResolution=300 · validate=off · (16 other settings at defaults)
+```
+
+and when nothing was changed from the defaults:
+
+```
+Sumcheck 1.6.0 · Chrome 151 · macOS
+source_format: pdf · pages: 1349
+ocr: no
+review_flags: 0 · table_fallback: 11
+settings: outputs=md · (19 other settings at defaults)
+```
+
+### The fixture, which is the feature
+
+`test/fixtures/diagnostics.pdf` is built to make an absence provable. It carries
+a word that cannot occur by chance (`Zquarnix`), a misspelling (`recieved`), and
+a printed total of `$1,560.00` against line items that sum to `$1,550.00` — so
+the arithmetic check fires and its message quotes `$1550.00`, `$1560.00` and
+`$10.00`. If a flag's message ever reached the payload, those digits would come
+with it.
+
+Fifteen assertions. Eight say the block reports what it should; six say it does
+not contain the file name, the title, a word from the body, an amount, or a
+validator message; and one is the general form — **no twelve-character run of
+the converted body appears anywhere in the block**. Twelve is long enough that a
+shared word like `settings` cannot collide and short enough that any real leak
+is caught many times over.
+
+### Proving a negative assertion can fail
+
+A test that asserts an absence passes trivially when the feature is broken, so
+the assertions were checked against a planted leak: one line added to
+`diagnostics.js` appending `review[0].message`. Three assertions failed
+immediately, including the general one, reporting **65 leaked runs** starting
+with `": line items"`. Reverted. An absence test nobody has seen fail is a
+comment.
+
+### Where the safety comes from
+
+Structure, not care. `buildDiagnostics` is never given the converted text, the
+flag objects' messages, or the file name — `flagCounts` reduces flags to
+`{type: count}` before anything is formatted, and the caller passes `meta`
+rather than the document. Every value that reaches the output also passes
+through `plain()`, which admits identifiers, numbers and short enumerated words
+and replaces anything else with `?` rather than truncating it, because a
+truncated leak is still a leak.
+
+### Two open questions from the issue, answered
+
+**The file name.** Omitted. It is genuinely useful for reproduction and
+genuinely private, and a reporter who wants to include it can type it — that way
+it is a choice rather than a default.
+
+**Failed conversions.** Offered, per the work order: a conversion that threw is
+when this is needed most. The error message is the one string here that can
+quote the document — `Sumcheck can't read "…"` names the file — so it is the one
+string not included. The failed payload records `status: conversion failed` and
+says nothing about why. A harness assertion runs the failed path and applies the
+same leak check to it.
+
+### Settings: deviations only
+
+Reporting all twenty settings produced a 400-character line of mostly defaults.
+A bug report's signal is what is unusual about the run, so only settings that
+differ are named, followed by a count of those that do not. The version is in
+the block, so the defaults it was measured against are recoverable. An assertion
+fails if a changed setting is not named, and fails if a default one is.
+
+### Surfaces
+
+The control sits under the result notes with its reassurance printed beside it
+rather than hidden in a tooltip — someone about to paste this into a public
+issue should be able to read what it contains before clicking anything. Three
+localized messages, 126 in the catalogue.
+
+`verify-extension` asserts the control exists in the installed build and that
+both its label and its note resolve to real text; a localized string that
+resolves to nothing looks exactly like a feature that was never wired up. The
+payload's contents are proved in the harness, where the planted-leak check can
+actually be run.
+
+The bug template's diagnostics field now says the button produces exactly what
+the field wants, and that there is a test that fails if it ever stops being
+true.
+
+Gates: **45/45** harness cases, **51/51** extension checks. No conversion change;
+no corpus re-score. `src/core/diagnostics.js` is in the packaged zip.
+
+---
+
 ## 2026-08-19 · v1.6.0 cycle · T4 — size and token savings in the result header (#3)
 
 ### What it shows
