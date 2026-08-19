@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sumcheck — PDF &amp; Document to Markdown, checked</title>
+<meta name="description" content="A Chrome extension that converts PDFs, Office files, images and web pages to Markdown entirely on your device — and tells you what it is unsure about.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f7f9; --surface: #ffffff; --fg: #17171b; --muted: #63636e;
+    --rule: #e3e3e8; --accent: #4b42d6; --accent-soft: #4b42d61a; --ok: #1a7f4b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101013; --surface: #18181d; --fg: #e9e9ee; --muted: #9a9aa6;
+      --rule: #2c2c35; --accent: #8d84ff; --accent-soft: #8d84ff1f; --ok: #4ec98a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 3rem 1.25rem 5rem; }
+  header { display: flex; align-items: center; gap: .9rem; }
+  .logo { width: 52px; height: 52px; color: var(--accent); flex: none; }
+  h1 { font-size: 1.9rem; margin: 0; letter-spacing: -.01em; }
+  .tag { color: var(--muted); margin: .15rem 0 0; }
+  .pill {
+    display: inline-flex; align-items: center; gap: .5rem; margin: 1.5rem 0 0;
+    border: 1.5px solid var(--accent); border-radius: 999px; padding: .35rem .9rem;
+    font-size: .9rem; font-weight: 600;
+  }
+  .pill .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); }
+  .cta { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1.75rem 0 0; }
+  .btn {
+    display: inline-block; padding: .6rem 1.1rem; border-radius: 8px;
+    text-decoration: none; font-weight: 600; font-size: .95rem;
+  }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.ghost { border: 1px solid var(--rule); color: var(--fg); background: var(--surface); }
+  h2 { font-size: 1.15rem; margin: 2.5rem 0 .5rem; }
+  p { margin: .75rem 0; }
+  .card {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 1rem 1.25rem; margin: 1rem 0;
+  }
+  .card p { margin: .5rem 0; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .85em;
+         background: var(--accent-soft); border-radius: 4px; padding: .1em .35em; }
+  ul { padding-left: 1.2rem; margin: .5rem 0; }
+  li { margin: .3rem 0; }
+  a { color: var(--accent); }
+  .flag { color: var(--muted); font-size: .9rem; }
+  footer { margin-top: 3.5rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: .85rem; }
+  footer nav { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: .5rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="2" y="2" width="28" height="28" rx="7" fill="currentColor" opacity=".14"/>
+      <text x="16" y="22" text-anchor="middle" font-family="inherit" font-size="18" font-weight="700" fill="currentColor">Σ</text>
+      <circle cx="25" cy="25" r="6" fill="#4ec98a"/>
+      <path d="M22.2 25 l2 2 3.6 -3.8" stroke="#0e2a1c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <div>
+      <h1>Sumcheck</h1>
+      <p class="tag">PDF &amp; documents → Markdown, checked</p>
+    </div>
+  </header>
+
+  <p class="pill"><span class="dot"></span> 100% on-device · no uploads, ever</p>
+
+  <div class="cta">
+    <a class="btn primary" href="https://github.com/mshresponse/sumcheck">View source on GitHub</a>
+    <a class="btn ghost" href="/privacy/">Privacy policy</a>
+  </div>
+  <p class="flag">Chrome Web Store listing: in review — the install link will appear here when it is live.</p>
+
+  <h2>What it does</h2>
+  <p>Sumcheck is a Chrome extension that converts documents into clean Markdown,
+  HTML, plain text or structured JSON — without sending them anywhere. PDFs
+  (including scans, read with on-device OCR), Word, Excel, PowerPoint, EPUB,
+  images, web pages, and a dozen more formats. Everything runs inside your
+  browser: no accounts, no per-page charges, no telemetry, zero network requests
+  at runtime.</p>
+
+  <h2>It tells you what it is unsure about</h2>
+  <div class="card">
+    <p>Most converters hand you text and leave you to trust it. Scanned documents
+    are where that gets expensive: a <code>$</code> misread as a <code>3</code> turns
+    $40.00 into 340.00, and the result looks perfectly reasonable.</p>
+    <p>Sumcheck checks its own work and marks what it cannot vouch for:</p>
+    <ul>
+      <li>currency columns where one amount lost its <code>$</code></li>
+      <li>line items that do not add up to the stated total</li>
+      <li>a prominent total that matches nothing else on the page</li>
+      <li>words that are not words — a confident <code>inchided</code> for "included"</li>
+      <li>regions of a page OCR could not read at all</li>
+    </ul>
+    <p>Every flag is written where a reader will see it. Nothing is ever silently
+    rewritten.</p>
+  </div>
+
+  <h2>Open, and open about its limits</h2>
+  <p>Sumcheck is open source under the Apache License 2.0, and its conversion
+  quality is measured against a ground-truth corpus of real scanned documents
+  rather than asserted. The "no network requests" claim is a property of the
+  code, not a promise — <a href="https://github.com/mshresponse/sumcheck">read the
+  source</a> or inspect the package.</p>
+
+  <footer>
+    <nav>
+      <a href="https://github.com/mshresponse/sumcheck">GitHub</a>
+      <a href="https://github.com/mshresponse/sumcheck/issues">Report an issue</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="mailto:sumcheck@everythingvirtually.com">sumcheck@everythingvirtually.com</a>
+    </nav>
+    Sumcheck · Documents in, Markdown out — checked, entirely on your device.<br>
+    © 2026 Everything Virtually LLC · Apache License 2.0
+  </footer>
+</main>
+</body>
+</html>
