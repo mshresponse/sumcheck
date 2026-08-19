@@ -7,6 +7,134 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.6.0 cycle · T1 — nested key-value structure inside table cells (#1, #4)
+
+### The fixture, and RED
+
+`test/fixtures/field-details.pdf` — three synthetic pages built from issue #4's
+table with invented values. The source page is 7.6 MB and lives outside the
+repository; what mattered was the *shape*, and the shape is reproducible: a
+Field/Details table where each Details cell holds its own definition list, a
+label on one line and its value indented beneath, plus a repeating running head
+and an incrementing folio for T2.
+
+The fixture reproduced the real defect exactly on first conversion — a
+row-faithful table with the Details cell flattened to
+`Type reference Properties Create, Filter, Group, Sort, Update Description …`,
+which is what page 600 of the real guide produces.
+
+**RED was precise**, which is the point of writing the assertions before the
+fix: of seven checks, five passed and two failed. Table emitted ✓, every
+expected value in its own row ✓ (17/17), no cross-row drift ✓, nothing promoted
+out of the cell ✓ — *pairs survive as pairs* ✗ (0 label:value pairs found) and
+*each label binds to its own value* ✗. That is the documented state written down
+as a test: structure lost, faithfulness intact.
+
+Two things the fixture surfaced that are **not** T1 and were left alone:
+
+- Pages 1 and 2 carry a single field each and do not table at all — a run needs
+  three rows. Pre-existing, unrelated to nesting.
+- The fixture's running head is *identical* on all three pages and is already
+  stripped. The real document's heads **vary** (`Chapter | ObjectName`), which
+  is why they survive. The fixture as built does not reproduce T2's miss; T2
+  will need a varying head, and that is now known before T2 starts rather than
+  after.
+
+### The fix
+
+The indent was already in the data and was being thrown away. `buildTable`
+joined every fragment on sight — `row[index] = row[index] + ' ' + text` — so the
+one record of structure inside a cell, the horizontal offset, died at assembly.
+
+Now fragments are collected **with their x** into a grid before anything is
+joined, and each column is classified once:
+
+- A column is a *definition column* when its fragments across all rows show two
+  indents — at least two at the column's left edge and at least two indented
+  past `tolerance` (the existing measured value, `max(bodySize * 0.9, 4)`, not a
+  new constant).
+- Classifying per column rather than per cell is deliberate: per cell, a field
+  with one pair renders as prose while its neighbour with six renders as a list.
+  Deciding once from all the evidence keeps a column internally consistent, and
+  requiring two distinct labels stops a single wrapped line that happens to be
+  indented from inventing structure that is not there.
+- Within a definition cell, a fragment at the left edge opens a pair and
+  anything indented belongs to the pair above — which is how a label with
+  several values keeps all of them (`Possible values are` → both bullets).
+- If fragments do not partition that way — a value before any label, or no label
+  with a value — the cell falls back to a plain joined string. A column that
+  only mostly looks like a definition list still renders its odd cell as text.
+
+### All four emitters agree
+
+The cell now carries `{ pairs: [[label, value]] }` rather than a string, and
+each emitter renders it in the idiom it has:
+
+| emitter | rendering |
+| --- | --- |
+| html | `<td>Type: reference<br>Properties: …</td>` — real `<br>` elements, every part escaped individually |
+| md | `Type: reference<br>Properties: …` inside a valid GFM row |
+| txt | `Type: reference; Properties: …` |
+| json | same `; ` form, cell values still strings |
+
+Two things had to be fixed for that to hold, and both were found by looking at
+the output rather than by reasoning:
+
+**Turndown's default `<br>` is a newline**, and a newline inside a GFM table
+cell *ends the row*. The first run produced a table shattered into fragments of
+prose. A rule now keeps `<br>` literal when it sits inside a `td`/`th` — the
+only line break a GFM table accepts.
+
+**`textContent` concatenates straight across a `<br>`**, so the text and JSON
+emitters would have produced `referenceProperties`. Both now read cells through
+a shared `cellText()` that renders the break as `; `.
+
+**The JSON emitter keeps cell values as strings.** The work order allowed
+exposing pairs as data "if that falls out naturally" — it does not. `tableData`
+returns `{header, rows, records}` with `rows` as string arrays and `records`
+mapping header→cell; making a cell an object would change the element type of an
+existing field, which is a breaking schema change for anything already consuming
+`sumcheck.document/v1`, and adding a parallel structure alongside it distorts the
+block model for one table shape. Not forced, as instructed, and recorded here.
+
+### Corpus
+
+All five metrics at baseline, marker invariant asserted at 6/50 OK, lexicon
+50/50, scorer exit 0:
+
+| metric | result |
+| --- | --- |
+| grand totals matched | 50/50 |
+| all line-item codes found | 49/49 |
+| amount on its code's row | 52/52 |
+| `#Error` preserved | 50/50 |
+| documents with a table | 49/50 |
+| headline figure recovered | 44/50 |
+| value-not-recovered markers | 6/50 OK |
+
+**0 of 50 documents changed**, ignoring timestamps. The work order predicted no
+movement because the GFE tables are simple — measured rather than assumed, and
+nothing to flag. It also means the new classifier declines to fire on ordinary
+money tables, which is the behaviour that matters: a change to table assembly
+that left the corpus untouched is a change that only fires where it should.
+
+### Gates
+
+`npm test` **42/42** (41 before) · `verify-extension` **47/47** ·
+`npm run check` green.
+
+### Invariant I was tempted to break and didn't
+
+**Row faithfulness for structure.** The tempting shortcut is to pair labels with
+values by scanning the joined string for known label words — it would have
+passed the pair assertions without touching the grid. It also reintroduces
+exactly the failure Docling exhibits: a guess about which value belongs to which
+label, made after the evidence has been discarded. The assertions that already
+passed at RED — 17/17 in the right row, zero drift — are the ones a structure
+change is most likely to break, and they were kept in the case for that reason.
+
+---
+
 ## 2026-08-19 · Doc sync to sumcheck.app, and the Discussions welcome post
 
 **Docs only.** No product files changed — `git diff --name-only` over `src/`,

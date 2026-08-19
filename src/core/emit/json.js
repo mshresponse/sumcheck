@@ -7,6 +7,8 @@
  * every block so a retrieved chunk can be cited back to the source page.
  */
 
+import { cellText } from './text.js';
+
 /**
  * Identifies the shape of the emitted JSON to whatever consumes it.
  *
@@ -136,7 +138,7 @@ function listItems(list) {
 function tableData(table) {
   const rows = Array.from(table.querySelectorAll('tr'));
   const cellsOf = (tr) =>
-    Array.from(tr.children).map((c) => c.textContent.replace(/\s+/g, ' ').trim());
+    Array.from(tr.children).map((c) => cellText(c));
   const headRow = table.querySelector('thead tr');
   const header = headRow ? cellsOf(headRow) : null;
   const body = rows.filter((tr) => tr !== headRow).map(cellsOf);

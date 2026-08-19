@@ -42,6 +42,19 @@ export function createTurndown(opts) {
     },
   });
 
+  /**
+   * A line break inside a table cell stays literal markup.
+   *
+   * Turndown's default for `<br>` is a newline, and a newline inside a GFM
+   * table cell ends the row — one cell carrying a definition list would split
+   * the table into fragments of prose. `<br>` is the only break GFM tables
+   * accept, and every renderer that understands the table understands it.
+   */
+  service.addRule('sumcheckCellBreak', {
+    filter: (node) => node.nodeName === 'BR' && Boolean(node.closest?.('td, th')),
+    replacement: () => '<br>',
+  });
+
   // Review flags travel as empty spans so they survive sanitizing; in Markdown
   // they become comments, which are visible to a human reading the file and
   // ignorable by a parser.

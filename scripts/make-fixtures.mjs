@@ -126,6 +126,146 @@ function buildEncryptedPdf(userPassword, ownerPassword) {
   return Buffer.concat(chunks);
 }
 
+
+/* ------------------------------------------------- field/details reference */
+
+/**
+ * A synthetic object-reference page in the shape that broke us.
+ *
+ * Modelled on page 600 of the Net Zero Cloud Developer Guide (issue #4), which
+ * is 7.6 MB and lives outside the repository — this reproduces the *structure*
+ * with invented values, per the fixture-first rule in CONTRIBUTING.
+ *
+ * The structure is the point. Each `Details` cell holds its own definition
+ * list: a label on one line, its value indented beneath. We flatten that into
+ * run-on text (issue #1). Three pages carry a repeating running head and an
+ * incrementing folio, which is the other half of the fixture (issue #2) — a
+ * folio never repeats, so a repetition-based stripper cannot see it.
+ */
+function buildFieldDetailsPdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const FIELD_X = 60;      // column 1
+  const LABEL_X = 210;     // column 2, the definition label
+  const VALUE_X = 236;     // column 2, indented value — the signal that is lost
+  const TOP = 700;
+  const STEP = 15;
+
+  /** One field's block: its name, then label/value pairs indented under it. */
+  function block(name, pairs, startY) {
+    const out = [line('F1', 10, FIELD_X, startY, name)];
+    let y = startY;
+    for (const [label, ...values] of pairs) {
+      out.push(line('F1', 10, LABEL_X, y, label));
+      for (const value of values) {
+        y -= STEP;
+        out.push(line('F1', 10, VALUE_X, y, value));
+      }
+      y -= STEP;
+    }
+    return { ops: out, endY: y };
+  }
+
+  function page(number, folio, blocks) {
+    const ops = [
+      line('F1', 9, FIELD_X, 742, 'Net Zero Cloud Standard Objects'),
+      line('F2', 10, FIELD_X, 720, 'Field'),
+      line('F2', 10, LABEL_X, 720, 'Details'),
+    ];
+    let y = TOP;
+    for (const [name, pairs] of blocks) {
+      const built = block(name, pairs, y);
+      ops.push(...built.ops);
+      y = built.endY - STEP;
+    }
+    ops.push(line('F1', 9, 300, 60, String(folio)));
+    return ops.join('\n');
+  }
+
+  const pages = [
+    page(1, 590, [
+      ['RentalCarCompanyName', [
+        ['Type', 'string'],
+        ['Properties', 'Create, Filter, Group, Nillable, Sort, Update'],
+        ['Description', 'The name of the rental car company.'],
+      ]],
+    ]),
+    page(2, 591, [
+      ['RentalCarEmssnFctrId', [
+        ['Type', 'reference'],
+        ['Properties', 'Create, Filter, Group, Nillable, Sort, Update'],
+        ['Description', 'The reference data that contains the rental car emission factors.'],
+        ['Relationship Name', 'RentalCarEmssnFctr'],
+        ['Relationship Type', 'Lookup'],
+        ['Refers To', 'RentalCarEmssnFctr'],
+      ]],
+    ]),
+    // The page the regression is measured on — the five fields from issue #4.
+    page(3, 592, [
+      ['Scope3EmssnSrcId', [
+        ['Type', 'reference'],
+        ['Properties', 'Create, Filter, Group, Sort, Update'],
+        ['Description', 'The scope 3 emission source for this energy use record.'],
+        ['Relationship Name', 'Scope3EmssnSrc'],
+        ['Relationship Type', 'Lookup'],
+        ['Refers To', 'Scope3EmssnSrc'],
+      ]],
+      ['Scope3GhgCategory', [
+        ['Type', 'picklist'],
+        ['Properties', 'Create, Filter, Group, Nillable, Restricted picklist, Sort'],
+        ['Description', 'Specifies the scope 3 GHG category for the energy use.'],
+        ['Possible values are', '\x95 BusinessTravel', '\x95 EmployeeCommuting'],
+      ]],
+      ['StartDate', [
+        ['Type', 'date'],
+        ['Properties', 'Create, Filter, Group, Nillable, Sort, Update'],
+        ['Description', 'The date from when the values of this record are valid.'],
+      ]],
+      ['SuplScope3Emissions', [
+        ['Type', 'double'],
+        ['Properties', 'Create, Filter, Nillable, Sort, Update'],
+        ['Description', 'The supplemental scope 3 emissions value that is added.'],
+      ]],
+      ['SupplierId', [
+        ['Type', 'reference'],
+      ]],
+    ]),
+  ];
+
+  const objects = [];
+  const add = (body) => { objects.push(body); return objects.length; };
+
+  add('<< /Type /Catalog /Pages 2 0 R >>');
+  const kids = pages.map((_, i) => `${3 + i * 2} 0 R`).join(' ');
+  add(`<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`);
+  for (const content of pages) {
+    const contentObj = objects.length + 2;
+    add(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ` +
+        `/Resources << /Font << /F1 ${3 + pages.length * 2} 0 R /F2 ${4 + pages.length * 2} 0 R >> >> ` +
+        `/Contents ${contentObj} 0 R >>`
+    );
+    add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  }
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const info = add('<< /Title (Object Reference) /Creator (Sumcheck fixtures) >>');
+
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 /* ------------------------------------------------------------------- PDF */
 
 function buildPdf() {
@@ -436,6 +576,7 @@ function buildWithTextutil() {
 
 write('sample.pdf', buildPdf());
 write('locked.pdf', buildEncryptedPdf('secret', 'owner-secret'));
+write('field-details.pdf', buildFieldDetailsPdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own

@@ -63,7 +63,7 @@ function walk(node, out, state) {
 
 function tableText(table) {
   const rows = Array.from(table.querySelectorAll('tr')).map((tr) =>
-    Array.from(tr.children).map((cell) => cell.textContent.replace(/\s+/g, ' ').trim())
+    Array.from(tr.children).map((cell) => cellText(cell))
   );
   if (!rows.length) return '';
   const widths = [];
@@ -75,4 +75,25 @@ function tableText(table) {
   return rows
     .map((row) => row.map((cell, i) => cell.padEnd(widths[i] || 0)).join('  ').trimEnd())
     .join('\n');
+}
+
+/**
+ * A table cell as plain text.
+ *
+ * `textContent` concatenates straight across a `<br>`, turning "reference" and
+ * "Properties" into "referenceProperties". A cell that carries a definition
+ * list has no line breaks to spend in these formats, so its pairs are
+ * separated with "; " — legible, and it survives whitespace normalization.
+ */
+export function cellText(cell) {
+  const parts = [];
+  for (const node of cell.childNodes) {
+    parts.push(node.nodeName === 'BR' ? ' ; ' : node.textContent || '');
+  }
+  return parts
+    .join('')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*;\s*/g, '; ')
+    .replace(/^;\s*|;\s*$/g, '')
+    .trim();
 }

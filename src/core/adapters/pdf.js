@@ -1670,27 +1670,61 @@ function buildTable(run, bodySize) {
   // fit throws away real tables: header labels are commonly left-aligned inside
   // a column whose figures are right-aligned, so the header row alone can sit
   // 70 units off the data grid and used to reject the whole table.
-  const rows = [];
+  /**
+   * Fragments are collected with their x before anything is joined, because the
+   * indent is the only record of structure *inside* a cell.
+   *
+   * A reference table's cell often holds its own definition list — a label, its
+   * value indented beneath — and joining on sight flattens
+   * "Type / reference / Properties / Create, Filter" into one run-on sentence.
+   * The label/value distinction survives only as the horizontal offset, so the
+   * offset has to reach the renderer.
+   */
+  const grid = [];
   let cells = 0;
   let misfits = 0;
   for (const { line, continuations } of run) {
-    const row = new Array(columns.length).fill('');
+    const row = columns.map(() => []);
     for (const cell of line.cells) {
       const { index, distance } = columnFor(cell.x);
       cells++;
       if (distance > tolerance * 2.2) misfits++;
-      row[index] = row[index] ? `${row[index]} ${cell.text}` : cell.text;
+      row[index].push(cell);
     }
-    if (row.filter(Boolean).length < 2) return null;
+    if (row.filter((fragments) => fragments.length).length < 2) return null;
     // Wrapped text rejoins the cell it belongs to, so a description stays in
     // the description column instead of trailing after the amounts.
     for (const extra of continuations) {
-      const { index } = columnFor(extra.x);
-      const text = extra.cells.map((c) => c.text).join(' ');
-      row[index] = row[index] ? `${row[index]} ${text}` : text;
+      for (const cell of extra.cells) row[columnFor(cell.x).index].push(cell);
     }
-    rows.push(row);
+    grid.push(row);
   }
+
+  /**
+   * Which columns hold a definition list, decided per column rather than per
+   * cell.
+   *
+   * Deciding per cell makes a column render inconsistently: a field with one
+   * pair looks like prose while its neighbour with six looks like a list.
+   * Deciding once, from every fragment in the column, means a single-pair cell
+   * formats the same way as the rest — and demanding two distinct labels stops
+   * one wrapped line that happens to be indented from inventing a structure
+   * that is not there.
+   */
+  const definitionColumn = columns.map((_, index) => {
+    const fragments = grid.flatMap((row) => row[index]);
+    if (fragments.length < 4) return false;
+    const left = Math.min(...fragments.map((f) => f.x));
+    const labels = fragments.filter((f) => f.x - left <= tolerance);
+    const values = fragments.filter((f) => f.x - left > tolerance);
+    return labels.length >= 2 && values.length >= 2;
+  });
+
+  const rows = grid.map((row) =>
+    row.map((fragments, index) =>
+      definitionColumn[index] ? cellPairs(fragments, tolerance) : joinFragments(fragments)
+    )
+  );
   // Scattered misfits are alignment noise; widespread ones mean this was never
   // a table.
   if (misfits / Math.max(1, cells) > 0.35) return null;
@@ -1720,9 +1754,53 @@ function renderAligned(run) {
   return `<pre><code>${escapeHtml(lines.join('\n'))}</code></pre>`;
 }
 
+
+/** A cell with no internal structure: its fragments, in reading order. */
+function joinFragments(fragments) {
+  return fragments.map((f) => f.text).join(' ');
+}
+
+/**
+ * Split a definition-list cell into its label/value pairs.
+ *
+ * Fragments arrive in reading order. One at the column's left edge opens a
+ * pair; anything indented past it belongs to the pair above, which is how a
+ * label with several values — a bulleted list under "Possible values are" —
+ * keeps all of them.
+ *
+ * Returns a plain string if the fragments do not actually partition that way,
+ * so a column that only mostly looks like a definition list still renders its
+ * odd cell as text rather than as a mangled pair.
+ */
+function cellPairs(fragments, tolerance) {
+  if (!fragments.length) return '';
+  const left = Math.min(...fragments.map((f) => f.x));
+  const pairs = [];
+  for (const fragment of fragments) {
+    if (fragment.x - left <= tolerance) pairs.push({ label: fragment.text, values: [] });
+    else if (pairs.length) pairs[pairs.length - 1].values.push(fragment.text);
+    else return joinFragments(fragments); // a value before any label
+  }
+  if (!pairs.some((pair) => pair.values.length)) return joinFragments(fragments);
+  return { pairs: pairs.map(({ label, values }) => [label, values.join(' ')]) };
+}
+
 function renderTable(table) {
   const [first, ...rest] = table.rows;
-  const cell = (t, tag) => `<${tag}>${escapeHtml(t)}</${tag}>`;
+  /**
+   * Pairs render as `label: value` separated by real `<br>` elements — the one
+   * line break a GFM table cell can carry. Every part is escaped individually;
+   * the break is markup, the content never is.
+   */
+  const cell = (value, tag) => {
+    if (value && Array.isArray(value.pairs)) {
+      const body = value.pairs
+        .map(([label, text]) => `${escapeHtml(label)}: ${escapeHtml(text)}`)
+        .join('<br>');
+      return `<${tag}>${body}</${tag}>`;
+    }
+    return `<${tag}>${escapeHtml(value)}</${tag}>`;
+  };
   const head = table.header
     ? `<thead><tr>${first.map((c) => cell(c, 'th')).join('')}</tr></thead>`
     : '';

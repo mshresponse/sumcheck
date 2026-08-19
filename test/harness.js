@@ -1003,6 +1003,122 @@ async function runI18nFallbackCase() {
   }
 }
 
+/**
+ * Nested key-value structure inside a table cell (issues #1 and #4).
+ *
+ * `test/fixtures/field-details.pdf` reproduces the shape of page 600 of the Net
+ * Zero Cloud guide with invented values: a Field/Details table where each
+ * Details cell holds its own definition list — a label on one line, its value
+ * indented beneath.
+ *
+ * Two things must hold, and only one of them held before this case existed:
+ *
+ *  - **Row faithfulness.** Every value stays in the row it came from. We were
+ *    already 17/17 here; Docling scored 8/17 on the same page with confirmed
+ *    cross-row drift. This is the property a structure change must not break.
+ *  - **Structure.** The pairs survive as pairs. We flattened them to run-on
+ *    text, which is what issue #1 is.
+ */
+async function runFieldDetailsCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>nested key-value pairs survive inside a table cell</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'field-details.pdf', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/field-details.pdf')).arrayBuffer());
+    const started = performance.now();
+    const result = await convertFile({ bytes, name: 'field-details.pdf' }, { outputs: ['md', 'json'] }, {});
+    record.ms = Math.round(performance.now() - started);
+    record.warnings = result.warnings;
+    const md = result.outputs.find((o) => o.format === 'md').content;
+    record.md = md;
+
+    // The reference table, keyed by field name -> its Details cell.
+    const cells = {};
+    for (const line of md.split('\n')) {
+      if (!line.startsWith('|')) continue;
+      const parts = line.split('|').map((c) => c.trim());
+      if (parts.length < 4) continue;
+      cells[parts[1]] = parts[2];
+    }
+
+    // Expected tokens per row, from issue #4.
+    const EXPECTED = {
+      Scope3EmssnSrcId: ['reference', 'Create, Filter, Group, Sort, Update', 'scope 3 emission source', 'Scope3EmssnSrc', 'Lookup'],
+      Scope3GhgCategory: ['picklist', 'Restricted picklist', 'scope 3 GHG category', 'BusinessTravel', 'EmployeeCommuting'],
+      StartDate: ['date', 'Create, Filter, Group, Nillable, Sort, Update', 'date from when the values'],
+      SuplScope3Emissions: ['double', 'Create, Filter, Nillable, Sort, Update', 'supplemental scope 3 emissions'],
+      SupplierId: ['reference'],
+    };
+    let present = 0;
+    let expected = 0;
+    const missing = [];
+    for (const [field, tokens] of Object.entries(EXPECTED)) {
+      for (const token of tokens) {
+        expected++;
+        if ((cells[field] || '').includes(token)) present++;
+        else missing.push(`${field}: ${token}`);
+      }
+    }
+
+    // Content belonging to another row, appearing in this one.
+    const foreign = [];
+    for (const [field, cell] of Object.entries(cells)) {
+      for (const [other, tokens] of Object.entries(EXPECTED)) {
+        if (other === field) continue;
+        for (const token of tokens) {
+          if (token.length > 18 && cell.includes(token) && !(EXPECTED[field] || []).includes(token)) {
+            foreign.push(`${field} <- ${other}: ${token}`);
+          }
+        }
+      }
+    }
+
+    /** A pair is preserved when its label and value are bound, not just adjacent. */
+    const pairsIn = (cell) => (cell.match(/(?:^|<br>)\s*[A-Z][A-Za-z ]*:\s*\S/g) || []).length;
+
+    record.md = JSON.stringify({ rowFaithful: `${present}/${expected}`, foreign, cells }, null, 1);
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the reference page emits a table': () =>
+          Object.keys(cells).length >= 6 || `found ${Object.keys(cells).length} row(s)`,
+        'every expected value is in its own row': () =>
+          present === expected || `${present}/${expected}; missing ${JSON.stringify(missing.slice(0, 3))}`,
+        'no content drifts between rows': () =>
+          foreign.length === 0 || JSON.stringify(foreign.slice(0, 3)),
+        'pairs survive as pairs, not run-on text': () => {
+          const n = pairsIn(cells.Scope3EmssnSrcId || '');
+          return n >= 6 || `only ${n} label:value pair(s) in the Scope3EmssnSrcId cell`;
+        },
+        'each label binds to its own value': () =>
+          /Type:\s*reference/.test(cells.Scope3EmssnSrcId || '') &&
+            /Relationship Type:\s*Lookup/.test(cells.Scope3EmssnSrcId || '') ||
+          'labels are not bound to their values',
+        'a multi-value pair keeps all its values': () =>
+          /BusinessTravel/.test(cells.Scope3GhgCategory || '') &&
+            /EmployeeCommuting/.test(cells.Scope3GhgCategory || '') ||
+          'the bullet list under "Possible values are" lost a value',
+        'nothing is promoted out of the cell': () =>
+          !/^#{1,6}\s+(Type|Properties|Description|Relationship (Name|Type)|Refers To)\s*$/m.test(md) ||
+          'a cell label was promoted to a heading',
+      },
+      record.md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('field-details', err);
+  }
+}
+
 const summary = document.getElementById('summary');
 const container = document.getElementById('cases');
 const results = [];
@@ -1034,6 +1150,7 @@ async function run() {
     ['ocr-rescue-dedup', runRescueDedupCase],
     ['prose-lexicon', runProseLexiconCase],
     ['locked.pdf', runPasswordCase],
+    ['field-details.pdf', runFieldDetailsCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],

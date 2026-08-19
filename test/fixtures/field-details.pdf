@@ -1,0 +1,131 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R 7 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 621 >>
+stream
+BT /F1 9 Tf 1 0 0 1 60 742 Tm (Net Zero Cloud Standard Objects) Tj ET
+BT /F2 10 Tf 1 0 0 1 60 720 Tm (Field) Tj ET
+BT /F2 10 Tf 1 0 0 1 210 720 Tm (Details) Tj ET
+BT /F1 10 Tf 1 0 0 1 60 700 Tm (RentalCarCompanyName) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 700 Tm (Type) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 685 Tm (string) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 670 Tm (Properties) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 655 Tm (Create, Filter, Group, Nillable, Sort, Update) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 640 Tm (Description) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 625 Tm (The name of the rental car company.) Tj ET
+BT /F1 9 Tf 1 0 0 1 300 60 Tm (590) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 985 >>
+stream
+BT /F1 9 Tf 1 0 0 1 60 742 Tm (Net Zero Cloud Standard Objects) Tj ET
+BT /F2 10 Tf 1 0 0 1 60 720 Tm (Field) Tj ET
+BT /F2 10 Tf 1 0 0 1 210 720 Tm (Details) Tj ET
+BT /F1 10 Tf 1 0 0 1 60 700 Tm (RentalCarEmssnFctrId) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 700 Tm (Type) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 685 Tm (reference) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 670 Tm (Properties) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 655 Tm (Create, Filter, Group, Nillable, Sort, Update) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 640 Tm (Description) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 625 Tm (The reference data that contains the rental car emission factors.) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 610 Tm (Relationship Name) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 595 Tm (RentalCarEmssnFctr) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 580 Tm (Relationship Type) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 565 Tm (Lookup) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 550 Tm (Refers To) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 535 Tm (RentalCarEmssnFctr) Tj ET
+BT /F1 9 Tf 1 0 0 1 300 60 Tm (591) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 2576 >>
+stream
+BT /F1 9 Tf 1 0 0 1 60 742 Tm (Net Zero Cloud Standard Objects) Tj ET
+BT /F2 10 Tf 1 0 0 1 60 720 Tm (Field) Tj ET
+BT /F2 10 Tf 1 0 0 1 210 720 Tm (Details) Tj ET
+BT /F1 10 Tf 1 0 0 1 60 700 Tm (Scope3EmssnSrcId) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 700 Tm (Type) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 685 Tm (reference) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 670 Tm (Properties) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 655 Tm (Create, Filter, Group, Sort, Update) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 640 Tm (Description) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 625 Tm (The scope 3 emission source for this energy use record.) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 610 Tm (Relationship Name) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 595 Tm (Scope3EmssnSrc) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 580 Tm (Relationship Type) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 565 Tm (Lookup) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 550 Tm (Refers To) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 535 Tm (Scope3EmssnSrc) Tj ET
+BT /F1 10 Tf 1 0 0 1 60 505 Tm (Scope3GhgCategory) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 505 Tm (Type) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 490 Tm (picklist) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 475 Tm (Properties) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 460 Tm (Create, Filter, Group, Nillable, Restricted picklist, Sort) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 445 Tm (Description) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 430 Tm (Specifies the scope 3 GHG category for the energy use.) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 415 Tm (Possible values are) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 400 Tm (• BusinessTravel) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 385 Tm (• EmployeeCommuting) Tj ET
+BT /F1 10 Tf 1 0 0 1 60 355 Tm (StartDate) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 355 Tm (Type) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 340 Tm (date) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 325 Tm (Properties) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 310 Tm (Create, Filter, Group, Nillable, Sort, Update) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 295 Tm (Description) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 280 Tm (The date from when the values of this record are valid.) Tj ET
+BT /F1 10 Tf 1 0 0 1 60 250 Tm (SuplScope3Emissions) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 250 Tm (Type) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 235 Tm (double) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 220 Tm (Properties) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 205 Tm (Create, Filter, Nillable, Sort, Update) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 190 Tm (Description) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 175 Tm (The supplemental scope 3 emissions value that is added.) Tj ET
+BT /F1 10 Tf 1 0 0 1 60 145 Tm (SupplierId) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 145 Tm (Type) Tj ET
+BT /F1 10 Tf 1 0 0 1 236 130 Tm (reference) Tj ET
+BT /F1 9 Tf 1 0 0 1 300 60 Tm (592) Tj ET
+endstream
+endobj
+9 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+10 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+11 0 obj
+<< /Title (Object Reference) /Creator (Sumcheck fixtures) >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000127 00000 n 
+0000000264 00000 n 
+0000000936 00000 n 
+0000001073 00000 n 
+0000002109 00000 n 
+0000002246 00000 n 
+0000004874 00000 n 
+0000004971 00000 n 
+0000005074 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R /Info 11 0 R >>
+startxref
+5151
+%%EOF
