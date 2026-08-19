@@ -1119,6 +1119,69 @@ async function runFieldDetailsCase() {
   }
 }
 
+/**
+ * Page chrome: varying running heads and printed folios (issue #2).
+ *
+ * The same fixture as the T1 case. Its head repeats on the left and names the
+ * page's object on the right — the pairing that defeats a whole-line
+ * repetition test — and its folios increment, so they never repeat at all.
+ * Measured on the real 1,349-page guide, the pass caught 0.3% of heads and
+ * 0.0% of folios before this.
+ *
+ * The last two checks are the guardrail. Repetition is the licence to strip; a
+ * line seen once is content, and stripping that is a worse failure than leaving
+ * a page number in.
+ */
+async function runPageChromeCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>running heads and folios are stripped, content is not</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'page-chrome', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/field-details.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'field-details.pdf' }, { outputs: ['md'] }, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    const lines = body.split('\n').map((l) => l.trim());
+
+    const heads = lines.filter((l) => /^Standard Objects Reference\b/.test(l));
+    const folios = lines.filter((l) => /^(599|600|601)$/.test(l));
+    record.md = JSON.stringify({ heads, folios, warnings: result.warnings }, null, 1);
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the varying running head is stripped': () =>
+          heads.length === 0 || `${heads.length} survived: ${JSON.stringify(heads)}`,
+        'printed folios are stripped, across a decade boundary': () =>
+          folios.length === 0 || `${folios.length} survived: ${JSON.stringify(folios)}`,
+        'field names survive': () =>
+          ['Scope3EmssnSrcId', 'RentalCarCompanyName', 'SupplierId'].every((f) => body.includes(f)) ||
+          'stripping removed table content',
+        'cell values survive': () =>
+          body.includes('The name of the rental car company.') || 'stripping removed a cell value',
+        'a chrome line seen on one page only is kept': () =>
+          body.includes('Draft for internal review only') ||
+          'a line appearing once was stripped — repetition is the licence, and it had none',
+        'the document title survives': () =>
+          /^#\s+Object Reference/m.test(body) || 'the title was stripped as chrome',
+      },
+      record.md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('page-chrome', err);
+  }
+}
+
 const summary = document.getElementById('summary');
 const container = document.getElementById('cases');
 const results = [];
@@ -1151,6 +1214,7 @@ async function run() {
     ['prose-lexicon', runProseLexiconCase],
     ['locked.pdf', runPasswordCase],
     ['field-details.pdf', runFieldDetailsCase],
+    ['page-chrome', runPageChromeCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],

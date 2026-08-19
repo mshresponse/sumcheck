@@ -9,9 +9,9 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> /Contents 4 0 R >>
 endobj
 4 0 obj
-<< /Length 621 >>
+<< /Length 637 >>
 stream
-BT /F1 9 Tf 1 0 0 1 60 742 Tm (Net Zero Cloud Standard Objects) Tj ET
+BT /F1 9 Tf 1 0 0 1 60 742 Tm (Standard Objects Reference RentalCarCompanyName) Tj ET
 BT /F2 10 Tf 1 0 0 1 60 720 Tm (Field) Tj ET
 BT /F2 10 Tf 1 0 0 1 210 720 Tm (Details) Tj ET
 BT /F1 10 Tf 1 0 0 1 60 700 Tm (RentalCarCompanyName) Tj ET
@@ -21,16 +21,16 @@ BT /F1 10 Tf 1 0 0 1 210 670 Tm (Properties) Tj ET
 BT /F1 10 Tf 1 0 0 1 236 655 Tm (Create, Filter, Group, Nillable, Sort, Update) Tj ET
 BT /F1 10 Tf 1 0 0 1 210 640 Tm (Description) Tj ET
 BT /F1 10 Tf 1 0 0 1 236 625 Tm (The name of the rental car company.) Tj ET
-BT /F1 9 Tf 1 0 0 1 300 60 Tm (590) Tj ET
+BT /F1 9 Tf 1 0 0 1 300 46 Tm (599) Tj ET
 endstream
 endobj
 5 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> /Contents 6 0 R >>
 endobj
 6 0 obj
-<< /Length 985 >>
+<< /Length 1067 >>
 stream
-BT /F1 9 Tf 1 0 0 1 60 742 Tm (Net Zero Cloud Standard Objects) Tj ET
+BT /F1 9 Tf 1 0 0 1 60 742 Tm (Standard Objects Reference RentalCarEmssnFctr) Tj ET
 BT /F2 10 Tf 1 0 0 1 60 720 Tm (Field) Tj ET
 BT /F2 10 Tf 1 0 0 1 210 720 Tm (Details) Tj ET
 BT /F1 10 Tf 1 0 0 1 60 700 Tm (RentalCarEmssnFctrId) Tj ET
@@ -46,16 +46,17 @@ BT /F1 10 Tf 1 0 0 1 210 580 Tm (Relationship Type) Tj ET
 BT /F1 10 Tf 1 0 0 1 236 565 Tm (Lookup) Tj ET
 BT /F1 10 Tf 1 0 0 1 210 550 Tm (Refers To) Tj ET
 BT /F1 10 Tf 1 0 0 1 236 535 Tm (RentalCarEmssnFctr) Tj ET
-BT /F1 9 Tf 1 0 0 1 300 60 Tm (591) Tj ET
+BT /F1 9 Tf 1 0 0 1 300 46 Tm (600) Tj ET
+BT /F1 9 Tf 1 0 0 1 60 62 Tm (Draft for internal review only) Tj ET
 endstream
 endobj
 7 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> /Contents 8 0 R >>
 endobj
 8 0 obj
-<< /Length 2576 >>
+<< /Length 2586 >>
 stream
-BT /F1 9 Tf 1 0 0 1 60 742 Tm (Net Zero Cloud Standard Objects) Tj ET
+BT /F1 9 Tf 1 0 0 1 60 742 Tm (Standard Objects Reference Scope3EnrgyUse) Tj ET
 BT /F2 10 Tf 1 0 0 1 60 720 Tm (Field) Tj ET
 BT /F2 10 Tf 1 0 0 1 210 720 Tm (Details) Tj ET
 BT /F1 10 Tf 1 0 0 1 60 700 Tm (Scope3EmssnSrcId) Tj ET
@@ -98,7 +99,7 @@ BT /F1 10 Tf 1 0 0 1 236 175 Tm (The supplemental scope 3 emissions value that i
 BT /F1 10 Tf 1 0 0 1 60 145 Tm (SupplierId) Tj ET
 BT /F1 10 Tf 1 0 0 1 210 145 Tm (Type) Tj ET
 BT /F1 10 Tf 1 0 0 1 236 130 Tm (reference) Tj ET
-BT /F1 9 Tf 1 0 0 1 300 60 Tm (592) Tj ET
+BT /F1 9 Tf 1 0 0 1 300 46 Tm (601) Tj ET
 endstream
 endobj
 9 0 obj
@@ -117,15 +118,15 @@ xref
 0000000058 00000 n 
 0000000127 00000 n 
 0000000264 00000 n 
-0000000936 00000 n 
-0000001073 00000 n 
-0000002109 00000 n 
-0000002246 00000 n 
-0000004874 00000 n 
-0000004971 00000 n 
-0000005074 00000 n 
+0000000952 00000 n 
+0000001089 00000 n 
+0000002208 00000 n 
+0000002345 00000 n 
+0000004983 00000 n 
+0000005080 00000 n 
+0000005183 00000 n 
 trailer
 << /Size 12 /Root 1 0 R /Info 11 0 R >>
 startxref
-5151
+5260
 %%EOF

@@ -7,6 +7,130 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.6.0 cycle · T2 — strip running headers and printed folios (#2)
+
+The characterization note below states the problem and the counts it was measured
+against. This is what shipped.
+
+### Result on the Net Zero Cloud guide, 1,349 pages
+
+| | before | after | **caught** |
+| --- | ---: | ---: | ---: |
+| running head lines | 1,334 | 5 | **99.6%** |
+| folio lines | 1,366 | 0 | **100%** |
+
+Before this the same document scored 0.3% and 0.0%.
+
+The 5 surviving heads are not misses in any useful sense — each is a line where
+the head is fused to body prose by the line assembly (`Net Zero Cloud Admin The
+Stationary Asset Energy Use (StnryAssetEnrgyUse) record…`) or is a real sentence
+that happens to open with the product name. Stripping those would delete
+content, which is the one outcome the guardrail forbids.
+
+Folios: 1,366 lines removed against 1,341 printed folios. The extra 25 are pages
+where our own emitter rendered the same folio line twice — verified against the
+pdftotext reference, which prints it once on every one of those pages. Both
+copies are furniture and both should go. Two bare numbers survive in the whole
+document (`3`, `0`) and both are content.
+
+### Three rules, because there are three phenomena
+
+Rule 1 is the existing whole-line test, unchanged. Nothing about its behaviour
+moved, which is the cheapest way to be sure the fix cannot regress what already
+worked.
+
+Rule 2 keys on the first three words instead of the whole line, so the varying
+tail stops defeating the match — but a shared opening alone is weak evidence,
+since reference prose repeats openings constantly. The second half of the
+evidence is height: chrome prints at a fixed offset on every page, and a body
+line that shares an opening does not. Both are required.
+
+Rule 3 does not test repetition at all. Folios are all different by
+construction — 1,340 distinct values across 1,341 lines — so repetition can
+never be the licence. The licence is the sequence: the printed number must
+advance exactly as far as the page index does. That formulation tolerates the
+pages carrying no folio (chapter openings, blanks) without tolerating a number
+that merely sits in the same place.
+
+### The one that mattered: rules 2 and 3 read only the outermost line
+
+A running head sits above all body text and a folio below all of it. Restricting
+the new rules to the topmost and bottommost line of each page is what keeps a
+body line that opens with the same three words on every page — ordinary in a
+reference manual — from being read as chrome. Rule 1 still sees the whole 8%
+band, so no existing behaviour narrowed.
+
+### Fixture
+
+`test/fixtures/field-details.pdf` gained a head whose right half names the object
+on that page, a folio, and one chrome-band line printed on a single page. The
+new harness case `page-chrome` asserts six things: heads stripped, folios
+stripped, field names survive, cell values survive, **the once-only line is
+kept**, and the document title is not eaten. RED on the old adapter for exactly
+the two miss classes; the other four passed before the change and still pass.
+
+### A fixture that passed a broken implementation
+
+The first version of `folioValue` was
+
+```js
+/^[\s[(-–—]*(\d{1,4})[\s\])-–—]*$/
+```
+
+where `(-–` inside the character class is a *range* from `(` to en-dash, which
+spans the digits. The class ate the leading digit and the capture group took what
+was left: `590` read as `90`. Against fixture folios 590/591/592 that still
+yields 90/91/92 — a clean sequence — so the fixture went green on code that was
+wrong, and only the 1,349-page document exposed it, where `599 → 600` reads as
+`99 → 0` and the sequence collapses.
+
+The fixture now numbers its pages 599/600/601. A rule that mis-reads the leading
+digit sees 99, 0, 1 and cannot call that a sequence, so the bug fails at the
+fixture where it belongs. This is the second time this cycle that the fixture
+proved a necessary but not sufficient check; both times the corpus was what
+caught it.
+
+### Corpus re-score, conversion-touching as required
+
+| | baseline | after T2 |
+| --- | ---: | ---: |
+| grand totals matched | 50/50 | **50/50** |
+| all line-item codes found | 49/49 | **49/49** |
+| each amount on its code's row | 52/52 | **52/52** |
+| `#Error` preserved | 50/50 | **50/50** |
+| documents emitting a real table | 49/50 | **49/50** |
+| headline figure recovered | 44/50 | **44/50** |
+| value-not-recovered markers | 6 = 6 | **6 = 6** |
+
+Unchanged on every metric. The marker invariant holds. The 50-document corpus is
+single-page scans with no running heads, so the pass has nothing to act on there;
+that it stays exactly flat is the result worth having.
+
+### What the change costs, measured
+
+Diffing the guide before and after at token level, against a baseline with the
+chrome removed by hand: 178 tokens of 220,013 differ, 0.08%. They are not spread
+out — they sit in one four-column layout table that is mangled in both versions,
+and removing the head above it changes how the continuation rows regroup. The
+removal set itself is clean: every line the pass deleted is a running head or a
+folio, and the folio values form the complete run 1…1,341 with no gaps.
+
+That 0.08% is the honest price. Stripping chrome shifts what the table
+continuation logic sees at a page boundary, and in a table that was already
+being reassembled badly the reshuffle moves a few cells. It is not a new defect
+class and it is not silent — those tables carry `table_fallback` and review
+markers already.
+
+### Invariant there was a temptation to break
+
+The obvious way to reach 100% on folios is to drop the `k.length < 2` guard in
+rule 1 so that bare numbers become countable. That would make every short
+repeated token in the band strippable, which is exactly the over-stripping the
+work order rules out. Rule 1 is untouched; rule 3 earns folios on its own
+evidence instead.
+
+---
+
 ## 2026-08-19 · v1.6.0 cycle · T2 characterization — why `stripRunningHeads` misses (#2)
 
 **Measured before changing anything**, per the work order. No fix in this entry.

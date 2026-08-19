@@ -1064,40 +1064,167 @@ function attachGapMarkers(lines, gaps) {
 
 /**
  * Headers, footers and page numbers repeat at the same height on most pages.
- * Normalizing digits away lets "Page 4 of 30" and "Page 5 of 30" match.
+ *
+ * Three rules, in increasing order of how much they infer:
+ *
+ *   1. the whole line recurs, digits normalized — "Page 4 of 30" matches
+ *      "Page 5 of 30". The safe case.
+ *   2. the opening words recur at a fixed height and the tail varies —
+ *      "Standard Objects Reference <the object on this page>". Rule 1 cannot
+ *      see these, because the varying tail is part of its key: measured on a
+ *      1,349-page reference guide it caught 4 of 1,334 such heads, 0.3%.
+ *   3. a bare number at the page edge that counts up with the pages — a
+ *      printed folio. Folios never repeat, so no repetition test can reach
+ *      them; the sequence is the evidence. Same document, 0 of 1,341.
+ *
+ * Rules 2 and 3 read only the outermost line of each band, since a running
+ * head sits above all body text and a folio below it. That is what stops a
+ * body line which happens to open with the same three words on every page —
+ * ordinary in a reference document — from being read as chrome.
+ *
+ * Every rule needs its evidence on most pages and none fires on a single page.
+ * Repetition is the licence to strip, and the failures are not symmetric:
+ * under-stripping leaves a page number in the text, over-stripping deletes
+ * something that was never recoverable from the output.
  */
 function stripRunningHeads(pages, warnings) {
   if (pages.length < 2) return;
-  const counts = new Map();
-  const key = (line) => line.text.replace(/\d+/g, '#').slice(0, 80);
+  const threshold = Math.max(2, Math.ceil(pages.length * 0.6));
+  const drop = new Set();
 
+  markRepeatedLines(pages, threshold, drop);
+  markRepeatedPrefixes(pages, threshold, drop);
+  markFolios(pages, threshold, drop);
+  if (!drop.size) return;
+
+  let removed = 0;
+  for (const page of pages) {
+    const before = page.lines.length;
+    page.lines = page.lines.filter((l) => !drop.has(l));
+    removed += before - page.lines.length;
+  }
+  if (removed) warnings.push(`Removed ${removed} header/footer line(s).`);
+}
+
+/** Rule 1: the whole line, digits normalized, recurs across pages. */
+function markRepeatedLines(pages, threshold, drop) {
+  const counts = new Map();
   for (const page of pages) {
     for (const line of candidateChrome(page)) {
-      const k = key(line);
+      const k = chromeKey(line);
       if (k.length < 2) continue;
       counts.set(k, (counts.get(k) || 0) + 1);
     }
   }
-  // Must recur on most pages, and on at least two — a line seen once is content.
-  const threshold = Math.max(2, Math.ceil(pages.length * 0.6));
   const repeated = new Set([...counts].filter(([, c]) => c >= threshold).map(([k]) => k));
   if (!repeated.size) return;
-
-  let removed = 0;
   for (const page of pages) {
-    const drop = new Set(candidateChrome(page).filter((l) => repeated.has(key(l))));
-    if (drop.size) {
-      page.lines = page.lines.filter((l) => !drop.has(l));
-      removed += drop.size;
+    for (const line of candidateChrome(page)) {
+      if (repeated.has(chromeKey(line))) drop.add(line);
     }
   }
-  if (removed) warnings.push(`Removed ${removed} repeated header/footer line(s).`);
+}
+
+/**
+ * Rule 2: the opening words recur at a fixed height, the tail varies.
+ *
+ * Height is half the evidence. A shared opening alone is weak — plenty of
+ * prose starts the same way — but chrome is printed at the same offset on
+ * every page, and body text that happens to share an opening is not.
+ */
+function markRepeatedPrefixes(pages, threshold, drop) {
+  const groups = new Map();
+  for (const page of pages) {
+    for (const line of edgeChrome(page)) {
+      const prefix = prefixKey(line);
+      if (!prefix) continue;
+      const band = line.y <= page.height * 0.08 ? 'top' : 'bottom';
+      const k = `${band} ${prefix}`;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(line);
+    }
+  }
+  for (const lines of groups.values()) {
+    if (lines.length < threshold) continue;
+    const ys = lines.map((l) => l.y).sort((a, b) => a - b);
+    const middle = ys[Math.floor(ys.length / 2)];
+    const steady = lines.filter((l) => Math.abs(l.y - middle) <= 6);
+    if (steady.length < threshold) continue;
+    for (const line of steady) drop.add(line);
+  }
+}
+
+/**
+ * Rule 3: a bare number at the page edge that advances with the pages.
+ *
+ * The test is that the printed number moves exactly as far as the page index
+ * does, which tolerates the pages carrying no folio at all — chapter openings
+ * and blanks — without tolerating a number that merely sits there.
+ */
+function markFolios(pages, threshold, drop) {
+  const bands = { top: [], bottom: [] };
+  pages.forEach((page, index) => {
+    for (const line of edgeChrome(page)) {
+      const value = folioValue(line.text);
+      if (value === null) continue;
+      bands[line.y <= page.height * 0.08 ? 'top' : 'bottom'].push({ line, value, index });
+    }
+  });
+
+  for (const found of Object.values(bands)) {
+    if (found.length < threshold) continue;
+    let inSequence = 0;
+    for (let i = 1; i < found.length; i++) {
+      const step = found[i].value - found[i - 1].value;
+      if (step > 0 && step === found[i].index - found[i - 1].index) inSequence++;
+    }
+    // A tenth of the gaps may break — a restarted section, a misread digit —
+    // before the sequence stops being the explanation.
+    if (inSequence < Math.ceil((found.length - 1) * 0.9)) continue;
+    for (const f of found) drop.add(f.line);
+  }
+}
+
+/** Digits carry no identity in chrome: "Page 4 of 30" is "Page # of #". */
+function chromeKey(line) {
+  return line.text.replace(/\d+/g, '#').slice(0, 80);
+}
+
+const PREFIX_WORDS = 3;
+
+/** The opening words of a line whose tail varies, or '' if there is no tail. */
+function prefixKey(line) {
+  const words = line.text.replace(/\d+/g, '#').trim().split(/\s+/);
+  if (words.length <= PREFIX_WORDS) return '';
+  const prefix = words.slice(0, PREFIX_WORDS).join(' ');
+  return prefix.length >= 10 ? prefix : '';
+}
+
+/** A page number and nothing else: "12", "- 12 -", "[12]". */
+function folioValue(text) {
+  const match = /^[\s[(–—-]*(\d{1,4})[\s\])–—-]*$/.exec(text);
+  return match ? Number(match[1]) : null;
 }
 
 function candidateChrome(page) {
   const top = page.height * 0.08;
   const bottom = page.height * 0.92;
   return page.lines.filter((l) => (l.y <= top || l.y >= bottom) && l.text.length <= 120);
+}
+
+/**
+ * The outermost line of each band. A running head is above everything else on
+ * its page and a folio below everything else on its own; anything further in
+ * is body text until proven otherwise.
+ */
+function edgeChrome(page) {
+  const band = candidateChrome(page);
+  const out = [];
+  const top = band.filter((l) => l.y <= page.height * 0.08);
+  const bottom = band.filter((l) => l.y >= page.height * 0.92);
+  if (top.length) out.push(top.reduce((a, b) => (b.y < a.y ? b : a)));
+  if (bottom.length) out.push(bottom.reduce((a, b) => (b.y > a.y ? b : a)));
+  return out;
 }
 
 function estimateBodySize(pages) {

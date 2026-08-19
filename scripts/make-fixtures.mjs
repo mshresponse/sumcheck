@@ -168,9 +168,13 @@ function buildFieldDetailsPdf() {
     return { ops: out, endY: y };
   }
 
-  function page(number, folio, blocks) {
+  function page(number, folio, headSuffix, blocks) {
     const ops = [
-      line('F1', 9, FIELD_X, 742, 'Net Zero Cloud Standard Objects'),
+      // The head's left half repeats and its right half names the object on
+      // this page. That pairing is what defeats a whole-line repetition test,
+      // so the fixture has to carry it — an identical head is already stripped
+      // and would prove nothing.
+      line('F1', 9, FIELD_X, 742, `Standard Objects Reference ${headSuffix}`),
       line('F2', 10, FIELD_X, 720, 'Field'),
       line('F2', 10, LABEL_X, 720, 'Details'),
     ];
@@ -180,19 +184,24 @@ function buildFieldDetailsPdf() {
       ops.push(...built.ops);
       y = built.endY - STEP;
     }
-    ops.push(line('F1', 9, 300, 60, String(folio)));
+    // 599-601 crosses a decade on purpose: a rule that mis-reads the
+    // leading digit sees 99, 0, 1 and cannot call that a sequence.
+    ops.push(line('F1', 9, 300, 46, String(folio)));
+    // A chrome-band line that appears on exactly one page. Repetition is the
+    // licence to strip; without it, this must survive.
+    if (number === 2) ops.push(line('F1', 9, FIELD_X, 62, 'Draft for internal review only'));
     return ops.join('\n');
   }
 
   const pages = [
-    page(1, 590, [
+    page(1, 599, 'RentalCarCompanyName', [
       ['RentalCarCompanyName', [
         ['Type', 'string'],
         ['Properties', 'Create, Filter, Group, Nillable, Sort, Update'],
         ['Description', 'The name of the rental car company.'],
       ]],
     ]),
-    page(2, 591, [
+    page(2, 600, 'RentalCarEmssnFctr', [
       ['RentalCarEmssnFctrId', [
         ['Type', 'reference'],
         ['Properties', 'Create, Filter, Group, Nillable, Sort, Update'],
@@ -203,7 +212,7 @@ function buildFieldDetailsPdf() {
       ]],
     ]),
     // The page the regression is measured on — the five fields from issue #4.
-    page(3, 592, [
+    page(3, 601, 'Scope3EnrgyUse', [
       ['Scope3EmssnSrcId', [
         ['Type', 'reference'],
         ['Properties', 'Create, Filter, Group, Sort, Update'],
