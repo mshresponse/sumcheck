@@ -7,6 +7,67 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.0 cycle · Q0 — version bump first, to protect the pending artifact
+
+### The artifact this cycle must not touch
+
+```
+dist/sumcheck-1.6.0.zip
+SHA-256  86670af2b0da21e07386e5855c6091b6d06e2254e02d8ce2759a748f128ea928
+size     6,493,701 bytes
+```
+
+Q9 re-checks that digest. Any packaging run during this cycle that changes it is
+a failure, not a detail.
+
+### `1.7.0-dev` is not a version Chrome will load
+
+The work order asks for `1.7.0-dev` in both manifests and says that if the suffix
+trips a gate assertion, the assertion is what should change. It trips something
+that is not ours:
+
+```
+Required value 'version' is missing or invalid. It must be between
+1-4 dot-separated integers each between 0 and 65536.
+```
+
+That is Chrome refusing to load the extension at all — `Extensions.loadUnpacked`
+fails, the service worker never registers, and `verify-extension` goes from 51/51
+to **0/2**. There is no assertion to relax; an extension whose manifest version
+carries a suffix cannot be installed, so a cycle spent on that version would have
+no working build to test at any point.
+
+Manifest V3 provides the mechanism intended for exactly this case, so the cycle
+uses it:
+
+```json
+"version": "1.7.0.1",
+"version_name": "1.7.0-dev"
+```
+
+`version` is what Chrome parses and what `scripts/package.mjs` uses for the zip
+name; `version_name` is the human-readable label and shows in `chrome://extensions`.
+`package.json` keeps `1.7.0-dev`, which npm accepts and Chrome never reads.
+
+### The protection is intact, which was the point
+
+The work order's reasoning holds regardless of the string: the packaging gate
+rebuilds `dist/sumcheck-<manifest.version>.zip` on every run, and last cycle that
+silently overwrote the 1.5.0 artifact. What protects 1.6.0 is that the version
+**differs** from it, not that it ends in `-dev`.
+
+The fourth component is deliberate. `1.7.0.1` is distinct from **both** 1.6.0 and
+the 1.7.0 that Q9 will produce, so mid-cycle packages cannot be mistaken for
+either the pending release or the finished one. Q9 drops it back to `1.7.0` and
+removes `version_name`.
+
+Verified after the change: `npm run check` clean, **45/45** harness cases,
+**51/51** packaged-extension checks, packaging landed on
+`dist/sumcheck-1.7.0.1.zip`, and `dist/sumcheck-1.6.0.zip` still hashes to
+`86670af2…` — byte-identical.
+
+---
+
 ## 2026-08-19 · bench addendum · the two mechanisms a PyMuPDF pipeline used that we do not
 
 Folded into the Winter '27 bench. Characterization only, no fixes, no version
