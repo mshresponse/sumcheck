@@ -7,6 +7,122 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · bench · Winter '27 release notes — Sumcheck 1.6.0 vs pdftotext vs Docling (characterization only)
+
+Run before the v1.7 cycle, against the **released artifact**
+(`dist/sumcheck-1.6.0.zip` unpacked and driven through the harness, plus the
+packaged extension installed in Chrome). Full analysis and every raw output live
+in the audit enclave: `~/mdforge-audit/winter27-comparison.md`. No fixes.
+
+**Source:** Salesforce Winter '27 Release Notes, 1,010 pages, 18.2 MB,
+born-digital, typeset by **Prince 15.4** — a different engine from the Net Zero
+guide's XEP, which is what makes it a generalization test rather than a repeat.
+
+### Timing, one machine, all measured
+
+| tool | version | wall-clock | per page |
+| --- | --- | ---: | ---: |
+| **Sumcheck** | 1.6.0 released zip | **5.8 s** | **5.7 ms** |
+| pdftotext | poppler 26.08.0 | 0.74 s | 0.7 ms |
+| Docling `--no-ocr` | 2.120.3 | 205.8 s | 204 ms |
+| Docling, default settings | 2.120.3 | **died at ~220 s, twice** | — |
+
+Setup, excluded: poppler 17 s, venv + Docling 77 s, model download ~87 s.
+
+**Docling cannot convert this document in one pass with default settings on a
+16 GB machine.** Two runs died with no exit status at 220 s and 210 s, peak
+3.87 GB resident, system down to ~56 MB free. Its default pipeline runs RapidOCR
+across a document with a perfect text layer; `--no-ocr` gives **byte-identical
+output** on a 20-page control (70,907 bytes either way) and finishes. That is the
+configuration every Docling figure here comes from.
+
+### The T2 chrome rules generalized — they were not overfit
+
+| | printed | surviving | caught |
+| --- | ---: | ---: | ---: |
+| running head | 1,007 | 3 | **99.7%** |
+| printed folio | 939 | 3 | **99.7%** |
+
+The header idiom here is different from the one T2 was written against:
+`Salesforce Release Notes` left and the section name right, **on one visual
+line**, which the assembler joins. The prefix rule keys on the first three words
+at a fixed height and strips all 39 section variants. A whole-line repetition
+test could not have — the commonest variant covers 213 pages, 21%, against a
+606-page threshold. The three survivors are front-matter pages whose header has
+no section half, leaving exactly three words, one short of what the prefix rule
+requires. Under-stripping, as intended.
+
+### The headline question: tables crossing a page boundary
+
+Sampling stated: all 33 tables interrupted by exactly one page marker, every 2nd
+taken → 12, each judged against the page itself via `pdftotext -layout`, never
+against the other tool's output.
+
+| | Sumcheck | Docling |
+| --- | ---: | ---: |
+| continuation stitched into one table | **0/12** | **0/12** |
+| stacked column header assembled | **0/9** | **8/9** |
+| straddling row label recovered whole | **3/8** | **4/8** |
+
+Document-wide: **87 of Sumcheck's 209 tables open with a mangled header split and
+only 2 are correct; Docling gets 95 of 109.**
+
+These tables carry a three-line stacked column header repeated on every
+continuation page. Docling assembles it into one header row. We read it as a
+header plus two junk data rows —
+
+```markdown
+| Enabled for | Requires | Contact |
+| --- | --- | --- |
+| Enabled for administrators administrator |  | Salesforce to |
+| Feature users /developers | setup | enable |
+```
+
+**This is the mirror image of the Net Zero result.** There we were row-faithful
+17/17 where Docling drifted 8/17; here the row bodies are fine and the header is
+what breaks. Neither result generalizes to "tool X is better at tables", and
+neither should be quoted alone. Both documents belong in the corpus.
+
+Neither tool joins a table across a page break, and both truncate a row label
+that wraps across one — within a page those labels stitch correctly, so T1 is
+working and the defect is specific to the boundary.
+
+### Other defect classes found
+
+- **713 bullet list items emitted as `##` headings** — 27% of all headings,
+  against 320 bullets that became real list items. Measured cause: body text is
+  12.8 pt and the `•` glyph is drawn at **19.2 pt**; the bullet sits on its own
+  baseline, the assembler joins it to its text, and the oversized decorative
+  glyph carries the line to a 1.5 size ratio, over the h2 threshold. The heading
+  branch runs before the list-marker branch, so `listMarker()` never objects.
+- **86 headings contain their own text twice** — `### August 2026August 2026`,
+  no separator. `pdftotext -bbox` shows the PDF draws it once. Reproduces on a
+  one-page extract.
+- **335 images across 131 pages produce no output and no indication.** The PDF
+  adapter touches images only to measure a scan's DPI for OCR and never emits an
+  `<img>`, so `imageMode` — offered in the settings panel as
+  embed/extract/link/strip — has nothing to act on for PDFs. A gap, not a bug,
+  but the setting implies a capability that does not exist for this format.
+
+### What held
+
+Completeness: residual against a chrome-stripped reference is **550 words of
+339,459, 0.16%**, and inspection shows those are header text, not content. T3
+holds — no split-title behaviour on this layout, no heading fragments of that
+shape. 0 false review flags across 1,010 pages. The released app reported
+`17 MB → 2.6 MB as .md · 85% smaller · ~582k tokens (estimated)`.
+
+### One harness limitation, not a converter defect
+
+`verify-extension`'s end-to-end check requires the converted document to contain
+at least one `$nn.nn` amount — a property of the medical-billing corpus it was
+written against. On this document it reports FAIL beside 2.7 M characters of
+correct output with tables and front matter present. Filed separately; the check
+needs a document-agnostic assertion, the same lesson as the hardcoded `$151.00`
+it already replaced once.
+
+---
+
 ## 2026-08-19 · v1.6.0 cycle · T6 — wall-clock in the audit runner (#5), and the release
 
 ### The number the Docling bench was missing
