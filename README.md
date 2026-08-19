@@ -147,7 +147,7 @@ Validators run on every document, because OCR confidence only catches *loud*
 failures — a "$" misread as "3" produces `340.00`, which scores in the 90s
 because it is a perfectly good number:
 
-- **Currency sigil check** — a bare amount in a column whose siblings carry "$".
+- **Currency symbol check** — a bare amount in a column whose siblings carry "$".
 - **Arithmetic reconciliation** — line items that do not sum to their total row.
 - **Headline reconciliation** — a prominent total that matches no other figure
   on the page.

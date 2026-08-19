@@ -42,7 +42,7 @@ adding an input format means one file in `src/core/adapters/` and one line in th
 registry. All dependencies are permissive-licensed and vendored locally; MV3
 forbids remote code.
 
-**Verification layer.** OCR confidence scalars, a currency-sigil validator, line
+**Verification layer.** OCR confidence scalars, a currency-symbol validator, line
 item vs total arithmetic reconciliation, and ink-coverage detection that marks
 regions where the page had content OCR could not read. Nothing is ever silently
 rewritten.
