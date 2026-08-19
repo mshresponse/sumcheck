@@ -112,6 +112,25 @@ holds — no split-title behaviour on this layout, no heading fragments of that
 shape. 0 false review flags across 1,010 pages. The released app reported
 `17 MB → 2.6 MB as .md · 85% smaller · ~582k tokens (estimated)`.
 
+### Issues filed from this bench
+
+Evidence landed in the repository before any of these became an issue, same rule
+as the last bench.
+
+| issue | class |
+| --- | --- |
+| #9 | stacked multi-line column headers read as a header plus junk rows — 2/209 against Docling's 95/109 |
+| #10 | 713 bullet list items emitted as h2 headings, from a 19.2 pt decorative glyph |
+| #11 | 86 headings containing their own text twice |
+| #12 | 335 images producing no output and no indication, while `imageMode` offers four choices |
+| #13 | page-boundary table continuation: never stitched, straddling row labels truncated |
+| #14 | `verify-extension`'s end-to-end check requires a currency amount |
+
+Nothing here duplicates the closed v1.6 ledger: #1 covered key-value structure
+inside a cell, not a wrapped header; #6 covered a wrapped display title, not a
+list item misread by size; #2 covered chrome, which this document confirms is
+working.
+
 ### One harness limitation, not a converter defect
 
 `verify-extension`'s end-to-end check requires the converted document to contain
