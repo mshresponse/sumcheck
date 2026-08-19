@@ -278,6 +278,18 @@ function buildLines(pdfjs, textContent, viewport, links = []) {
       x2: group[group.length - 1].x + group[group.length - 1].width,
       y: group[0].y,
       size: Math.max(...sizes),
+      /**
+       * The size of the glyphs that carry the line's *text*, as distinct from
+       * the largest glyph on it.
+       *
+       * `size` is a maximum, so one outsized run decides the whole line. That
+       * is right for grouping and gaps and wrong for asking "is this a
+       * heading": a bullet drawn at 19.2 pt in front of 12.8 pt text turned 713
+       * list items into h2 headings in one reference document. Weighted by
+       * characters, so decoration — which is always short — cannot outvote the
+       * prose it decorates.
+       */
+      textSize: dominantSize(group),
       bold: group.every((g) => g.bold) && text.length > 1,
       italic: group.every((g) => g.italic),
       mono: group.every((g) => g.mono),
@@ -288,6 +300,22 @@ function buildLines(pdfjs, textContent, viewport, links = []) {
   });
 
   return lines.filter((l) => l.text);
+}
+
+/**
+ * The type size most of a line's characters are set in.
+ *
+ * A plain median over glyph runs lets a one-character run count as much as a
+ * sixty-character one; weighting by length is what makes a decorative glyph
+ * lose to the text beside it.
+ */
+function dominantSize(group) {
+  const weighted = [];
+  for (const item of group) {
+    const weight = Math.max(1, String(item.text || '').trim().length);
+    for (let i = 0; i < weight; i++) weighted.push(item.size);
+  }
+  return median(weighted) || Math.max(...group.map((g) => g.size));
 }
 
 /** Split a line wherever the horizontal gap is wide enough to be a column. */
@@ -1737,10 +1765,14 @@ function outlineHeading(line, bodySize, state) {
 function headingLevel(line, bodySize, state) {
   const text = line.text;
   if (!text || text.length > 200) return 0;
-  const ratio = line.size / bodySize;
+  const ratio = (line.textSize || line.size) / bodySize;
   const short = text.length <= 120;
   const endsLikeProse = /[.,;]$/.test(text) && text.length > 40;
   if (endsLikeProse) return 0;
+  // A line carrying no letters and no digits is decoration — a stray bullet, a
+  // rule, an ornament. Whatever size it is set in, it is not a heading, and
+  // with no text on it there is nothing for the size weighting to weigh.
+  if (!/[\p{L}\p{N}]/u.test(text)) return 0;
 
   let level = 0;
   if (ratio >= 1.85) level = 1;

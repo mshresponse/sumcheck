@@ -470,6 +470,77 @@ function buildOutlineHeadingsPdf() {
   return Buffer.from(out, 'latin1');
 }
 
+/**
+ * A list whose bullet glyph is set larger than the text it introduces.
+ *
+ * Measured on a real reference document: body text 12.8 pt, the `\x95` bullet
+ * drawn at 19.2 pt. A line's size is the maximum over its glyph runs, so the
+ * decorative glyph carried the whole line to a 1.5 ratio and 713 list items
+ * were emitted as h2 headings.
+ *
+ * The two controls matter as much as the defect. A numbered heading opens with
+ * something a list-marker test also matches, and a genuinely large heading has
+ * to stay one — a fix that reaches either of those is worse than the bug.
+ */
+function buildOversizedBulletPdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const content = [
+    line('F2', 16, 72, 720, 'Findings'),
+    // Enough body text that the body-size estimate is decided by prose rather
+    // than by the bullets. In the reference document bullets are a small
+    // minority of lines, which is why they read as oversized against it; a
+    // fixture with three bullets and two sentences inverts that and hides the
+    // defect behind a shifted baseline.
+    line('F1', 11, 72, 694, 'The review covered every region and recorded the results below.'),
+    line('F1', 11, 72, 680, 'Throughput was measured weekly at each site and aggregated by region'),
+    line('F1', 11, 72, 666, 'before being compared against the targets agreed at the start of the'),
+    line('F1', 11, 72, 652, 'period. Latency was sampled continuously and is reported separately.'),
+    line('F1', 11, 72, 638, 'No site reported an outage lasting longer than four minutes, and the'),
+    line('F1', 11, 72, 624, 'two brief interruptions recorded in the east were both planned.'),
+    line('F1', 11, 72, 610, 'Staffing remained stable across the period with one vacancy filled.'),
+    line('F1', 11, 72, 596, 'The following observations are drawn from the regional summaries.'),
+
+    // The defect: an oversized bullet on the same baseline as 11 pt text.
+    line('F2', 17, 72, 560, '\x95'),
+    line('F1', 11, 90, 560, 'Eastern corridor exceeded its target by eleven percent this quarter'),
+    line('F2', 17, 72, 540, '\x95'),
+    line('F1', 11, 90, 540, 'Western corridor met its target with no reported incidents at all'),
+    line('F2', 17, 72, 520, '\x95'),
+    line('F1', 11, 90, 520, 'Northern corridor remains under review pending a site visit'),
+
+    // Control: a numbered heading. A list-marker test matches its opening too,
+    // so a fix that reorders the tests without care demotes this.
+    line('F2', 11, 72, 480, '1. Overview of the Quarter'),
+    line('F1', 11, 72, 456, 'Throughput rose across every region during the period under review.'),
+  ].join('\n');
+
+  const objects = [];
+  const add = (body) => { objects.push(body); return objects.length; };
+  add('<< /Type /Catalog /Pages 2 0 R >>');
+  add('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      '/Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>');
+  add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const info = add('<< /Title (Regional Review) /Creator (Sumcheck fixtures) >>');
+
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 /* ------------------------------------------------------------------- PDF */
 
 function buildPdf() {
@@ -784,6 +855,7 @@ write('field-details.pdf', buildFieldDetailsPdf());
 write('split-title.pdf', buildSplitTitlePdf());
 write('diagnostics.pdf', buildDiagnosticsPdf());
 write('outline-headings.pdf', buildOutlineHeadingsPdf());
+write('oversized-bullet.pdf', buildOversizedBulletPdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own

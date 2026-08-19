@@ -1474,6 +1474,90 @@ async function runOutlineHeadingCase() {
   }
 }
 
+/**
+ * A decorative glyph must not decide that its line is a heading (Q2, #10).
+ *
+ * A line's size is the maximum over its glyph runs, so a bullet drawn larger
+ * than the text it introduces carries the whole line over the heading
+ * threshold. Measured on a reference document: body text 12.8 pt, bullet glyph
+ * 19.2 pt, and 713 list items emitted as h2 headings — 27% of every heading in
+ * it.
+ *
+ * The controls are the point. `Findings` is a real heading and has to stay one;
+ * `1. Overview of the Quarter` opens with something a list-marker test also
+ * matches, so a fix that reorders the tests carelessly turns a paragraph into
+ * an ordered list. Markdown renders those two identically, which is why this
+ * case reads the JSON block types rather than the text.
+ */
+async function runOversizedBulletCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>an oversized bullet glyph does not make a heading</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'oversized-bullet', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/oversized-bullet.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'oversized-bullet.pdf' }, { outputs: ['md', 'json'] }, {});
+    const md = result.outputs.find((o) => o.format === 'md').content;
+    const doc = JSON.parse(result.outputs.find((o) => o.format === 'json').content);
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    const headings = [...body.matchAll(/^(#{1,6})\s+(.*)$/gm)].map((m) => [m[1].length, m[2].trim()]);
+    const blockFor = (needle) => doc.blocks.find((b) => (b.text || '').includes(needle));
+
+    renderChecks(
+      box,
+      record,
+      {
+        'no heading opens with a bullet glyph': () =>
+          !headings.some(([, t]) => t.startsWith('•')) ||
+          `still headings: ${JSON.stringify(headings.filter(([, t]) => t.startsWith('•')).slice(0, 2))}`,
+        'the bulleted lines became a list': () =>
+          blockFor('Eastern corridor exceeded')?.type === 'list' ||
+          `block type was ${blockFor('Eastern corridor exceeded')?.type}`,
+        'all three items are in it': () => {
+          const block = blockFor('Eastern corridor exceeded');
+          return (
+            (block?.items?.length === 3 && /Northern corridor/.test(block.text || '')) ||
+            `list had ${block?.items?.length} item(s)`
+          );
+        },
+        'the item text survives whole': () =>
+          body.includes('Western corridor met its target with no reported incidents at all') ||
+          'item text was damaged',
+        'a genuinely large heading is still a heading': () =>
+          headings.some(([lvl, t]) => t === 'Findings' && lvl === 2) ||
+          `Findings came out as ${JSON.stringify(headings.filter(([, t]) => t === 'Findings'))}`,
+        /**
+         * A preservation control, not a target. This line is an ordered list
+         * item today and must still be one afterwards — it opens with something
+         * both the marker test and the numbered-heading rule match, so it is
+         * the line most likely to move if either is touched carelessly. In
+         * Markdown a paragraph reading "1. Overview" and an ordered list item
+         * are the same characters, so only the block model can tell.
+         */
+        'a numbered line keeps the classification it already had': () =>
+          blockFor('Overview of the Quarter')?.type === 'list' ||
+          `block type was ${blockFor('Overview of the Quarter')?.type}, expected list`,
+        'the body paragraph is untouched': () =>
+          body.includes('Throughput was measured weekly at each site and aggregated by region') ||
+          'the paragraph was damaged',
+      },
+      record.md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('oversized-bullet', err);
+  }
+}
+
 const summary = document.getElementById('summary');
 const container = document.getElementById('cases');
 const results = [];
@@ -1510,6 +1594,7 @@ async function run() {
     ['split-title', runSplitTitleCase],
     ['diagnostics', runDiagnosticsCase],
     ['outline-headings', runOutlineHeadingCase],
+    ['oversized-bullet', runOversizedBulletCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],

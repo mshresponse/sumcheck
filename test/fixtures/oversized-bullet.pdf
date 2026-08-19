@@ -1,0 +1,56 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 1504 >>
+stream
+BT /F2 16 Tf 1 0 0 1 72 720 Tm (Findings) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 694 Tm (The review covered every region and recorded the results below.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 680 Tm (Throughput was measured weekly at each site and aggregated by region) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 666 Tm (before being compared against the targets agreed at the start of the) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 652 Tm (period. Latency was sampled continuously and is reported separately.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 638 Tm (No site reported an outage lasting longer than four minutes, and the) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 624 Tm (two brief interruptions recorded in the east were both planned.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 610 Tm (Staffing remained stable across the period with one vacancy filled.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 596 Tm (The following observations are drawn from the regional summaries.) Tj ET
+BT /F2 17 Tf 1 0 0 1 72 560 Tm (•) Tj ET
+BT /F1 11 Tf 1 0 0 1 90 560 Tm (Eastern corridor exceeded its target by eleven percent this quarter) Tj ET
+BT /F2 17 Tf 1 0 0 1 72 540 Tm (•) Tj ET
+BT /F1 11 Tf 1 0 0 1 90 540 Tm (Western corridor met its target with no reported incidents at all) Tj ET
+BT /F2 17 Tf 1 0 0 1 72 520 Tm (•) Tj ET
+BT /F1 11 Tf 1 0 0 1 90 520 Tm (Northern corridor remains under review pending a site visit) Tj ET
+BT /F2 11 Tf 1 0 0 1 72 480 Tm (1. Overview of the Quarter) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 456 Tm (Throughput rose across every region during the period under review.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+7 0 obj
+<< /Title (Regional Review) /Creator (Sumcheck fixtures) >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000001807 00000 n 
+0000001904 00000 n 
+0000002006 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R /Info 7 0 R >>
+startxref
+2081
+%%EOF

@@ -7,6 +7,84 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.0 cycle · Q2 — a decorative glyph must not decide its line is a heading (#10)
+
+### Which fix, and why that one
+
+The work order offers two: measure the ratio without the marker glyph, or run
+the list-marker test before the heading test. **Only the first is shipped**, and
+the reason is that the second is a workaround for the first.
+
+The cause is one line of line assembly:
+
+```js
+size: Math.max(...sizes),
+```
+
+A line's size is the maximum over its glyph runs, so a bullet drawn at 19.2 pt
+in front of 12.8 pt text makes the whole line 19.2 pt and a ratio of 1.5 — over
+the 1.45 threshold for an h2. That is right for grouping and gaps and wrong for
+asking whether a line is a heading, and it is wrong for **any** oversized
+decoration: an ornament, a drop cap, a section dingbat. Reordering the two tests
+would rescue bullets specifically and leave every other decorative glyph still
+able to invent a heading.
+
+So lines gained `textSize` — a character-weighted median over the glyph runs —
+and `headingLevel` asks that instead. Weighting by length is the whole trick:
+decoration is short by nature and cannot outvote the prose beside it.
+
+Reordering was also the riskier of the two. `1. Overview of the Quarter` opens
+with something the list-marker test matches, and the fixture asserts on the JSON
+block model rather than on Markdown because a paragraph reading `1. Overview`
+and an ordered list item are the same characters.
+
+### One more guard, found by measuring
+
+Two `## •` headings survived on the reference document: a bullet alone on a
+line, no text. With nothing else on the line there is nothing for the weighting
+to weigh. A line carrying no letters and no digits is decoration whatever size
+it is set in, so it is now never a heading — narrow enough that a numeric
+heading like `2026` is untouched.
+
+### The fixture took three attempts, and the failures were instructive
+
+RED was surprisingly hard to reach, and each miss was a real fact about the
+defect:
+
+1. **Three bullets and two sentences** — the bullets dominated
+   `estimateBodySize`, the body size came out at 17 pt, and the *real* heading
+   was suppressed instead. Same root cause, opposite symptom.
+2. **Bullets ending in a full stop** — caught by the existing `endsLikeProse`
+   guard and emitted as paragraphs. Release-note bullets are fragments.
+3. **Bullets as fragments, outnumbered by prose** — reproduced exactly.
+
+The fixture now carries eight lines of body text to three bullets, matching the
+proportion in the reference document, and its bullets are fragments. Both facts
+are load-bearing and both are commented in the builder.
+
+### Results
+
+| Winter '27 | before Q1 | after Q1 | **after Q2** |
+| --- | ---: | ---: | ---: |
+| headings | 2,630 | 2,543 | **2,015** |
+| bullet list items emitted as h2 | 713 | 276 | **0** |
+| real list items | 320 | 789 | **1,315** |
+| table rows | 1,162 | 1,162 | 1,162 |
+
+Target was 713 → 0 with list items to ~1,033. Bullets reached 0; list items
+overshot the estimate at 1,315 because more bullets were recovered than the
+target assumed. Heading count landed at 2,015 against the document's own
+outline of ~1,990.
+
+Net Zero: 866 → 864. The two are `In this chapter ... Track and manage
+environmental impact for precise` and a sibling — lead-in sentences, not
+headings. Chrome (5 residual) and table rows (3,122) unmoved.
+
+Corpus: every metric at baseline, marker invariant 6 = 6. Gates: check clean,
+**47/47** harness cases, **51/51** packaged-extension checks.
+
+---
+
 ## 2026-08-19 · v1.7.0 cycle · Q1 — the embedded outline as the heading authority
 
 ### The fixture, and RED
