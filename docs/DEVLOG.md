@@ -7,6 +7,96 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · bench addendum · the two mechanisms a PyMuPDF pipeline used that we do not
+
+Folded into the Winter '27 bench. Characterization only, no fixes, no version
+change, `dist/sumcheck-1.6.0.zip` untouched.
+
+The owner had an independent deterministic PyMuPDF pipeline convert the same
+1,010-page PDF in **93.9 s** (owner-reported, not re-timed here — 16× our 5.8 s),
+self-reporting 1,990 headings from a 1,968-entry embedded outline, 1,179 link
+annotations and 104 image objects.
+
+**Its output file was never delivered to the enclave**, so none of its
+output-side numbers could be verified. What could be verified without it — and
+was, locally, with PyMuPDF 1.28.2 against the source PDFs
+(`~/mdforge-audit/verify-pdf-structures.py`) — is whether the PDF carries the
+structures it claims to have used.
+
+### (a) The embedded outline: real, large, and we ignore it
+
+| document | outline | entries | levels |
+| --- | --- | ---: | --- |
+| Winter '27 release notes | **yes** | **1,968** | L1 67 · L2 315 · L3 405 · L4 837 · L5 344 |
+| Net Zero Cloud guide | **yes** | 282 | L1 10 · L2 177 · L3 38 · L4 57 |
+| Good Faith Estimates (50) | **no** | 0 | — |
+
+The 1,968 figure is confirmed exactly. `src/core/adapters/pdf.js` contains no
+reference to an outline; headings come from font-size inference alone. The
+bundled pdf.js already exposes `getOutline`, so the data costs nothing to reach.
+
+Scored both directions (the 1,968 entries reduce to 1,344 distinct titles — many,
+like `August 2026`, recur):
+
+| | Winter '27 | Net Zero |
+| --- | ---: | ---: |
+| distinct outline titles we emit as a heading | 1,254 / 1,344 — **93.3%** | 257 / 267 — **96.3%** |
+| our distinct headings absent from the outline | **939 / 2,193 — 42.8%** | 123 / 380 — 32.4% |
+| of those, beginning with a bullet glyph | **502** | 0 |
+
+**Two in five of the headings we emit for this document correspond to nothing in
+the document's own structure**, and the largest group is the bullet list items of
+#10. The 589 outline entries we miss are led by `august 2026` — that is #11,
+where we emit `August 2026August 2026` and the outline states the heading
+plainly. One mechanism addresses both defect classes, which is why it is worth a
+cycle rather than two point fixes.
+
+It cannot be the *only* source: **0 of the 50 scanned Good Faith Estimates carry
+an outline**, and that is the corpus every score is measured on. Font-size
+inference stays as the fallback; the outline is a source-of-truth when present
+and a cross-check either way. Filed as #15.
+
+### (b) Link annotations: the premise does not hold — we already do this
+
+I was asked to file an issue for extracting PDF link annotations. **We already
+extract them, and by the available numbers more thoroughly than the pipeline
+reports.** No issue filed; filing one would have asserted a defect that does not
+exist.
+
+| in the PDF | count | | in our output | count |
+| --- | ---: | --- | --- | ---: |
+| link annotations, all kinds | 5,261 | | Markdown links emitted | **3,612** |
+| of which `LINK_URI` | 1,258 | | of which `http(s)` | 1,252 |
+| of which `LINK_LAUNCH` (`/apex/…`) | 3,969 | | of which relative `/apex/…` | 2,360 |
+| of which `LINK_GOTO` | 34 | | distinct targets | 2,025 |
+| distinct URI targets | 757 | | | |
+
+**We recover 1,252 of 1,258 URI annotations — 99.5%** — plus 2,360 launch-action
+targets on top. `pdfLinks: true` has been the default all along. The Winter '27
+completeness table already recorded this from the other side: our higher token
+count against pdftotext is largely link targets pdftotext never emits.
+
+### A correction to the published bench
+
+The bench said the document carries **335 image XObjects**, taken from
+`pdfimages -list`. That double-counts: of its 335 rows, 171 are images and **164
+are transparency masks**. PyMuPDF reports **161 placements over 106 distinct
+xrefs**, 154 of the placements carrying an SMask — exactly where the extra rows
+come from. 161/106 are the counts to use, and Docling's 161 base64 blobs match
+the placement count precisely, which corroborates both readings. The comparison
+document and issue #12 are corrected; the pipeline's claim of 104 image objects
+sits within two of the 106 measured.
+
+### Still unverified
+
+The pipeline's heading count, table count, header sample and link count in *its
+own output* remain unchecked, and the claim that it assembles the stacked column
+header correctly — the one that would confirm #9 is structural rather than
+heuristic — cannot be tested without the file. No note was added to #9 asserting
+it.
+
+---
+
 ## 2026-08-19 · bench · Winter '27 release notes — Sumcheck 1.6.0 vs pdftotext vs Docling (characterization only)
 
 Run before the v1.7 cycle, against the **released artifact**
