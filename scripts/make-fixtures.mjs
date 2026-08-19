@@ -275,6 +275,69 @@ function buildFieldDetailsPdf() {
   return Buffer.from(out, 'latin1');
 }
 
+/**
+ * A display-size title that wrapped across two visual lines, plus the cases a
+ * merge rule must not touch: two headings of the same size separated by body
+ * text, two separated by nothing but a wide gap, and a heading directly above
+ * body text.
+ */
+function buildSplitTitlePdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const content = [
+    // The bug. One title at display size, wrapped: the gap between the two
+    // lines is ordinary leading for 24pt, not a break between headings.
+    line('F2', 24, 72, 700, 'Net Zero Cloud Developer'),
+    line('F2', 24, 72, 672, 'Guide'),
+    line('F1', 10, 72, 630, 'Salesforce Net Zero Cloud helps organizations track and report'),
+    line('F1', 10, 72, 616, 'their carbon footprint across scopes one, two and three.'),
+
+    // Same size, separated by body text: two headings, and they stay two.
+    line('F2', 16, 72, 576, 'Overview'),
+    line('F1', 10, 72, 552, 'The developer guide describes the standard objects, their fields'),
+    line('F1', 10, 72, 538, 'and the calculations that populate them.'),
+    line('F2', 16, 72, 498, 'Details'),
+    line('F1', 10, 72, 474, 'Each object is documented with its properties and description.'),
+
+    // Same size, nothing between them, but four line-heights apart: a wide gap
+    // is a section break, not a wrap.
+    line('F2', 16, 72, 420, 'Appendix'),
+    line('F2', 16, 72, 340, 'Glossary'),
+    line('F1', 10, 72, 316, 'Terms used throughout this guide are defined here.'),
+  ].join('\n');
+
+  const objects = [];
+  const add = (body) => { objects.push(body); return objects.length; };
+
+  add('<< /Type /Catalog /Pages 2 0 R >>');
+  add('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  add(
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      '/Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>'
+  );
+  add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  // Deliberately not the visible title: when metadata carries the same string
+  // the assembler drops the heading as a duplicate of the cover title, which
+  // would hide whether the merge happened at all.
+  const info = add('<< /Title (Developer documentation) /Creator (Sumcheck fixtures) >>');
+
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 /* ------------------------------------------------------------------- PDF */
 
 function buildPdf() {
@@ -586,6 +649,7 @@ function buildWithTextutil() {
 write('sample.pdf', buildPdf());
 write('locked.pdf', buildEncryptedPdf('secret', 'owner-secret'));
 write('field-details.pdf', buildFieldDetailsPdf());
+write('split-title.pdf', buildSplitTitlePdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own

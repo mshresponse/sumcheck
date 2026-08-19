@@ -7,6 +7,105 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.6.0 cycle · T3 — a wrapped display title split into two headings (#6)
+
+### The fixture, and RED
+
+`test/fixtures/split-title.pdf` — one page carrying the bug and three cases that
+must not move. The bug reproduced on first conversion, character for character
+with the issue:
+
+```markdown
+## Net Zero Cloud Developer
+
+## Guide
+```
+
+The three controls are the point of the fixture, not padding. Two headings of
+the same size separated by body text (`Overview`, `Details`). Two of the same
+size separated by nothing but a wide gap (`Appendix`, `Glossary`). A heading
+sitting directly above a body paragraph. Eight assertions; three failed and
+five passed before the change, and all eight pass after.
+
+### The fix
+
+A heading now collects the visual lines it wrapped across before anything is
+decided about it. Three conditions must hold together:
+
+- the same type size within 6% and the same weight
+- a gap that is ordinary leading for that size (≤ 1.6 × size), not a break
+- the line above did not finish a sentence
+
+The tolerance is relative rather than absolute because OCR reports glyph heights
+normalized around 1, where an absolute tolerance accepts anything.
+
+### The restriction that protects the corpus
+
+The merge only applies to text set at **1.45 × body size or larger**. This is
+the whole reason the scored corpus does not move. The h4 rules classify a short
+bold line at body size as a heading, which is correct for a form label — and the
+50-document corpus is scanned medical forms full of stacked bold labels one
+leading apart. Without the size floor, `Patient Name` and `Date of Service`
+become `Patient Name Date of Service`, and the fixture would never have shown
+it. Display sizes only keeps that case out of reach entirely.
+
+### Order of operations, which turned out to matter
+
+The metadata-duplicate check now runs against the **merged** title rather than
+its first line. On the document the issue was filed against, the merged
+`Net Zero Cloud Developer Guide` matches the metadata title exactly and is
+dropped as the cover title already emitted from front matter. The guide's
+opening went from
+
+```markdown
+# Net Zero Cloud Developer Guide      <- from metadata
+## Net Zero Cloud Developer           <- the same title, split
+## Guide
+### Version 67.0, Summer '26
+```
+
+to
+
+```markdown
+# Net Zero Cloud Developer Guide
+### Version 67.0, Summer '26
+```
+
+Merging first is what makes the existing duplicate-suppression reachable. Had
+the check stayed on the first line, the fix would have produced one heading that
+merely duplicated the title instead of none.
+
+### Blast radius, measured
+
+Across the 1,349-page guide: **894 headings before, 892 after**. Two, and they
+are the two the issue names. Eight content tokens differ, all of them the words
+of the duplicated title.
+
+### Corpus re-score
+
+| | baseline | after T3 |
+| --- | ---: | ---: |
+| grand totals matched | 50/50 | **50/50** |
+| all line-item codes found | 49/49 | **49/49** |
+| each amount on its code's row | 52/52 | **52/52** |
+| `#Error` preserved | 50/50 | **50/50** |
+| documents emitting a real table | 49/50 | **49/50** |
+| headline figure recovered | 44/50 | **44/50** |
+| value-not-recovered markers | 6 = 6 | **6 = 6** |
+
+The headline metric was the one to watch on a heading-adjacent change. It did
+not move.
+
+### Invariant there was a temptation to break
+
+Merging by geometry alone — same size, tight gap — would have caught the case
+and been wrong. `Appendix` and `Glossary` in the fixture are the same size with
+nothing between them; only the gap separates a wrapped line from a section
+break, and only the size floor separates a title from a stack of form labels.
+Both guards are load-bearing and both are in the fixture.
+
+---
+
 ## 2026-08-19 · v1.6.0 cycle · T2 — strip running headers and printed folios (#2)
 
 The characterization note below states the problem and the counts it was measured

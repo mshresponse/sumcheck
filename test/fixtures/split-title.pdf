@@ -1,0 +1,51 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 873 >>
+stream
+BT /F2 24 Tf 1 0 0 1 72 700 Tm (Net Zero Cloud Developer) Tj ET
+BT /F2 24 Tf 1 0 0 1 72 672 Tm (Guide) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 630 Tm (Salesforce Net Zero Cloud helps organizations track and report) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 616 Tm (their carbon footprint across scopes one, two and three.) Tj ET
+BT /F2 16 Tf 1 0 0 1 72 576 Tm (Overview) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 552 Tm (The developer guide describes the standard objects, their fields) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 538 Tm (and the calculations that populate them.) Tj ET
+BT /F2 16 Tf 1 0 0 1 72 498 Tm (Details) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 474 Tm (Each object is documented with its properties and description.) Tj ET
+BT /F2 16 Tf 1 0 0 1 72 420 Tm (Appendix) Tj ET
+BT /F2 16 Tf 1 0 0 1 72 340 Tm (Glossary) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 316 Tm (Terms used throughout this guide are defined here.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+7 0 obj
+<< /Title (Developer documentation) /Creator (Sumcheck fixtures) >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000001175 00000 n 
+0000001272 00000 n 
+0000001374 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R /Info 7 0 R >>
+startxref
+1457
+%%EOF

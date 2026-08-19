@@ -1182,6 +1182,68 @@ async function runPageChromeCase() {
   }
 }
 
+/**
+ * A wrapped display-size title is one heading, not two (issue #6).
+ *
+ * The document's title is the first thing a reader or a chunker sees, so a
+ * split there costs more than its size suggests. The merge is licensed by
+ * three things together — same size, same heading level, and a gap that is
+ * ordinary leading for that size — and the fixture carries the cases where
+ * only some of those hold, because those must not merge.
+ */
+async function runSplitTitleCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>a wrapped display title is one heading</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'split-title', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/split-title.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'split-title.pdf' }, { outputs: ['md'] }, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    const headings = [...body.matchAll(/^#{1,6}\s+(.*)$/gm)].map((m) => m[1].trim());
+    const has = (t) => headings.includes(t);
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the wrapped title is one heading': () =>
+          has('Net Zero Cloud Developer Guide') || `headings were ${JSON.stringify(headings)}`,
+        'its second line is not a heading of its own': () =>
+          !has('Guide') || 'the tail of the title is still a sibling heading',
+        'its first line is not left behind': () =>
+          !has('Net Zero Cloud Developer') || 'the head of the title is still a heading of its own',
+        'headings separated by body text stay separate': () =>
+          (has('Overview') && has('Details')) || `lost one of Overview/Details: ${JSON.stringify(headings)}`,
+        'headings separated by a wide gap stay separate': () =>
+          (has('Appendix') && has('Glossary')) || `merged across a section break: ${JSON.stringify(headings)}`,
+        'no heading swallowed body text': () =>
+          headings.every((h) => h.length <= 60) || `over-long heading: ${JSON.stringify(headings)}`,
+        'the body paragraph survives intact': () =>
+          body.includes('Salesforce Net Zero Cloud helps organizations track and report their carbon footprint') ||
+          'the paragraph under the title was damaged',
+        'the metadata title is still emitted once': () =>
+          (body.match(/^#\s+Developer documentation$/gm) || []).length === 1 ||
+          'the cover title changed',
+      },
+      record.md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('split-title', err);
+  }
+}
+
 const summary = document.getElementById('summary');
 const container = document.getElementById('cases');
 const results = [];
@@ -1215,6 +1277,7 @@ async function run() {
     ['locked.pdf', runPasswordCase],
     ['field-details.pdf', runFieldDetailsCase],
     ['page-chrome', runPageChromeCase],
+    ['split-title', runSplitTitleCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],

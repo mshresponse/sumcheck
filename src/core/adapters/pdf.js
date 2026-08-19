@@ -1440,11 +1440,25 @@ function renderBlocks(lines, bodySize, opts, state) {
     const heading = opts.pdfHeadings === false ? 0 : headingLevel(line, bodySize, state);
     if (heading) {
       flushAll();
-      if (state.docTitle && normalizeHeading(line.text) === state.docTitle) {
+      // Collect the visual lines this heading wrapped across before deciding
+      // anything about it: the title to compare against metadata is the whole
+      // title, not its first line.
+      const parts = [line];
+      while (
+        i + 1 < lines.length &&
+        continuesHeading(lines[i + 1], parts[parts.length - 1], bodySize, tables) &&
+        headingLevel(lines[i + 1], bodySize, { titleUsed: true })
+      ) {
+        parts.push(lines[++i]);
+      }
+      const whole = parts.map((l) => l.text).join(' ');
+      if (state.docTitle && normalizeHeading(whole) === state.docTitle) {
         state.docTitle = null; // the cover title, already emitted from metadata
         continue;
       }
-      const text = inlineHtml(line.segments, { plain: true }) + markerFor(line);
+      const text =
+        parts.map((l) => inlineHtml(l.segments, { plain: true })).join(' ') +
+        parts.map(markerFor).join('');
       out.push(`<h${heading}>${text}</h${heading}>`);
       continue;
     }
@@ -1484,6 +1498,41 @@ function renderBlocks(lines, bodySize, opts, state) {
 function joinWrapped(a, b) {
   if (/[‐-―-]$/.test(a) && /^[a-zà-ÿ]/.test(b.replace(/^<[^>]+>/, ''))) return a.slice(0, -1) + b;
   return `${a} ${b}`;
+}
+
+/**
+ * Is this line the continuation of the heading above it?
+ *
+ * A title set at display size wraps like any other text, and the PDF records
+ * the two visual lines with nothing to say they belong together. Three things
+ * have to hold at once before they are treated as one heading:
+ *
+ *   - the same type size, within a few percent, and the same weight
+ *   - a gap that is ordinary leading for that size, not a section break
+ *   - the line above did not finish a sentence
+ *
+ * Only display sizes qualify. The h4 rules classify a short bold line at body
+ * size as a heading, which is right for a form label — and two form labels
+ * stacked one leading apart are two labels, not one that wrapped. Restricting
+ * the merge to text that is actually set large keeps that case out of reach.
+ */
+function continuesHeading(next, prev, bodySize, tables) {
+  if (!next || next.paragraph) return false;
+  if (tables.get(next)) return false;
+  if (listMarker(next)) return false;
+  if (Boolean(next.fromOcr) !== Boolean(prev.fromOcr)) return false;
+  if (Boolean(next.bold) !== Boolean(prev.bold)) return false;
+
+  // Relative, because OCR reports glyph heights normalized around 1 and an
+  // absolute tolerance there would accept anything.
+  if (Math.abs(next.size - prev.size) > prev.size * 0.06) return false;
+  if (next.size / bodySize < 1.45) return false;
+
+  const gap = next.y - prev.y;
+  if (gap <= 0 || gap > next.size * 1.6) return false;
+  if (SENTENCE_END_RE.test(prev.text)) return false;
+  if (prev.text.length + next.text.length > 200) return false;
+  return true;
 }
 
 function startsNewParagraph(line, prev, bodySize, leftEdge) {
