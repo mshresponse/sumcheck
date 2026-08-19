@@ -283,3 +283,17 @@ input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px;
 }
 .app-footer a { color: var(--accent); }
 .footer-note { color: var(--muted); }
+
+/* The savings line sits under the result meta and reads as secondary to it:
+   it is a useful number, not the headline, and it must never compete with the
+   document's own title for attention. */
+.result-savings,
+.batch-savings {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.result-savings:empty {
+  display: none;
+}

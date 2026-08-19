@@ -7,6 +7,113 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.6.0 cycle · T4 — size and token savings in the result header (#3)
+
+### What it shows
+
+Per conversion, under the result meta:
+
+```
+7.3 MB → 1.7 MB as .md · 77% smaller · ~437k tokens (estimated)
+```
+
+and across a finished batch:
+
+```
+Across 12 converted: 255 B → 1.9 KB · 664% larger · ~60 tokens (estimated)
+```
+
+That second line is real output from the verification run, not an illustration.
+The batch there is twelve 21-byte text files, and twelve files whose front
+matter outweighs their content genuinely are larger. The line says so rather
+than clamping at zero, because a number that only ever reports good news is not
+a measurement.
+
+### Three decisions worth recording
+
+**Which output the number describes.** The format the Copy and Download buttons
+act on — so the figure always describes the file the reader is about to take
+away, and it re-computes when they switch tabs. An average across four formats
+would describe no file that exists.
+
+**Bytes, measured before the adapter runs.** The fixture caught a real bug here:
+`source_bytes` came back **0 for every PDF**. pdf.js transfers the input buffer
+to its worker, which detaches it, so `byteLength` on the original view is zero
+by the time the conversion returns. Measuring at entry rather than at exit is
+the fix, and it is the kind of defect that a UI eyeball on a small text file
+would never surface — the number was right for `.txt` and silently zero for the
+format the feature exists for.
+
+**One estimate, computed once.** `characters / 4`, computed on the document's
+text in `convert.js`, and read from there by both the header and the JSON. Not
+two computations that nearly agree — a pipeline reading `estimated_tokens` out
+of the JSON gets the same integer a person read on screen. Every surface labels
+it: the header says `(estimated)`, and the JSON carries
+`"token_estimate": "characters/4"` in the same object as the number, so a
+consumer cannot pick up the count without also picking up how it was made.
+
+Issue #3 asked whether an estimate that is confidently wrong beats no number at
+all. The answer taken here is that a *labelled* estimate beats both. Shipping a
+real tokenizer would be exact for one model and wrong for the next, and would
+cost megabytes of vocabulary for a figure nobody acts on to that precision.
+
+### JSON, as data
+
+`stats` gains three fields beside the existing block/word/character counts:
+
+```json
+"stats": {
+  "blocks": 412, "words": 8801, "characters": 54210,
+  "source_bytes": 7643205,
+  "estimated_tokens": 437168,
+  "token_estimate": "characters/4"
+}
+```
+
+Additive only. `sumcheck.document/v1` is unchanged in structure, so nothing that
+reads the schema today breaks.
+
+### Corpus: not re-scored, and why — with the check that says so
+
+The work order allows skipping the re-score unless an emitter's **scored** output
+surface moved. The scorer reads Markdown, and Markdown did not change:
+
+- `frontMatter()` enumerates its fields explicitly, so the new `meta` values
+  cannot leak into a document's front matter
+- a new assertion on the `sample.pdf` case fails if any front-matter key ever
+  matches `/bytes|token|size|estimate/`
+- three corpus documents converted before and after this task are **byte
+  identical** apart from the `converted:` timestamp
+
+The JSON emitter did change, additively. T6 re-scores the full corpus regardless
+as part of the release checks.
+
+### Fixtures
+
+Three assertions on the existing `sample.pdf` case: the JSON stats carry the
+figures, the estimator is named beside the count, and Markdown front matter
+gained no keys. RED before the change on the first two — `source_bytes was
+undefined` — and RED again on the first after the change, reading `source_bytes
+was 0`, which is how the detached-buffer bug was found.
+
+Three checks in `verify-extension`, on the installed build: the result panel
+shows the line, the count is labelled an estimate, and the batch line totals the
+batch. These belong there rather than in the harness because the strings only
+exist in the installed app, and a localized message that resolves to nothing
+looks exactly like a feature that was never wired up.
+
+Gates: **44/44** harness cases, **49/49** extension checks (46 before this task).
+
+### One thing the work order assumed that is not true
+
+It asks for "both locales files updated". The repository ships **one** locale,
+`_locales/en/messages.json`; there has never been a second. Eight messages were
+added there, `npm run check` counts 123 and rejects an empty one, and the
+verification run confirms no element falls back to showing its key. If a second
+locale is ever added, these eight are part of what it has to carry.
+
+---
+
 ## 2026-08-19 · v1.6.0 cycle · T3 — a wrapped display title split into two headings (#6)
 
 ### The fixture, and RED

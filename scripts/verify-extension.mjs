@@ -708,7 +708,38 @@ try {
       Boolean(sv.title) && sv.name.startsWith(sv.title),
       `heading "${sv.title}" for row "${sv.name}"`
     );
-    fs.rmSync(batchDir, { recursive: true, force: true });
+    // --- size and token savings, on screen (#3) ------------------------
+    // Both surfaces at once: the per-file line describes the row that is
+    // selected, and the batch line totals what finished. Asserted here rather
+    // than in the harness because these strings only exist in the installed
+    // app, and a localized string that resolves to nothing looks identical to
+    // a feature that was never wired up.
+    const sav = await appc.eval(
+      `JSON.stringify({
+         file: document.getElementById('result-savings').textContent,
+         batch: document.getElementById('batch-savings').textContent,
+         batchHidden: document.getElementById('batch-savings').hidden,
+       })`,
+      false
+    );
+    const S = JSON.parse(sav.value || '{}');
+    record(
+      'the result panel shows size and token savings',
+      /\u2192/.test(S.file || '') && /tokens/.test(S.file || ''),
+      S.file || '(empty)'
+    );
+    record(
+      'the token count is labelled an estimate',
+      /\(estimated\)/.test(S.file || ''),
+      S.file || '(empty)'
+    );
+    record(
+      'the batch line totals the whole batch',
+      !S.batchHidden && /12/.test(S.batch || '') && /tokens/.test(S.batch || ''),
+      S.batch || '(hidden)'
+    );
+
+fs.rmSync(batchDir, { recursive: true, force: true });
     appc.socket.close();
   }
 

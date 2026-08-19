@@ -33,7 +33,41 @@ const CASES = [
       'running footer removed': lacks('Page 1 of 2'),
       'front matter': matches(/^---\ntitle: Quarterly Field Report/),
       'author in front matter': has('author: Operations Team'),
-      'json blocks': (md, r) => {
+      /**
+       * The result header's numbers, carried as data (#3). Asserted here rather
+       * than in the app, because the contract is that the number a pipeline reads
+       * out of the JSON is the same number a person read on screen — one estimate,
+       * computed once, not two that nearly agree.
+       */
+      'json stats carry size and token figures': (md, r) => {
+        const doc = JSON.parse(r.outputs.find((o) => o.format === 'json').content);
+        const stats = doc.stats || {};
+        if (!(stats.source_bytes > 0)) return `source_bytes was ${stats.source_bytes}`;
+        if (!(stats.estimated_tokens > 0)) return `estimated_tokens was ${stats.estimated_tokens}`;
+        if (stats.token_estimate !== 'characters/4') return `token_estimate was ${stats.token_estimate}`;
+        return true;
+      },
+      /**
+       * The count is an estimate and every surface that shows it says so. A bare
+       * number invites someone to plan a context window around it.
+       */
+      'the token figure names its estimator': (md, r) => {
+        const doc = JSON.parse(r.outputs.find((o) => o.format === 'json').content);
+        return Boolean(doc.stats?.token_estimate) || 'no estimator named beside the count';
+      },
+      /**
+       * The scored output surface must not move for a display feature. The corpus
+       * scorer reads Markdown front matter, so a new key there would be a
+       * conversion change wearing a UI change's clothes.
+       */
+      'markdown front matter gained no keys': (md) => {
+        const front = /^---\n([\s\S]*?)\n---/.exec(md);
+        if (!front) return 'no front matter';
+        const keys = front[1].split('\n').map((l) => l.split(':')[0].trim());
+        const unexpected = keys.filter((k) => /bytes|token|size|estimate/i.test(k));
+        return !unexpected.length || `front matter gained ${JSON.stringify(unexpected)}`;
+      },
+'json blocks': (md, r) => {
         const doc = JSON.parse(r.outputs.find((o) => o.format === 'json').content);
         return (
           (doc.schema === 'sumcheck.document/v1' &&

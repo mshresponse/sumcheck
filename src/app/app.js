@@ -26,12 +26,14 @@ const el = {
   queueHeading: $('#queue-heading'),
   batch: $('#batch'),
   batchLabel: $('#batch-label'),
+  batchSavings: $('#batch-savings'),
   stop: $('#stop'),
   clear: $('#clear'),
   downloadAll: $('#download-all'),
   result: $('#result'),
   resultTitle: $('#result-title'),
   resultMeta: $('#result-meta'),
+  resultSavings: $('#result-savings'),
   warnings: $('#warnings'),
   tabs: $('#tabs'),
   panePreview: $('#pane-preview'),
@@ -371,8 +373,12 @@ function updateBatch() {
   if (!state.running) {
     el.batchLabel.textContent =
       t('batchDone', finished - failed, total) + (failed ? t('batchFailedSuffix', failed) : '');
+    const totals = batchSavings(documents);
+    el.batchSavings.textContent = totals;
+    el.batchSavings.hidden = !totals;
     return;
   }
+  el.batchSavings.hidden = true;
   // With a long queue the working row is usually scrolled out of sight, so the
   // live per-file progress belongs here, where it is always visible.
   const position = Math.min(finished + 1, total);
@@ -573,6 +579,7 @@ function renderError(item) {
   el.result.hidden = false;
   el.resultTitle.textContent = item.name;
   el.resultMeta.textContent = `${humanSize(item.size)} · could not be converted`;
+  el.resultSavings.textContent = '';
   el.warnings.hidden = false;
   // Built as nodes rather than markup: the reason text comes from a caught
   // error, which can carry a file name.
@@ -673,6 +680,14 @@ function renderResult(item) {
   const target = targetFormat();
   el.copy.textContent = t('copyFormat', extFor(target));
   renderDownloadButtons(item, target);
+
+  const shown = ensureOutput(item, target);
+  el.resultSavings.textContent = savingsLine(
+    item.size,
+    shown?.bytes || 0,
+    result.meta?.estimatedTokens || 0,
+    extFor(target)
+  );
 }
 
 /**
@@ -690,6 +705,70 @@ function renderDownloadButtons(item, target) {
     button.addEventListener('click', () => downloadFormat(item, spec.id));
     el.downloads.appendChild(button);
   }
+}
+
+
+/**
+ * Size and token savings for one conversion.
+ *
+ * Measured against the format the Copy and Download buttons act on, so the
+ * number always describes the file the reader is about to take away rather than
+ * an average across the four formats.
+ *
+ * The token figure is an estimate — characters over four — and says so. A real
+ * tokenizer would be exact for one model and wrong for the next, and would cost
+ * megabytes of vocabulary to ship for a number nobody acts on to that
+ * precision. An estimate labelled as an estimate is more honest than a precise
+ * number that is precisely wrong.
+ */
+function savingsLine(sourceBytes, outputBytes, tokens, ext) {
+  const parts = [];
+  if (sourceBytes > 0 && outputBytes > 0) {
+    parts.push(t('savingsSizes', humanSize(sourceBytes), humanSize(outputBytes), ext));
+    const change = Math.round((1 - outputBytes / sourceBytes) * 100);
+    if (change > 0) parts.push(t('savingsSmaller', change));
+    else if (change < 0) parts.push(t('savingsLarger', -change));
+    else parts.push(t('savingsSameSize'));
+  } else if (outputBytes > 0) {
+    parts.push(t('savingsOutputOnly', humanSize(outputBytes), ext));
+  }
+  if (tokens > 0) parts.push(t('savingsTokens', compactCount(tokens)));
+  return parts.join(' · ');
+}
+
+/** Thousands and millions, because an estimate written to six digits lies. */
+function compactCount(n) {
+  if (n < 1000) return String(n);
+  if (n < 1e6) return `${n < 10_000 ? (n / 1000).toFixed(1) : Math.round(n / 1000)}k`;
+  return `${(n / 1e6).toFixed(1)}M`;
+}
+
+/** Totals across a batch: the same three numbers, summed over what finished. */
+function batchSavings(documents) {
+  let sourceBytes = 0;
+  let outputBytes = 0;
+  let tokens = 0;
+  let counted = 0;
+  for (const item of documents) {
+    if (item.status !== 'done' || !item.result) continue;
+    const output = item.result.outputs[0];
+    if (!output) continue;
+    sourceBytes += item.size || 0;
+    outputBytes += output.bytes || 0;
+    tokens += item.result.meta?.estimatedTokens || 0;
+    counted++;
+  }
+  if (!counted) return '';
+  const parts = [];
+  if (sourceBytes > 0 && outputBytes > 0) {
+    parts.push(t('savingsSizesPlain', humanSize(sourceBytes), humanSize(outputBytes)));
+    const change = Math.round((1 - outputBytes / sourceBytes) * 100);
+    if (change > 0) parts.push(t('savingsSmaller', change));
+    else if (change < 0) parts.push(t('savingsLarger', -change));
+    else parts.push(t('savingsSameSize'));
+  }
+  if (tokens > 0) parts.push(t('savingsTokens', compactCount(tokens)));
+  return parts.length ? t('batchSavings', counted, parts.join(' · ')) : '';
 }
 
 const extFor = (format) => OUTPUT_FORMATS.find((f) => f.id === format)?.ext || format;

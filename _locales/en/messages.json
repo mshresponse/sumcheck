@@ -458,5 +458,99 @@
   "footerFeedbackNote": {
     "message": "Opens GitHub. Please don't attach private documents.",
     "description": "Caution beside the feedback link, shown in the app footer."
+  },
+  "savingsSizes": {
+    "message": "$1 → $2 as .$3",
+    "description": "Source file size, converted output size, and the output extension.",
+    "placeholders": {
+      "1": {
+        "content": "$1",
+        "example": "1.8 MB"
+      },
+      "2": {
+        "content": "$2",
+        "example": "950 KB"
+      },
+      "3": {
+        "content": "$3",
+        "example": "md"
+      }
+    }
+  },
+  "savingsSizesPlain": {
+    "message": "$1 → $2",
+    "description": "Combined source size and combined output size for a batch.",
+    "placeholders": {
+      "1": {
+        "content": "$1",
+        "example": "12.4 MB"
+      },
+      "2": {
+        "content": "$2",
+        "example": "5.1 MB"
+      }
+    }
+  },
+  "savingsOutputOnly": {
+    "message": "$1 as .$2",
+    "description": "Output size when the source size is not known, such as a captured tab.",
+    "placeholders": {
+      "1": {
+        "content": "$1",
+        "example": "950 KB"
+      },
+      "2": {
+        "content": "$2",
+        "example": "md"
+      }
+    }
+  },
+  "savingsSmaller": {
+    "message": "$1% smaller",
+    "description": "How much smaller the output is than the source file.",
+    "placeholders": {
+      "1": {
+        "content": "$1",
+        "example": "47"
+      }
+    }
+  },
+  "savingsLarger": {
+    "message": "$1% larger",
+    "description": "Shown when the output is bigger than the source file.",
+    "placeholders": {
+      "1": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "savingsSameSize": {
+    "message": "same size",
+    "description": "Shown when output and source are within a percent of each other."
+  },
+  "savingsTokens": {
+    "message": "~$1 tokens (estimated)",
+    "description": "Estimated token count of the output. The estimate is characters divided by four.",
+    "placeholders": {
+      "1": {
+        "content": "$1",
+        "example": "237k"
+      }
+    }
+  },
+  "batchSavings": {
+    "message": "Across $1 converted: $2",
+    "description": "Totals for a finished batch: how many files, then the combined sizes and tokens.",
+    "placeholders": {
+      "1": {
+        "content": "$1",
+        "example": "50"
+      },
+      "2": {
+        "content": "$2",
+        "example": "12.4 MB → 5.1 MB · 59% smaller · ~1.2M tokens (estimated)"
+      }
+    }
   }
 }

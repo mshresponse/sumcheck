@@ -110,6 +110,16 @@ export async function convertFile(input, userOptions = {}, hooks = {}) {
     wantRaster: hooks.wantRaster,
   };
 
+  /**
+   * Measured before anything reads the input, not after.
+   *
+   * pdf.js transfers the buffer to its worker, which detaches it — by the time
+   * the adapter returns, `byteLength` on the original view is 0. A size taken
+   * after conversion is silently zero for every PDF, which is the one format
+   * this number matters most for.
+   */
+  const inputBytes = sourceBytes(input);
+
   // A captured tab arrives as HTML with a URL rather than as bytes.
   let detected;
   let result;
@@ -161,6 +171,23 @@ export async function convertFile(input, userOptions = {}, hooks = {}) {
   }
 
   const assets = applyImagePolicy(host, opts, baseName(name), warnings);
+
+  /**
+   * What the conversion is worth, in the two units the reader cares about.
+   *
+   * The token figure is an estimate and is labelled as one everywhere it is
+   * shown: characters over four, which is close enough for capacity planning
+   * and wrong in the third digit for every model. Shipping a real tokenizer to
+   * make it exact would cost megabytes of vocabulary for a number nobody acts
+   * on to that precision.
+   *
+   * It is computed once, here, on the document's text rather than on any one
+   * emitted file, so the number in the result header and the number in the JSON
+   * are literally the same number rather than two estimates that nearly agree.
+   */
+  meta.sourceBytes = inputBytes;
+  meta.characters = host.textContent.replace(/\s+/g, ' ').trim().length;
+  meta.estimatedTokens = Math.round(meta.characters / 4);
 
   const requested = opts.outputs?.length ? opts.outputs : ['md'];
   const cleanHtml = host.innerHTML;
@@ -231,7 +258,25 @@ export function renderOutputFormat(format, { html, host, meta, opts, nativeMarkd
     mime: spec.mime,
     filename: `${safeFileName(baseName(name || meta.name || 'document'))}.${spec.ext}`,
     content,
+    // Bytes, not characters: what lands on disk, and what a size comparison
+    // against the source file has to be measured in to mean anything.
+    bytes: byteLength(content),
   };
+}
+
+/** UTF-8 length, which is what a file size is. */
+export function byteLength(text) {
+  return new TextEncoder().encode(text).length;
+}
+
+/**
+ * The source file's size. A captured tab arrives as an HTML string rather than
+ * as bytes, and its markup is the closest thing it has to an original size.
+ */
+function sourceBytes(input) {
+  if (input.bytes) return input.bytes.byteLength ?? input.bytes.length ?? 0;
+  if (input.html != null) return byteLength(input.html);
+  return 0;
 }
 
 function fragmentFrom(html) {

@@ -116,6 +116,12 @@ export function toJsonDocument(root, opts, meta, turndown) {
       blocks: blocks.length,
       words: blocks.reduce((n, b) => n + (b.text ? b.text.split(/\s+/).filter(Boolean).length : 0), 0),
       characters: blocks.reduce((n, b) => n + (b.text?.length || 0), 0),
+      // The same figures the result header shows. `estimated_tokens` is an
+      // estimate and says so in the field beside it; a pipeline that needs an
+      // exact count for a specific model should tokenize for that model.
+      source_bytes: meta.sourceBytes ?? null,
+      estimated_tokens: meta.estimatedTokens ?? null,
+      token_estimate: 'characters/4',
     },
     blocks: blocks.map((b, i) => ({ ...b, index: i })),
   };
