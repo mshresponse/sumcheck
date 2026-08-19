@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Report privately to **mike@everythingvirtually.com**. Please do not open a
+Report privately to **sumcheck@everythingvirtually.com**. Please do not open a
 public issue for a security problem.
 
 Include what you did, what happened, and what you expected. A proof of concept

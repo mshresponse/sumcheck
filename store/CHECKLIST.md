@@ -45,7 +45,7 @@ Legend: **✅ done** · **⬜ open** (needs a human decision or an account) ·
 | 20 | Remote code declaration | ✅ "No, I am not using remote code", with the enforcement mechanism |
 | 21 | Data collection disclosure | ✅ nothing collected — no category applies. **Read the category list off the dashboard at submission**; the answer will not change |
 | 22 | Limited Use certifications (×3) | ✅ all affirmable; Sumcheck transfers no data anywhere |
-| 23 | Privacy policy URL, publicly reachable | ✅ **https://mshresponse.github.io/sumcheck/privacy/** — served by GitHub Pages from `docs/`, verified HTTP 200. Contact: mike@everythingvirtually.com |
+| 23 | Privacy policy URL, publicly reachable | ✅ **https://mshresponse.github.io/sumcheck/privacy/** — served by GitHub Pages from `docs/`, verified HTTP 200. Contact: sumcheck@everythingvirtually.com |
 | 24 | Policy updates effective 1 Aug 2026 | ✅ Limited Use now requires collection be *strictly necessary* to the single purpose, and all collection be prominently disclosed. Nothing is collected, so both hold |
 
 ## Distribution tab
