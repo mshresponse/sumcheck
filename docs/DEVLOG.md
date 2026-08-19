@@ -7,6 +7,104 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.6.0 cycle · T2 characterization — why `stripRunningHeads` misses (#2)
+
+**Measured before changing anything**, per the work order. No fix in this entry.
+
+### Catch rate on the Net Zero Cloud guide, 1,349 pages
+
+| | in source | survived | stripped | **catch rate** |
+| --- | ---: | ---: | ---: | ---: |
+| running head | 1,334 | 1,330 | 4 | **0.3%** |
+| folio number | 1,341 | 1,341 | 0 | **0.0%** |
+
+The honest headline is not "the pass misses some" — on this document **it catches
+essentially nothing**. Both failures are by construction, and each has a single
+cause.
+
+### Cause 1 — folios are excluded before they are ever counted
+
+`stripRunningHeads` builds its key by normalizing digits so that `Page 4 of 30`
+and `Page 5 of 30` match:
+
+```js
+const key = (line) => line.text.replace(/\d+/g, '#').slice(0, 80);
+...
+if (k.length < 2) continue;
+```
+
+A bare folio is *only* digits. `"592"` normalizes to `"#"` — one character — and
+the `k.length < 2` guard drops it. The guard is there to stop trivial keys from
+matching, and the side effect is that the most common form of page furniture in
+print-style documents can never be seen at all. **0.0% is not a tuning problem;
+the code path does not exist.**
+
+The folios themselves are about as regular as data gets:
+
+- 1,341 folio lines across 1,349 pages
+- **1,336 of 1,340** consecutive page pairs increment by exactly 1
+- folio == page number − 8 on **1,339** pages (front matter accounts for the offset)
+- 1,340 distinct values for 1,341 lines — a folio value essentially never repeats
+
+That last line is exactly why a repetition-based stripper cannot see them, and
+why the rule has to be *sequence*, not *repetition*.
+
+### Cause 2 — the head key includes the half that varies
+
+The running head is two parts: a stable left (`Net Zero Cloud Standard Objects`)
+and a right that changes per object (`RentalCarEnrgyUse`). The key is the whole
+line, so every object produces a different key.
+
+- **215 distinct** surviving head strings
+- most common appears on **107** pages; **median 4**
+- the threshold is `ceil(1349 × 0.6)` = **810 pages**
+
+Nothing is remotely close — the best candidate reaches 13% of the bar. The 0.3%
+that *was* caught is the handful of pages whose head happens to be identical.
+
+Prefix repetition, on the other hand, is overwhelming:
+
+| prefix | distinct | most common | lines on a prefix shared by ≥2 pages |
+| --- | ---: | ---: | ---: |
+| first 3 words | 1 | **1,330** | 1,330 |
+| first 4 words | 8 | 860 | 1,329 |
+| first 5 words | 37 | 856 | 1,324 |
+| first 6 words | 178 | 107 | 1,307 |
+
+A five-word prefix already clears the 810 threshold on its own.
+
+### What this implies for the fix
+
+Two distinct rules, because they are two distinct phenomena:
+
+- **Folios**: a chrome-band line that is only a number, whose values across pages
+  form a monotone run. Repetition cannot license this one — the values are all
+  different — so the license is the sequence.
+- **Heads**: key on the stable prefix rather than the whole line, keeping
+  repetition as the license.
+
+The guardrail stands either way: a line appearing on one page is content. Both
+rules stay inside `candidateChrome`'s top/bottom 8% band, so nothing in the body
+is eligible regardless. Where a section title legitimately recurs in that band
+and cannot be distinguished, prefer under-stripping.
+
+### One thing the T1 fixture cannot test
+
+`test/fixtures/field-details.pdf` carries an *identical* head on all three pages,
+and that head is already stripped correctly — the existing pass handles the easy
+case. The fixture as built does not reproduce this miss. T2's fixture needs a
+head whose right half **varies per page**, which is the whole point.
+
+### Method note
+
+Measured against the 1.5.0 conversion of the guide (`netzero_cloud_dev_guide.md`)
+and the pdftotext reference, both already in the audit enclave. T1 changed table
+cell assembly only and does not touch page chrome, so the counts stand for the
+current build; re-deriving them would have cost a 1,349-page conversion to
+reproduce numbers about a code path T1 never entered.
+
+---
+
 ## 2026-08-19 · v1.6.0 cycle · T1 — nested key-value structure inside table cells (#1, #4)
 
 ### The fixture, and RED
