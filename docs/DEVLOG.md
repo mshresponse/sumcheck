@@ -7,6 +7,116 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.0 cycle · Q1 — the embedded outline as the heading authority
+
+### The fixture, and RED
+
+`test/fixtures/outline-headings.pdf` — two pages carrying a real `/Outlines`
+tree, built so that **every heading in it is 11 pt**. Nothing in this document is
+recoverable by measuring:
+
+- `IMPORTANT NOTICE` at 24 pt, absent from the outline
+- `Chapter One` / `Chapter Two` at body size, present in the outline
+- `Section 1.1`, a child of Chapter One, so its level exists only as depth
+
+RED reproduced the misread in both directions on the first conversion:
+`## IMPORTANT NOTICE` was promoted, and all three real headings came out as
+paragraphs. Five of eight assertions failed.
+
+### What it does
+
+`readOutline()` walks `doc.getOutline()` and resolves each destination to a page
+via `getPageIndex`, yielding `{title, level, page}`. `bindOutline()` then binds
+each entry to the line that is its heading — page narrows the search, text
+decides it, and a title printed across two lines is matched against the pair
+joined. Each line binds once, so a title that recurs (`August 2026`, 79 times in
+the Winter '27 document) consumes its occurrences in order.
+
+A bound line's level is its outline depth, capped at h6. Everything else falls
+through to size inference exactly as before.
+
+**A malformed outline is never fatal**: `readOutline` returns null on any throw
+and a broken destination costs one heading, not the conversion.
+
+### The rule that took two attempts, and the measurements that decided it
+
+The work order says a size-inferred heading between outline anchors is demoted
+"if it conflicts with the outline's structure". The first reading — an inferred
+heading must be *strictly deeper* than the entry enclosing it — is defensible
+and wrong:
+
+| | Winter '27 headings | its bullets-as-h2 | Net Zero headings |
+| --- | ---: | ---: | ---: |
+| before Q1 | 2,630 | 713 | 892 |
+| **strict** (deeper than the anchor) | 2,008 | **22** | **286** |
+| **shipped** (at least as deep) | 2,543 | 276 | 866 |
+
+The strict rule hits Q1's stated target on Winter '27 almost exactly — 2,008
+against the outline's ~1,990 — and **destroys the Net Zero guide**, which the
+work order names as a baseline that must not regress. That document states 282
+outline entries for 892 real headings: its per-object sections are siblings the
+table of contents never listed, and demanding they sit *below* their enclosing
+L2 anchor deletes 606 of them.
+
+So the shipped rule demotes only a heading that claims to **outrank** the
+structure the document stated. At equal depth it is a sibling, which is
+ordinary. Text above the document's first stated heading is demoted regardless:
+that is cover matter whatever size it is set in.
+
+That leaves 276 bullets-as-headings on Winter '27 rather than 22. **Q2 is the
+right place to close them** — their cause is a 19.2 pt decorative glyph
+inflating a 12.8 pt line, and suppressing the symptom through outline authority
+would leave the same defect live on every PDF without an outline. Fixing a cause
+in the task that owns it beats masking it in the task before.
+
+### Net Zero: 892 → 866, and the 26 are all junk
+
+Every heading lost is front matter that was never a heading:
+
+```
+CONTENTS
+Version 67.0, Summer '26
+Chapter 1: Introduction to Net Zero Cloud . . . . . . . . . . . . . . .
+Chapter 2: Net Zero Cloud Standard Objects . . . . . . . . . . . . . . .
+… (ten table-of-contents dot-leader lines)
+```
+
+Chrome, folios and table rows are untouched: 5 residual head lines, 1 bare
+number, 3,122 table rows — identical to the T2/T3 baseline.
+
+### One side effect, caught by measuring rather than by a test
+
+With the cover title no longer classified as a heading, the duplicate-title
+suppression stopped firing — it lived inside the heading branch — and
+`Net Zero Cloud Developer Guide` reappeared as a paragraph directly beneath the
+`<h1>` built from the same string. The check now runs at paragraph flush, which
+catches it whether the title arrived as one line or as two the joiner merged.
+Neither the fixture nor the 46-case suite would have shown this; the Net Zero
+before/after diff did.
+
+### Corpus
+
+| | baseline | after Q1 |
+| --- | ---: | ---: |
+| grand totals matched | 50/50 | **50/50** |
+| all line-item codes found | 49/49 | **49/49** |
+| each amount on its code's row | 52/52 | **52/52** |
+| `#Error` preserved | 50/50 | **50/50** |
+| documents emitting a real table | 49/50 | **49/50** |
+| headline figure recovered | 44/50 | **44/50** |
+| value-not-recovered markers | 6 = 6 | **6 = 6** |
+
+Unmoved, twice — once after the outline work and again after the flush change,
+because that one touches every document rather than only those with an outline.
+**0 of the 50 scored documents carry an outline**, so the corpus exercises the
+fallback path exclusively; that it stays flat is the evidence the fallback is
+untouched.
+
+Gates: `npm run check` clean, **46/46** harness cases, **51/51** packaged-extension
+checks. `dist/sumcheck-1.6.0.zip` still `86670af2…`.
+
+---
+
 ## 2026-08-19 · v1.7.0 cycle · Q0 — version bump first, to protect the pending artifact
 
 ### The artifact this cycle must not touch

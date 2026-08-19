@@ -1,0 +1,74 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /Outlines 9 0 R /PageMode /UseOutlines >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 544 >>
+stream
+BT /F2 24 Tf 1 0 0 1 72 720 Tm (IMPORTANT NOTICE) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 690 Tm (This document is provided for evaluation purposes only.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 650 Tm (Chapter One) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 626 Tm (The first chapter introduces the subject and sets out the) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 612 Tm (conventions used throughout the remainder of the document.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 572 Tm (Section 1.1) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 548 Tm (A subsection whose depth is recorded only in the outline.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 148 >>
+stream
+BT /F1 11 Tf 1 0 0 1 72 720 Tm (Chapter Two) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 696 Tm (The second chapter continues the discussion and closes it.) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+8 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+9 0 obj
+<< /Type /Outlines /First 10 0 R /Last 12 0 R /Count 3 >>
+endobj
+10 0 obj
+<< /Title (Chapter One) /Parent 9 0 R /Next 12 0 R /First 11 0 R /Last 11 0 R /Count 1 /Dest [3 0 R /XYZ 72 660 0] >>
+endobj
+11 0 obj
+<< /Title (Section 1.1) /Parent 10 0 R /Dest [3 0 R /XYZ 72 582 0] >>
+endobj
+12 0 obj
+<< /Title (Chapter Two) /Parent 9 0 R /Prev 10 0 R /Dest [5 0 R /XYZ 72 730 0] >>
+endobj
+13 0 obj
+<< /Title (Evaluation Copy) /Creator (Sumcheck fixtures) >>
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000009 00000 n 
+0000000097 00000 n 
+0000000160 00000 n 
+0000000296 00000 n 
+0000000891 00000 n 
+0000001027 00000 n 
+0000001226 00000 n 
+0000001323 00000 n 
+0000001425 00000 n 
+0000001498 00000 n 
+0000001632 00000 n 
+0000001718 00000 n 
+0000001816 00000 n 
+trailer
+<< /Size 14 /Root 1 0 R /Info 13 0 R >>
+startxref
+1892
+%%EOF

@@ -396,6 +396,80 @@ function buildDiagnosticsPdf() {
   return Buffer.from(out, 'latin1');
 }
 
+/**
+ * A PDF whose own outline disagrees with what glyph sizes suggest.
+ *
+ * Three disagreements, one per failure direction:
+ *
+ *   - `IMPORTANT NOTICE` is set at twice body size and is **not** in the
+ *     outline. Size inference calls it a heading; the document does not.
+ *   - `Chapter One` and `Chapter Two` are set at body size, unbolded, and
+ *     **are** in the outline. Size inference cannot see them at all.
+ *   - `Section 1.1` is a child of `Chapter One`, so its level has to come from
+ *     outline depth rather than from type size — every heading here is 11 pt.
+ *
+ * Object numbering is fixed by construction below; the catalog forward-refers
+ * to the outline root, which is legal and is how real producers write it.
+ */
+function buildOutlineHeadingsPdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const page1 = [
+    // Oversized, decorative, and absent from the outline.
+    line('F2', 24, 72, 720, 'IMPORTANT NOTICE'),
+    line('F1', 11, 72, 690, 'This document is provided for evaluation purposes only.'),
+    // A real heading at body size: invisible to a size-based rule.
+    line('F1', 11, 72, 650, 'Chapter One'),
+    line('F1', 11, 72, 626, 'The first chapter introduces the subject and sets out the'),
+    line('F1', 11, 72, 612, 'conventions used throughout the remainder of the document.'),
+    line('F1', 11, 72, 572, 'Section 1.1'),
+    line('F1', 11, 72, 548, 'A subsection whose depth is recorded only in the outline.'),
+  ].join('\n');
+
+  const page2 = [
+    line('F1', 11, 72, 720, 'Chapter Two'),
+    line('F1', 11, 72, 696, 'The second chapter continues the discussion and closes it.'),
+  ].join('\n');
+
+  const OUTLINES = 9;
+  const objects = [];
+  const add = (body) => { objects.push(body); return objects.length; };
+
+  add(`<< /Type /Catalog /Pages 2 0 R /Outlines ${OUTLINES} 0 R /PageMode /UseOutlines >>`);
+  add('<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>');
+  add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      '/Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 4 0 R >>');
+  add(`<< /Length ${page1.length} >>\nstream\n${page1}\nendstream`);
+  add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      '/Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 6 0 R >>');
+  add(`<< /Length ${page2.length} >>\nstream\n${page2}\nendstream`);
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+
+  // Outline root, then two top-level entries and one child.
+  add(`<< /Type /Outlines /First 10 0 R /Last 12 0 R /Count 3 >>`);
+  add(`<< /Title (Chapter One) /Parent ${OUTLINES} 0 R /Next 12 0 R ` +
+      `/First 11 0 R /Last 11 0 R /Count 1 /Dest [3 0 R /XYZ 72 660 0] >>`);
+  add(`<< /Title (Section 1.1) /Parent 10 0 R /Dest [3 0 R /XYZ 72 582 0] >>`);
+  add(`<< /Title (Chapter Two) /Parent ${OUTLINES} 0 R /Prev 10 0 R ` +
+      `/Dest [5 0 R /XYZ 72 730 0] >>`);
+  const info = add('<< /Title (Evaluation Copy) /Creator (Sumcheck fixtures) >>');
+
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 /* ------------------------------------------------------------------- PDF */
 
 function buildPdf() {
@@ -709,6 +783,7 @@ write('locked.pdf', buildEncryptedPdf('secret', 'owner-secret'));
 write('field-details.pdf', buildFieldDetailsPdf());
 write('split-title.pdf', buildSplitTitlePdf());
 write('diagnostics.pdf', buildDiagnosticsPdf());
+write('outline-headings.pdf', buildOutlineHeadingsPdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own

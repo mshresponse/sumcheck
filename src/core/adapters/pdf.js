@@ -115,11 +115,15 @@ export async function convertPdf(bytes, ctx) {
 
     if (opts.stripRunningHeads !== false) stripRunningHeads(pages, warnings);
 
+    // Read before rendering: the outline decides which lines are headings, so it
+    // has to be in hand before any of them are classified.
+    const outline = opts.pdfHeadings === false ? null : await readOutline(doc);
+
     const bodySize = estimateBodySize(pages);
     // Inspection hook for the test harness: the layout decisions all hinge on
     // these numbers, and they are otherwise invisible from outside.
     ctx.onLayout?.(pages, bodySize);
-    const html = renderPages(pages, bodySize, opts, meta);
+    const html = renderPages(pages, bodySize, opts, meta, outline);
 
     if (ocrPages) {
       warnings.push(
@@ -1060,6 +1064,110 @@ function attachGapMarkers(lines, gaps) {
   }
 }
 
+/* ---------------------------------------------------------------- outline */
+
+/**
+ * The document's own heading tree, when it carries one.
+ *
+ * A born-digital PDF usually states its structure outright: titles, nesting and
+ * a destination page per entry. Re-deriving that from glyph sizes is guesswork
+ * against data already in the file, and the guess fails in both directions — a
+ * decorative line set large is promoted, a real heading set at body size is
+ * missed. Measured on a 1,010-page reference document, two in five of the
+ * headings we inferred corresponded to nothing in its outline.
+ *
+ * Returns null when there is no outline, which is the common case for scans:
+ * none of the 50 documents in the scored corpus carry one, so the inference
+ * path below is not going anywhere.
+ */
+async function readOutline(doc) {
+  let raw;
+  try {
+    raw = await doc.getOutline();
+  } catch {
+    return null;
+  }
+  if (!raw?.length) return null;
+
+  const entries = [];
+  const walk = async (items, level) => {
+    for (const item of items) {
+      const title = String(item?.title || '').replace(/\s+/g, ' ').trim();
+      const page = await destinationPage(doc, item?.dest);
+      if (title && page) entries.push({ title, key: normalizeHeading(title), level, page });
+      if (item?.items?.length) await walk(item.items, level + 1);
+    }
+  };
+  try {
+    await walk(raw, 1);
+  } catch {
+    return null;
+  }
+  return entries.length ? entries : null;
+}
+
+/** Resolve an outline destination to a 1-based page number. */
+async function destinationPage(doc, dest) {
+  try {
+    const resolved = typeof dest === 'string' ? await doc.getDestination(dest) : dest;
+    const ref = Array.isArray(resolved) ? resolved[0] : null;
+    if (!ref) return null;
+    const index = await doc.getPageIndex(ref);
+    return Number.isInteger(index) ? index + 1 : null;
+  } catch {
+    // A broken destination is one lost heading, not a failed conversion.
+    return null;
+  }
+}
+
+/**
+ * Bind each outline entry to the line that is its heading.
+ *
+ * Destinations are page-level, so the page narrows the search and the text
+ * decides it. A title that wrapped across two visual lines is matched against
+ * the pair joined, since that is how it was printed. Each line binds once, so a
+ * title that recurs — `August 2026` appears 79 times in one reference document —
+ * consumes its occurrences in order rather than all landing on the first.
+ */
+function bindOutline(pages, entries) {
+  const bound = new Map();
+  if (!entries?.length) return bound;
+
+  const byPage = new Map();
+  for (const entry of entries) {
+    if (!byPage.has(entry.page)) byPage.set(entry.page, []);
+    byPage.get(entry.page).push(entry);
+  }
+
+  for (const page of pages) {
+    const wanted = byPage.get(page.number);
+    if (!wanted) continue;
+    const taken = new Set();
+    for (const entry of wanted) {
+      for (let i = 0; i < page.lines.length; i++) {
+        if (taken.has(i)) continue;
+        const line = page.lines[i];
+        if (normalizeHeading(line.text) === entry.key) {
+          taken.add(i);
+          bound.set(line, entry.level);
+          break;
+        }
+        // The same title printed across two lines, which is how a long heading
+        // reaches the page.
+        const next = page.lines[i + 1];
+        if (next && !taken.has(i + 1) && normalizeHeading(`${line.text} ${next.text}`) === entry.key) {
+          taken.add(i);
+          taken.add(i + 1);
+          bound.set(line, entry.level);
+          bound.set(next, -1); // continuation: absorbed by the line above
+          break;
+        }
+      }
+    }
+  }
+  return bound;
+}
+
 /* ------------------------------------------------------------- page chrome */
 
 /**
@@ -1343,7 +1451,7 @@ function snapWordEnd(text, index) {
 
 /* ----------------------------------------------------------------- render */
 
-function renderPages(pages, bodySize, opts, meta) {
+function renderPages(pages, bodySize, opts, meta, outline) {
   const out = [];
   const state = {
     tablesBuilt: 0,
@@ -1351,7 +1459,17 @@ function renderPages(pages, bodySize, opts, meta) {
     titleUsed: Boolean(meta.title),
     // Used to drop the cover-page title when it just repeats the PDF metadata.
     docTitle: meta.title ? normalizeHeading(meta.title) : null,
+    /**
+     * When the document states its own structure, size inference stops being
+     * the authority and becomes the fallback for text the outline is silent
+     * about. `outlineLevel` is the depth of the last entry passed, which is
+     * what a size-inferred heading has to sit beneath to be believable.
+     */
+    outline: bindOutline(pages, outline),
+    outlineSeen: 0,
+    outlineLevel: 0,
   };
+  if (state.outline.size) meta.outlineHeadings = state.outline.size;
 
   if (meta.title) out.push(`<h1>${escapeHtml(meta.title)}</h1>`);
 
@@ -1413,6 +1531,15 @@ function renderBlocks(lines, bodySize, opts, state) {
 
   const flushPara = () => {
     if (para) {
+      // A cover line that merely repeats the PDF's metadata title, dropped at
+      // flush so it is caught whether it arrived as one line or as two that the
+      // paragraph joiner merged. Checked here rather than per line because the
+      // title on a cover page is usually set large and wraps.
+      if (state.docTitle && normalizeHeading(para.html.replace(/<[^>]*>/g, '')) === state.docTitle) {
+        state.docTitle = null;
+        para = null;
+        return;
+      }
       out.push(`<p>${para.html}</p>`);
       para = null;
     }
@@ -1437,7 +1564,22 @@ function renderBlocks(lines, bodySize, opts, state) {
       continue;
     }
 
-    const heading = opts.pdfHeadings === false ? 0 : headingLevel(line, bodySize, state);
+    /**
+     * The cover line that merely repeats the PDF's metadata title, dropped
+     * whether or not it is being emitted as a heading.
+     *
+     * This check used to live inside the heading branch, which was enough while
+     * every cover title was classified as one. With the outline in charge, a
+     * cover line above the document's first stated heading is no longer a
+     * heading — and the title would otherwise reappear as a paragraph directly
+     * under the `<h1>` built from the same string.
+     */
+    if (state.docTitle && normalizeHeading(line.text) === state.docTitle) {
+      state.docTitle = null;
+      continue;
+    }
+
+    const heading = opts.pdfHeadings === false ? 0 : outlineHeading(line, bodySize, state);
     if (heading) {
       flushAll();
       // Collect the visual lines this heading wrapped across before deciding
@@ -1552,6 +1694,44 @@ function startsNewParagraph(line, prev, bodySize, leftEdge) {
 function continuesListItem(line, prev, bodySize) {
   if (!prev) return false;
   return line.x > prev.x + bodySize * 0.4 && line.y - prev.y < line.size * 2;
+}
+
+/**
+ * The heading level for a line, with the outline in charge where there is one.
+ *
+ * Three cases:
+ *
+ *   - the outline names this line: its depth is the level, full stop
+ *   - the outline names this line's predecessor as a wrapped continuation: the
+ *     line was already absorbed and emits nothing of its own
+ *   - the outline is silent: fall back to size inference, but only where the
+ *     result does not contradict the structure the document stated
+ *
+ * The third case is the careful one. Dropping every unclaimed heading would
+ * gut documents whose outline records only the top few levels — one reference
+ * guide states 282 entries for 892 real headings. Keeping every unclaimed
+ * heading is what produced 713 bullet list items as h2s. So an inferred heading
+ * survives only *below* the outline entry that encloses it, and before the
+ * first entry it does not survive at all: text above a document's first stated
+ * heading is cover matter, whatever size it is set in.
+ */
+function outlineHeading(line, bodySize, state) {
+  const claimed = state.outline.get(line);
+  if (claimed === -1) return 0;           // absorbed into the line above
+  if (claimed) {
+    state.outlineSeen++;
+    state.outlineLevel = claimed;
+    if (claimed === 1) state.titleUsed = true;
+    return Math.min(claimed, 6);
+  }
+  const inferred = headingLevel(line, bodySize, state);
+  if (!inferred || !state.outline.size) return inferred;
+  if (!state.outlineSeen) return 0;       // above the document's first heading
+  // At the same depth it is a sibling the table of contents did not list, which
+  // is ordinary — one reference guide states 282 entries for 892 real headings.
+  // Only a heading claiming to outrank the structure the document stated is a
+  // conflict.
+  return inferred >= state.outlineLevel ? inferred : 0;
 }
 
 function headingLevel(line, bodySize, state) {

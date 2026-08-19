@@ -1402,6 +1402,78 @@ async function runDiagnosticsCase() {
   }
 }
 
+/**
+ * A PDF's own outline outranks what glyph sizes suggest (Q1).
+ *
+ * Born-digital PDFs usually carry their heading tree in the file. Re-deriving
+ * it from type size is guesswork against data the document already states, and
+ * the guess fails in both directions — this fixture carries one of each:
+ *
+ *   - `IMPORTANT NOTICE` is set at twice body size and is not in the outline
+ *   - `Chapter One` / `Chapter Two` are set at body size and are in it
+ *   - `Section 1.1` is a child, so its level can only come from outline depth
+ *
+ * Every heading in the fixture is 11 pt, so nothing here can be recovered by
+ * measuring.
+ */
+async function runOutlineHeadingCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>the embedded outline outranks font-size inference</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'outline-headings', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/outline-headings.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'outline-headings.pdf' }, { outputs: ['md'] }, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    const headings = [...body.matchAll(/^(#{1,6})\s+(.*)$/gm)].map((m) => [m[1].length, m[2].trim()]);
+    const levelOf = (text) => headings.find(([, t]) => t === text)?.[0] ?? null;
+
+    renderChecks(
+      box,
+      record,
+      {
+        'an outline entry becomes a heading even at body size': () =>
+          levelOf('Chapter One') !== null || `headings were ${JSON.stringify(headings)}`,
+        'the second one too, on its own page': () =>
+          levelOf('Chapter Two') !== null || 'Chapter Two is not a heading',
+        'a nested entry takes its level from outline depth': () =>
+          levelOf('Section 1.1') === 2 || `Section 1.1 came out at ${levelOf('Section 1.1')}, expected 2`,
+        'a top-level entry takes level 1': () =>
+          levelOf('Chapter One') === 1 || `Chapter One came out at ${levelOf('Chapter One')}`,
+        'an oversized line the outline does not claim is not a heading': () =>
+          levelOf('IMPORTANT NOTICE') === null ||
+          `IMPORTANT NOTICE is still an h${levelOf('IMPORTANT NOTICE')}`,
+        /**
+         * Demotion, not deletion. The outline says the line is not a heading;
+         * it says nothing about the line being worth less than its own text.
+         */
+        'the demoted line keeps its text': () =>
+          body.includes('IMPORTANT NOTICE') || 'the text was dropped rather than demoted',
+        'body paragraphs are untouched': () =>
+          body.includes('The first chapter introduces the subject and sets out the conventions') &&
+          body.includes('A subsection whose depth is recorded only in the outline.') ||
+          'a paragraph was damaged',
+        'the metadata title is still emitted once': () =>
+          (body.match(/^#\s+Evaluation Copy$/gm) || []).length === 1 || 'the cover title changed',
+      },
+      record.md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('outline-headings', err);
+  }
+}
+
 const summary = document.getElementById('summary');
 const container = document.getElementById('cases');
 const results = [];
@@ -1437,6 +1509,7 @@ async function run() {
     ['page-chrome', runPageChromeCase],
     ['split-title', runSplitTitleCase],
     ['diagnostics', runDiagnosticsCase],
+    ['outline-headings', runOutlineHeadingCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],
