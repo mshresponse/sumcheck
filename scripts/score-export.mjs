@@ -53,6 +53,20 @@ const totals = {
 /** The headline figure's label in this corpus's template. See its use below. */
 const HEADLINE_LABEL = /Total Estimated Costs:/;
 
+/**
+ * Scoring time, not conversion time.
+ *
+ * The audit runner records what it costs to *convert* the corpus; this records
+ * what it costs to score one. They are different questions, and a report that
+ * quotes one number without saying which it is invites the wrong comparison.
+ */
+function formatMs(ms) {
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)} s`;
+  return `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`;
+}
+
+const scoringStarted = performance.now();
 const rows = [];
 
 for (const [id, doc] of Object.entries(documents)) {
@@ -183,7 +197,8 @@ headline figure recovered ${totals.headlineOk}/${totals.headlineOk + totals.head
 documents carrying any marker   ${totals.markers}/${totals.docs}
   value-not-recovered markers   ${totals.notRecovered}/${totals.docs}   ${totals.notRecovered === totals.headlineMiss ? 'OK' : 'MISMATCH'} — must equal the ${totals.headlineMiss} document(s) missing a headline
   prose lexicon flags           ${totals.lexicon}/${totals.docs}
-missing conversions       ${totals.missing}`);
+missing conversions       ${totals.missing}
+scoring wall-clock        ${formatMs(performance.now() - scoringStarted)} for ${totals.docs} document(s)`);
 
 if (totals.notRecovered !== totals.headlineMiss) {
   console.log(

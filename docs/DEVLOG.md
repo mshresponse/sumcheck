@@ -7,6 +7,137 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.6.0 cycle · T6 — wall-clock in the audit runner (#5), and the release
+
+### The number the Docling bench was missing
+
+The bench extrapolated ~14 minutes for the 1,349-page Net Zero Cloud guide and
+then **declined to compare**, on the grounds that our own time for the same
+document had never been measured and a figure with no denominator is not a
+comparison in either direction. It has a denominator now:
+
+| | pages | wall-clock | per page |
+| --- | ---: | ---: | ---: |
+| Net Zero Cloud guide (text layer) | 1,349 | **3.1 s** | 2.3 ms |
+| Good Faith Estimate corpus (scanned) | 50 | **39.4 s** | 0.79 s |
+
+Both measured on this machine, this build. The corpus figure has a median of
+783 ms per document and a slowest of 1.0 s.
+
+**Read those two rows together before quoting either.** They differ by a factor
+of roughly 340 per page, and almost all of that is OCR. A page with a text layer
+costs milliseconds; a page that has to be rasterized and read costs the better
+part of a second. Any single "pages per second" number for this converter is a
+statement about the corpus, not about the converter.
+
+The 3.1 s figure was checked rather than trusted: the run was repeated, the
+whole `node scripts/audit.mjs` invocation was timed at 4.3 s end to end
+(including Chrome start-up), and the output was confirmed complete —
+**1,758,674 bytes, byte-identical to the earlier run, 1,349 page markers, 892
+headings, 3,122 table rows**. It is a real measurement of a complete conversion.
+
+Against Docling's extrapolated ~14 minutes on the same document that is a large
+ratio, and the bench's caution still applies in the other direction: Docling is
+running layout models we are not. The two tools are doing different amounts of
+work, and this note records our side of the arithmetic rather than a verdict.
+
+### What was added
+
+`test/audit.js` times each document from the first byte read to the last emitter
+finishing. `scripts/audit.mjs` prints per-document wall-clock in the console
+line and in the report body, with a corpus total, median, slowest document and
+per-page cost. The per-page unit scales — milliseconds under 100 ms, seconds
+above — because one fixed unit reports one of the two cases above as `0.00`.
+
+`score-export` records its own wall-clock separately and labels it **scoring**
+wall-clock, because it does not convert anything: 4–23 ms for 50 documents. It
+is a different question from conversion cost and a report that quotes one number
+without saying which invites the wrong comparison.
+
+---
+
+## The cycle, end to end
+
+| task | issue | what moved |
+| --- | --- | --- |
+| T1 | #1, #4 | key-value structure inside a table cell survives as pairs in all four emitters |
+| T2 | #2 | running heads 0.3% → **99.6%** caught, folios 0.0% → **100%** |
+| T3 | #6 | a wrapped display title is one heading; 894 headings → 892 on the guide |
+| T4 | #3 | size and token savings per conversion and per batch, and as JSON data |
+| T5 | #7 | "Copy diagnostic info" — counts and settings only, absence proved by fixture |
+| T6 | #5 | wall-clock per document and per corpus; release |
+
+### Corpus scores, every task
+
+| | baseline | 1.6.0 |
+| --- | ---: | ---: |
+| grand totals matched | 50/50 | **50/50** |
+| all line-item codes found | 49/49 | **49/49** |
+| each amount on its code's row | 52/52 | **52/52** |
+| `#Error` preserved | 50/50 | **50/50** |
+| documents emitting a real table | 49/50 | **49/50** |
+| headline figure recovered | 44/50 | **44/50** |
+| value-not-recovered markers | 6 = 6 | **6 = 6** |
+
+Not one metric moved across three conversion-touching tasks. That is the
+intended result and it is worth saying why it is not a null finding: the scored
+corpus is single-page scanned forms, and T1's classifier, T2's chrome rules and
+T3's size floor were each written to decline on exactly that shape. A corpus
+that moved would have meant one of them was firing where it had no business.
+
+### Fixtures added this cycle
+
+| fixture | proves |
+| --- | --- |
+| `field-details.pdf` | nested key-value structure in a cell; row-faithfulness; per-page varying head; folios crossing a decade; a chrome line printed once |
+| `split-title.pdf` | a wrapped display title merges — and three shapes that must not |
+| `diagnostics.pdf` | a diagnostic block contains nothing of the document, by carrying a word that cannot occur by chance and a flag whose message quotes amounts |
+
+Two of them earned their keep by failing when the implementation was wrong in a
+way no eyeball would have caught: a character-class range that read `590` as
+`90`, and a detached input buffer that made `source_bytes` zero for every PDF.
+A third — the planted-leak run against `diagnostics.pdf` — was made to fail
+deliberately, because an absence test nobody has seen fail is a comment.
+
+### Release
+
+- version **1.6.0** in `manifest.json` and `package.json`
+- CHANGELOG entry summarizing the cycle with every issue closed by number
+- `npm run check` clean · **45/45** harness cases · **51/51** packaged-extension
+  checks · full corpus re-scored, all metrics at baseline, marker invariant
+  holding
+- `npm run package` → **`dist/sumcheck-1.6.0.zip`**, 6.2 MB, 308 files
+- zip contents confirmed: `manifest.json` at 1.6.0, all four icons, `_locales/en`,
+  the new `src/core/diagnostics.js`, and `LICENSE` and `NOTICE` both carrying
+  `Copyright 2026 Everything Virtually LLC` — expected
+- **Nothing was uploaded to the Chrome Web Store.** Submission timing is the
+  owner's call once the 1.5.0 review resolves.
+
+### A note on `dist/sumcheck-1.5.0.zip`, so the record is clean
+
+That file was **rebuilt on 2026-08-19** as a side effect of the packaging gate:
+`verify-extension` installs the packaged zip, and the gate runs `npm run package`
+first, so every task in this cycle that ran the gate re-created it — from the
+working tree at that moment, which by then contained this cycle's code.
+
+**The local `dist/sumcheck-1.5.0.zip` is therefore no longer the artifact that
+was submitted for review.** It carries T1–T5's conversion changes with a 1.5.0
+version string. The two files are the same byte length (6,493,701) for exactly
+that reason: they differ only where `1.5.0` and `1.6.0` appear, and those are the
+same number of characters.
+
+**The canonical 1.5.0 is the copy in the Chrome Web Store dashboard**, not
+anything on this disk. If a 1.5.0 artifact is ever needed again it should be
+downloaded from the dashboard or rebuilt from the `v1.5.0` commit — not taken
+from `dist/`. The stale file is left in place rather than deleted; removing it is
+the owner's call, and it is worth making, because a file named
+`sumcheck-1.5.0.zip` that contains 1.6.0 code is exactly the kind of thing that
+gets uploaded by mistake.
+
+The release artifact for this cycle is **`dist/sumcheck-1.6.0.zip`**.
+
+---
+
 ## 2026-08-19 · v1.6.0 cycle · T5 — "Copy diagnostic info", with zero document content (#7)
 
 ### What it copies

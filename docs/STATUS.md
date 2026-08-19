@@ -1,6 +1,6 @@
 # Sumcheck — where the project stands
 
-**Version 1.5.0 · 17 August 2026 · written for whoever picks this up next**
+**Version 1.6.0 · 19 August 2026 · written for whoever picks this up next**
 
 > **Renamed 17 August 2026: MDForge → Sumcheck.** "MDForge" collided with a
 > same-pitch Windows app, a dental platform on mdforge.com, a PyPI package and
@@ -54,17 +54,32 @@ rewritten.
 Scored with `npm run score-export` against a 50-document ground-truth set for a
 corpus of scanned medical Good Faith Estimates (96 dpi, no text layer):
 
-| | v1.0.0 | v1.1.0 | v1.2.0 | v1.3.0 |
-| --- | --- | --- | --- | --- |
-| grand totals matched | — | 50/50 | 50/50 | **50/50** |
-| all line-item codes found | — | 49/49 | 49/49 | **49/49** |
-| each amount on its code's row | — | 52/52 | 52/52 | **52/52** |
-| `#Error` string preserved | — | 50/50 | 50/50 | **50/50** |
-| documents emitting a real table | 0/50 | 0/50 | 3/50 | **49/50** |
-| headline total recovered | — | 1/50 | 1/50 | **44/50** |
-| documents with no table and no note | — | 50/50 | 47/50 | **0/50** |
-| review markers vs actual misses | — | — | — | **6 = 6** |
-| independent audit defects | 121 | 0 data errors | 0 data errors | 0 data errors |
+| | v1.0.0 | v1.1.0 | v1.2.0 | v1.3.0 | v1.6.0 |
+| --- | --- | --- | --- | --- | --- |
+| grand totals matched | — | 50/50 | 50/50 | 50/50 | **50/50** |
+| all line-item codes found | — | 49/49 | 49/49 | 49/49 | **49/49** |
+| each amount on its code's row | — | 52/52 | 52/52 | 52/52 | **52/52** |
+| `#Error` string preserved | — | 50/50 | 50/50 | 50/50 | **50/50** |
+| documents emitting a real table | 0/50 | 0/50 | 3/50 | 49/50 | **49/50** |
+| headline total recovered | — | 1/50 | 1/50 | 44/50 | **44/50** |
+| documents with no table and no note | — | 50/50 | 47/50 | 0/50 | **0/50** |
+| review markers vs actual misses | — | — | — | 6 = 6 | **6 = 6** |
+| independent audit defects | 121 | 0 data errors | 0 data errors | 0 data errors | 0 data errors |
+
+1.4.0 and 1.5.0 were ship-readiness and rename cycles and changed no conversion
+behaviour, so they carry v1.3.0's column. 1.6.0 changed three conversion paths
+and moved nothing here — deliberately: the corpus is single-page scanned forms,
+and each of those changes was written to decline on that shape.
+
+Conversion wall-clock, first recorded in 1.6.0 on this machine:
+
+| corpus | pages | wall-clock | per page |
+| --- | ---: | ---: | ---: |
+| Net Zero Cloud guide (text layer) | 1,349 | 3.1 s | 2.3 ms |
+| Good Faith Estimates (scanned, OCR) | 50 | 39.4 s | 0.79 s |
+
+The factor of ~340 between them is OCR. Any single pages-per-second figure for
+this converter is a statement about the corpus, not about the converter.
 
 The numeric defect class that started this — `$` read as `3`, inflating a price
 ~8.5×; `14835` read as `44835`; invalid CPT codes — is gone, verified across 50
@@ -77,10 +92,12 @@ which smears one-pixel strokes. Measured against ground truth:
 | 1.5× (v1.0.0) | 12/14 |
 | **2× (current)** | **14/14** |
 
-38 automated cases pass (`npm test`), covering every adapter plus regressions for
+45 automated cases pass (`npm test`), covering every adapter plus regressions for
 a 96 dpi billing form, a shaded callout, a wrapped-cell table, a real corpus page,
-and the rescue pass re-reading ink it had already read. A further 20 checks run
-the extension unpacked in Chrome (`npm run verify-extension`).
+the rescue pass re-reading ink it had already read, nested key-value structure
+inside a table cell, running heads and printed folios, a wrapped display title,
+and a diagnostic block proved to contain nothing of the document. A further 51
+checks run the packaged extension in Chrome (`npm run verify-extension`).
 
 ---
 
@@ -174,7 +191,7 @@ Task 4.
 
 ## 4. Not verified at all
 
-- **Any input format not in the corpus.** The 38 automated cases cover every
+- **Any input format not in the corpus.** The 45 automated cases cover every
   adapter, but only PDFs have been tested against real third-party documents.
 - **Capturing a page without `activeTab`.** Chrome grants `activeTab` only on a
   real toolbar or context-menu click, which no headless driver can synthesise.

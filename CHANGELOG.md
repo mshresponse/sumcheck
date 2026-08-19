@@ -1,5 +1,66 @@
 # Changelog
 
+## 1.6.0
+
+The first post-launch cycle, and it is about conversion quality: the seven-issue
+ledger filed after 1.5.0 shipped, closed in order.
+
+### Structure that used to be lost
+
+**Key-value structure inside a table cell survives** (#1, #4). A reference table
+whose Details column holds its own definition list — a label on one line, its
+value indented beneath — used to flatten to one run of words, so `Type` and
+`string` ended up adjacent to `Properties` and its list with nothing to say
+which belonged to which. The indent was in the source all along and was being
+discarded when rows were assembled. Pairs now survive as pairs in all four
+outputs.
+
+**Running heads and printed page numbers are actually stripped** (#2). Measured
+on a 1,349-page reference guide, the old pass caught 0.3% of running heads and
+0.0% of folios. Both misses were structural: a page number normalizes to a
+single character and was dropped before it could be counted, and a head's key
+included the half that names the page's subject, so every page produced a
+different key. Heads are now matched on their stable opening at a fixed height;
+folios are matched on their sequence, because folios never repeat and no
+repetition test can ever see them. Same document: 99.6% and 100%.
+
+**A display-size title that wrapped is one heading again** (#6). `Net Zero Cloud
+Developer` / `Guide` was two sibling headings; it is one, and when it matches the
+document's own metadata title it is recognized as the cover title rather than
+duplicated.
+
+### Numbers you can see
+
+**Size and token savings, per conversion and per batch** (#3). The result panel
+shows source size, output size, percent change and an estimated token count —
+`7.3 MB → 1.7 MB as .md · 77% smaller · ~437k tokens (estimated)`. The estimate
+is characters over four and is labelled as an estimate everywhere it appears.
+The JSON output carries the same figures as data, alongside the name of the
+estimator that produced them.
+
+**Copy diagnostic info** (#7). One button in the result panel puts version,
+browser, format and page counts, OCR figures, flag counts by type and any
+non-default setting on the clipboard — and nothing else. No file name, no title,
+no converted text, no validator message. It is available on failed conversions
+too, where the error message is the one string that could quote the document, so
+the block records that the conversion failed and nothing about why.
+
+**Wall-clock in the audit runner** (#5). Per document and across a corpus, with
+seconds per page. The Docling benchmark could not compare speeds because our own
+number had never been measured; it has been now.
+
+### Under the hood
+
+- source size is measured before conversion begins — pdf.js transfers the input
+  buffer to its worker and detaches it, which made every PDF report zero
+- three new fixtures: nested cell structure, page chrome, a split display title,
+  and a document built so a diagnostic block's *absence* of content is provable
+- 45 automated cases and 51 packaged-extension checks
+
+Corpus scores are unchanged across the whole cycle: 50/50 grand totals, 49/49
+line-item codes, 52/52 amounts on their code's row, 49/50 documents with a real
+table, 44/50 headline figures, and the marker invariant holding at 6 = 6.
+
 ## 1.5.0
 
 **MDForge is now Sumcheck.** The old name collided with a Windows app making the

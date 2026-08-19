@@ -217,6 +217,46 @@ function evaluate(wsUrl, fileCount) {
   });
 }
 
+/**
+ * How long the corpus took, ours to quote.
+ *
+ * The Docling bench extrapolated ~14 minutes for the 1,349-page guide and then
+ * declined to compare, because our own time for the same work had never been
+ * measured — a figure with no denominator is not a comparison in either
+ * direction. Recorded here so the next bench has one.
+ */
+function timingSummary(results) {
+  const timed = results.filter((d) => Number.isFinite(d.ms));
+  if (!timed.length) return '';
+  const total = timed.reduce((n, d) => n + d.ms, 0);
+  const pages = timed.reduce((n, d) => n + (d.pages || 0), 0);
+  const each = timed.map((d) => d.ms).sort((a, b) => a - b);
+  const middle = each[Math.floor(each.length / 2)];
+  const slowest = timed.reduce((a, b) => (b.ms > a.ms ? b : a));
+  return [
+    `wall-clock ${formatMs(total)} for ${timed.length} document(s)` +
+      (pages ? `, ${pages} page(s), ${perPage(total, pages)}` : ''),
+    `  median ${formatMs(middle)} per document · slowest ${formatMs(slowest.ms)} (${slowest.name})`,
+  ].join('\n');
+}
+
+/**
+ * Per-page cost in a unit that survives the division. A text-layer PDF runs at
+ * a few milliseconds a page and a scanned one at several seconds; one fixed
+ * unit reports one of those two cases as 0.00.
+ */
+function perPage(ms, pages) {
+  const each = ms / pages;
+  return each < 100 ? `${each.toFixed(1)} ms/page` : `${(each / 1000).toFixed(2)} s/page`;
+}
+
+function formatMs(ms) {
+  if (ms < 1000) return `${ms} ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)} s`;
+  const minutes = Math.floor(ms / 60_000);
+  return `${minutes}m ${Math.round((ms % 60_000) / 1000)}s`;
+}
+
 function report(results) {
   // The PSM probe returns a different shape: per-raster token scores per mode.
   if (results.length && results[0]?.modes) {
@@ -258,7 +298,7 @@ function report(results) {
     const scored = expected.length ? ` · ground truth ${expected.length - failures.length}/${expected.length}` : '';
     const summary = doc.error
       ? `ERROR ${doc.error}`
-      : `conf ${doc.confidenceMean ?? 'n/a'} · flagged ${doc.flaggedWords} · review ${doc.reviewFlags}${scored} · ${problems} finding(s)`;
+      : `conf ${doc.confidenceMean ?? 'n/a'} · flagged ${doc.flaggedWords} · review ${doc.reviewFlags}${scored} · ${problems} finding(s)${doc.ms ? ` · ${formatMs(doc.ms)}` : ''}`;
     console.log(`${mark} ${doc.name}  ${summary}`);
     for (const f of doc.findings || []) console.log(`    ${f.type}: ${f.detail}`);
     for (const f of failures) console.log(`    MISSING  ${f.rule}`);
@@ -272,6 +312,9 @@ function report(results) {
         `- low-confidence words: ${doc.flaggedWords}`,
         `- unreadable regions: ${doc.unreadableRegions}`,
         `- validator flags: ${doc.reviewFlags}`,
+        `- wall-clock: ${doc.ms ? formatMs(doc.ms) : 'not recorded'}${
+          doc.pages ? ` for ${doc.pages} page(s), ${perPage(doc.ms, doc.pages)}` : ''
+        }`,
         ''
       );
       for (const m of doc.reviewMessages || []) lines.push(`  - ${m}`);
@@ -292,6 +335,7 @@ function report(results) {
 
   const summaryLines = [
     '',
+    timingSummary(results),
     `${clean}/${results.length} documents with no findings`,
     ...(groundTruth.total
       ? [`${groundTruth.passed}/${groundTruth.total} ground-truth values found (${

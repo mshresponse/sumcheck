@@ -62,6 +62,7 @@ function inspect(name, md, result) {
   return {
     name,
     bytes: md.length,
+    pages: result.meta.pages ?? null,
     ocr: Boolean(result.meta.ocr || result.meta.ocrPages),
     dpi: result.meta.ocrDpi ?? null,
     confidenceMean: result.meta.ocrConfidenceMean ?? null,
@@ -183,6 +184,10 @@ async function run() {
   for (let i = 0; i < files.length; i++) {
     const name = files[i];
     status.textContent = `converting ${i + 1} of ${files.length} — ${name}`;
+    // Timed from the first byte read to the last emitter finishing — the whole
+    // cost of converting this document, which is the number a speed comparison
+    // needs and the one we have never recorded.
+    const started = performance.now();
     try {
       const bytes = new Uint8Array(
         await (await fetch(`/corpus/${encodeURIComponent(name)}`)).arrayBuffer()
@@ -201,11 +206,19 @@ async function run() {
       );
       const md = result.outputs.find((o) => o.format === 'md').content;
       const record = inspect(name, md, result);
+      record.ms = Math.round(performance.now() - started);
       record.expected = checkExpectations(name, md, expectations);
       if (DUMP_WORDS) Object.assign(record, dumpFor(pages));
       out.push(record);
     } catch (err) {
-      out.push({ name, error: err.message, findings: [], expected: [], warnings: [] });
+      out.push({
+        name,
+        error: err.message,
+        ms: Math.round(performance.now() - started),
+        findings: [],
+        expected: [],
+        warnings: [],
+      });
     }
     const row = document.createElement('div');
     row.className = 'row';
