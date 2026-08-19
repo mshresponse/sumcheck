@@ -7,6 +7,88 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · Doc sync to sumcheck.app, and the Discussions welcome post
+
+**Docs only.** No product files changed — `git diff --name-only` over `src/`,
+`manifest.json`, `_locales/`, `icons/`, `vendor/` and `package.json` returns
+nothing. `dist/sumcheck-1.5.0.zip` was not rebuilt and no version was bumped;
+1.5.0 is in Chrome Web Store review.
+
+Verified the domain before writing any URL into a document: `https://sumcheck.app`
+and `https://sumcheck.app/privacy/` both return **HTTP 200** (the privacy page
+serving the right `<title>`), and both old URLs return **301** —
+`mshresponse.github.io/sumcheck/` → `sumcheck.app/`, and the `/privacy/` path
+likewise.
+
+### Files touched
+
+**`store/CHECKLIST.md`** — item 23's privacy URL is now
+`https://sumcheck.app/privacy/`, and records explicitly that *the submission was
+filed with the earlier `mshresponse.github.io` URL, which now 301s to this one,
+so the submitted link still resolves.* Worth stating rather than silently
+swapping: a reviewer comparing the checklist against what was actually submitted
+would otherwise find a mismatch and have no way to tell whether it was a
+correction or a discrepancy. The open-items paragraph and the source line pick up
+the new domain, the latter now naming the homepage as well as the repository.
+
+**`store/LISTING.md`** — three changes:
+
+- A new **Homepage and privacy policy** section, because the dashboard asks for
+  both fields and the packet documented neither. Carries the same note about the
+  submitted URLs redirecting.
+- The description's verifiability line now offers the homepage alongside the
+  source repository.
+- **The stale promo-tile line is fixed.** It read *"Not yet produced… flagged in
+  CHECKLIST.md as an open decision"* — but `store/promo-440x280.png` exists and
+  went out with the listing. `CHECKLIST.md` item 16 was closed on 17 August and
+  this line was not updated with it. Now a plain file reference. A packet that
+  says a submitted asset does not exist is worse than one that never mentioned
+  it.
+
+**`README.md`** — the header line leads with
+[sumcheck.app](https://sumcheck.app) and its privacy-policy link moves to the
+new domain.
+
+Left alone deliberately:
+
+- `docs/index.html` and `docs/CNAME` — the reviewer's, per the task.
+- **The DEVLOG's own `github.io` reference** (17 August, R3). It records what was
+  verified reachable *on that date*, which was true and is the point of a log.
+  Corrections here are appended, not applied retroactively; this entry is the
+  correction.
+
+### Discussions
+
+Enabled and publicly reachable — `/discussions` returns HTTP 200 with the six
+default categories. It held **zero** posts, so the welcome post the previous task
+specified did not exist.
+
+Created as **#8, "Welcome — what Sumcheck is, and where to put things"**, in
+Announcements. It covers what Sumcheck is (on-device, checks its own work, with
+a worked `SUMCHECK:` marker example), the routing — bugs to Issues, questions and
+half-formed ideas to Discussions, security privately to
+**sumcheck@everythingvirtually.com** per `SECURITY.md` — and repeats the request
+not to attach private documents, with the same three alternatives the issue
+template gives. Verified publicly reachable at HTTP 200.
+
+**It is not pinned, and I could not pin it.** GitHub exposes no pinning mutation:
+introspecting the GraphQL `Mutation` type for pin-related fields returns
+`pinIssue`, `unpinIssue`, `pinIssueComment`, `unpinIssueComment`,
+`pinEnvironment` — nothing for discussions. `pinnedDiscussions.totalCount` reads
+0, confirming the state rather than assuming it. Pinning is a web-UI action:
+
+> <https://github.com/mshresponse/sumcheck/discussions/8> → **⋯** menu → **Pin
+> discussion**
+
+One click, and it is the last step of this task that needs a human.
+
+### Gates
+
+`npm test` **41/41** · `verify-extension` **47/47**. No corpus re-score: nothing
+in the conversion path was touched.
+
+---
+
 ## 2026-08-18 · Feedback infrastructure, and the candidate ledger migrated to issues
 
 Pre-submission polish. **No conversion changes** — the corpus was not re-scored

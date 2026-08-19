@@ -45,7 +45,7 @@ Legend: **✅ done** · **⬜ open** (needs a human decision or an account) ·
 | 20 | Remote code declaration | ✅ "No, I am not using remote code", with the enforcement mechanism |
 | 21 | Data collection disclosure | ✅ nothing collected — no category applies. **Read the category list off the dashboard at submission**; the answer will not change |
 | 22 | Limited Use certifications (×3) | ✅ all affirmable; Sumcheck transfers no data anywhere |
-| 23 | Privacy policy URL, publicly reachable | ✅ **https://mshresponse.github.io/sumcheck/privacy/** — served by GitHub Pages from `docs/`, verified HTTP 200. Contact: sumcheck@everythingvirtually.com |
+| 23 | Privacy policy URL, publicly reachable | ✅ **https://sumcheck.app/privacy/** — served by GitHub Pages from `docs/` on the custom domain, verified HTTP 200. The submission was filed with the earlier `https://mshresponse.github.io/sumcheck/privacy/` URL, which now returns 301 to this one, so the submitted link still resolves. Contact: sumcheck@everythingvirtually.com |
 | 24 | Policy updates effective 1 Aug 2026 | ✅ Limited Use now requires collection be *strictly necessary* to the single purpose, and all collection be prominently disclosed. Nothing is collected, so both hold |
 
 ## Distribution tab
@@ -86,11 +86,12 @@ owner's to decide or to hold an account for — none of it is code:
 2. **A registered developer account** and its one-time fee (#29–30).
 
 The privacy policy is live at
-<https://mshresponse.github.io/sumcheck/privacy/>, served by GitHub Pages from
-`docs/` in the public repository, and the 440×280 promo tile is in
+<https://sumcheck.app/privacy/>, served by GitHub Pages from `docs/` in the
+public repository on the sumcheck.app domain, and the 440×280 promo tile is in
 `store/promo-440x280.png`.
 
-The source is public at <https://github.com/mshresponse/sumcheck>, which is
+The product homepage is <https://sumcheck.app> and the source is public at
+<https://github.com/mshresponse/sumcheck>, which is
 what makes the listing's "verifiable by inspection" claim checkable rather than
 rhetorical.
 

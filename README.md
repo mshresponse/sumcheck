@@ -1,6 +1,6 @@
 # Sumcheck
 
-[Source](https://github.com/mshresponse/sumcheck) · [Privacy policy](https://mshresponse.github.io/sumcheck/privacy/) · Apache 2.0
+[sumcheck.app](https://sumcheck.app) · [Source](https://github.com/mshresponse/sumcheck) · [Privacy policy](https://sumcheck.app/privacy/) · Apache 2.0
 
 A Chrome extension that turns documents into Markdown — and into HTML, plain
 text, or structured JSON — **entirely on the user's machine**. No account, no

@@ -92,12 +92,23 @@ Sumcheck is open source under the Apache License 2.0. The "no network requests"
 claim above is not a promise you have to take on trust — the source is public
 and you can read it:
 
-https://github.com/mshresponse/sumcheck
+https://sumcheck.app  ·  https://github.com/mshresponse/sumcheck
 
 Third-party components are all permissively licensed and listed in the package.
 ```
 
 ---
+
+## Homepage and privacy policy
+
+| dashboard field | value |
+| --- | --- |
+| Homepage URL | `https://sumcheck.app` |
+| Privacy policy URL | `https://sumcheck.app/privacy/` |
+
+Both are served by GitHub Pages from `docs/` in the public repository. The
+submission was filed with the earlier `mshresponse.github.io` URLs, which now
+301 to these, so the submitted links still resolve.
 
 ## Category
 
@@ -128,5 +139,4 @@ that shows a converter admitting uncertainty.
 
 ## Small promo tile (440×280)
 
-**Not yet produced.** Optional, but listings without one rank lower in search.
-Flagged in `CHECKLIST.md` as an open decision rather than quietly skipped.
+`store/promo-440x280.png` — submitted with the listing.
