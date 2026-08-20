@@ -123,7 +123,7 @@ export async function convertPdf(bytes, ctx) {
     // Inspection hook for the test harness: the layout decisions all hinge on
     // these numbers, and they are otherwise invisible from outside.
     ctx.onLayout?.(pages, bodySize);
-    const html = renderPages(pages, bodySize, opts, meta, outline);
+    const html = mergeContinuedTables(renderPages(pages, bodySize, opts, meta, outline), meta);
 
     if (ocrPages) {
       warnings.push(
@@ -1229,6 +1229,80 @@ function bindOutline(pages, entries) {
     }
   }
   return bound;
+}
+
+/* ------------------------------------------------- continued tables */
+
+/**
+ * Join a table to its continuation on the following page.
+ *
+ * A long table reprints its column header at the top of every page it runs
+ * onto. Read page by page that is two tables, and a reader — or a chunker —
+ * gets two where the document has one. Measured on a 1,010-page reference
+ * document, 33 tables cross a single page boundary and none were joined; nor
+ * were they by either reference implementation, so this is a shared gap.
+ *
+ * **A matching header is the only evidence accepted.** Two tables that merely
+ * touch a page break are two tables: proximity is not continuation, and joining
+ * on proximity would silently fuse unrelated data. A continuation that reprints
+ * no header is therefore out of scope and stays two tables — under-merging is
+ * recoverable by a reader, over-merging is not.
+ *
+ * The page marker between them is kept, and ends up after the merged table. The
+ * rows that moved are attributed to the page they started on, which is the
+ * honest answer for a table that spans pages: it began there.
+ */
+function mergeContinuedTables(html, meta) {
+  if (!/<table>/.test(html)) return html;
+  const host = document.createElement('div');
+  host.innerHTML = html;
+
+  let merged = 0;
+  // `host` is detached, so `isConnected` is false for everything in it —
+  // whether a table is still in the tree has to be asked of the container.
+  for (const table of Array.from(host.querySelectorAll('table'))) {
+    if (!host.contains(table)) continue;
+    const key = headerKey(table);
+    if (!key) continue;
+    // Keep absorbing while the next thing across a page break repeats this
+    // header, so a table spanning four pages becomes one rather than two.
+    for (;;) {
+      const next = tableAcrossPageBreak(table);
+      if (!next || headerKey(next) !== key) break;
+      const body = table.querySelector('tbody');
+      const rows = Array.from(next.querySelectorAll('tbody tr'));
+      if (!body || !rows.length) break;
+      for (const row of rows) body.appendChild(row);
+      next.remove();
+      merged++;
+    }
+  }
+  if (merged) meta.tablesMerged = merged;
+  return host.innerHTML;
+}
+
+/** The next element after a table, if a page break is all that separates them. */
+function tableAcrossPageBreak(table) {
+  let next = table.nextElementSibling;
+  let crossed = false;
+  while (next && next.tagName === 'HR' && next.hasAttribute('data-smc-page')) {
+    crossed = true;
+    next = next.nextElementSibling;
+  }
+  return crossed && next?.tagName === 'TABLE' ? next : null;
+}
+
+/**
+ * A table's header as a comparable string, or '' when it has no header row.
+ *
+ * Two cells minimum: a one-column "header" is not distinctive enough to license
+ * fusing two tables together.
+ */
+function headerKey(table) {
+  const cells = Array.from(table.querySelectorAll('thead th'));
+  if (cells.length < 2) return '';
+  const key = cells.map((cell) => cell.textContent.replace(/\s+/g, ' ').trim()).join('\u0000');
+  return key.replace(/\u0000/g, '').trim() ? key : '';
 }
 
 /* ------------------------------------------------------------- page chrome */

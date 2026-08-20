@@ -1710,6 +1710,88 @@ async function runStackedHeaderCase() {
   }
 }
 
+/**
+ * A table continued on the next page is one table (Q5, #13).
+ *
+ * A long table reprints its column header at the top of every continuation
+ * page. Read page by page that is two tables, and a reader or a chunker gets
+ * two where the document has one. Measured on a 1,010-page document: 33 tables
+ * cross a single page boundary and none were joined — nor were they by either
+ * reference implementation, so this is a shared gap rather than a competitive
+ * one.
+ *
+ * The third page is the control. Its table sits directly after a page break too
+ * and its header is different, so it must stay separate — proximity is not
+ * evidence, a matching header is.
+ */
+async function runTableContinuationCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>a table continued across a page break is merged</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'table-continuation', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/table-continuation.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'table-continuation.pdf' }, { outputs: ['md', 'json'] }, {});
+    const md = result.outputs.find((o) => o.format === 'md').content;
+    const doc = JSON.parse(result.outputs.find((o) => o.format === 'json').content);
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    const headerRows = (body.match(/^\| Feature \| Available \| Notes \|$/gm) || []).length;
+    const dataRows = body.split('\n').filter((l) => /^\|/.test(l) && !/^\|\s*---/.test(l));
+    const tables = doc.blocks.filter((b) => b.type === 'table');
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the repeated header appears once': () =>
+          headerRows === 1 || `${headerRows} copies of the header row`,
+        'the continuation is one table with the first': () =>
+          tables.length === 2 || `${tables.length} tables, expected 2`,
+        'every row from both pages is present': () => {
+          const wanted = [
+            'Adaptive routing for inbound cases',
+            'Bulk reassignment of open work',
+            'Scheduled export of audit',
+            'trails to external storage',
+            'Inline translation of case replies',
+            'Retention policy per record type',
+          ];
+          const missing = wanted.filter((t) => !body.includes(t));
+          return !missing.length || `missing ${JSON.stringify(missing)}`;
+        },
+        'no row was duplicated by the merge': () =>
+          dataRows.filter((r) => r.includes('Adaptive routing')).length === 1 ||
+          'a row appears more than once',
+        'the values travel with their rows': () =>
+          body.includes('| Inline translation of case replies | Yes | Pilot |') ||
+          'a merged row lost its values',
+        /**
+         * The control. This table also sits directly after a page break; only
+         * its header differs, and that has to be enough to keep it separate.
+         */
+        'a different table after a page break is not swallowed': () =>
+          body.includes('| Region | Volume | Change |') || 'the control table disappeared',
+        'and it keeps its own rows': () =>
+          body.includes('| Eastern corridor | 18,420 | plus 11 percent |') ||
+          'the control table lost a row',
+      },
+      record.md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('table-continuation', err);
+  }
+}
+
 const summary = document.getElementById('summary');
 const container = document.getElementById('cases');
 const results = [];
@@ -1749,6 +1831,7 @@ async function run() {
     ['oversized-bullet', runOversizedBulletCase],
     ['overprint-heading', runOverprintCase],
     ['stacked-header', runStackedHeaderCase],
+    ['table-continuation', runTableContinuationCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],

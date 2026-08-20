@@ -680,6 +680,106 @@ function buildStackedHeaderPdf() {
   return Buffer.from(out, 'latin1');
 }
 
+/**
+ * A table continued across a page break, and one that only looks continued.
+ *
+ * Page 1 ends mid-table with a row whose label wraps; page 2 reprints the same
+ * column header and carries on; page 3 opens with a different table whose
+ * header does not match, which must stay separate.
+ *
+ * Built as its own fixture rather than by extending `field-details.pdf`: that
+ * one is load-bearing for the nested-cell case and the page-chrome case, and
+ * adding pages to it would move counts those two assert on.
+ */
+function buildTableContinuationPdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+  const head = (y) => [
+    line('F2', 10, 72, y, 'Feature'),
+    line('F2', 10, 300, y, 'Available'),
+    line('F2', 10, 430, y, 'Notes'),
+  ];
+
+  const page1 = [
+    line('F1', 9, 72, 742, 'Product Guide Availability'),
+    ...head(700),
+    line('F1', 10, 72, 676, 'Adaptive routing for inbound cases'),
+    line('F1', 10, 300, 676, 'Yes'),
+    line('F1', 10, 430, 676, 'GA'),
+    line('F1', 10, 72, 652, 'Bulk reassignment of open work'),
+    line('F1', 10, 300, 652, 'Yes'),
+    line('F1', 10, 430, 652, 'Beta'),
+    // The straddling row: its label starts here and finishes on page 2.
+    line('F1', 10, 72, 628, 'Scheduled export of audit'),
+    line('F1', 10, 300, 628, 'No'),
+    line('F1', 9, 300, 46, '11'),
+  ].join('\n');
+
+  const page2 = [
+    line('F1', 9, 72, 742, 'Product Guide Availability'),
+    ...head(700),
+    // A label-only line here would leave page 2 with a one-cell row, and a
+    // one-cell row rejects the whole grid — so the straddling-label case cannot
+    // be exercised through a table that never forms. It is measured on the real
+    // document instead and reported as a residual.
+    line('F1', 10, 72, 676, 'trails to external storage'),
+    line('F1', 10, 300, 676, 'No'),
+    line('F1', 10, 430, 676, 'GA'),
+    line('F1', 10, 72, 652, 'Inline translation of case replies'),
+    line('F1', 10, 300, 652, 'Yes'),
+    line('F1', 10, 430, 652, 'Pilot'),
+    line('F1', 10, 72, 628, 'Retention policy per record type'),
+    line('F1', 10, 300, 628, 'No'),
+    line('F1', 10, 430, 628, 'Roadmap'),
+    line('F1', 9, 300, 46, '12'),
+  ].join('\n');
+
+  const page3 = [
+    line('F1', 9, 72, 742, 'Product Guide Availability'),
+    // A different header: this table must not be swallowed by the one above.
+    line('F2', 10, 72, 700, 'Region'),
+    line('F2', 10, 300, 700, 'Volume'),
+    line('F2', 10, 430, 700, 'Change'),
+    line('F1', 10, 72, 676, 'Eastern corridor'),
+    line('F1', 10, 300, 676, '18,420'),
+    line('F1', 10, 430, 676, 'plus 11 percent'),
+    line('F1', 10, 72, 652, 'Western corridor'),
+    line('F1', 10, 300, 652, '12,110'),
+    line('F1', 10, 430, 652, 'plus 3 percent'),
+    line('F1', 9, 300, 46, '13'),
+  ].join('\n');
+
+  const pages = [page1, page2, page3];
+  const objects = [];
+  const add = (body) => { objects.push(body); return objects.length; };
+  add('<< /Type /Catalog /Pages 2 0 R >>');
+  const kids = pages.map((_, i) => `${3 + i * 2} 0 R`).join(' ');
+  add(`<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`);
+  for (const content of pages) {
+    const contentObj = objects.length + 2;
+    add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+        `/Resources << /Font << /F1 ${3 + pages.length * 2} 0 R /F2 ${4 + pages.length * 2} 0 R >> >> ` +
+        `/Contents ${contentObj} 0 R >>`);
+    add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  }
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const info = add('<< /Title (Product Guide) /Creator (Sumcheck fixtures) >>');
+
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 /* ------------------------------------------------------------------- PDF */
 
 function buildPdf() {
@@ -997,6 +1097,7 @@ write('outline-headings.pdf', buildOutlineHeadingsPdf());
 write('oversized-bullet.pdf', buildOversizedBulletPdf());
 write('overprint-heading.pdf', buildOverprintHeadingPdf());
 write('stacked-header.pdf', buildStackedHeaderPdf());
+write('table-continuation.pdf', buildTableContinuationPdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own

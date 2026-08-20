@@ -1,0 +1,97 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R 7 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 676 >>
+stream
+BT /F1 9 Tf 1 0 0 1 72 742 Tm (Product Guide Availability) Tj ET
+BT /F2 10 Tf 1 0 0 1 72 700 Tm (Feature) Tj ET
+BT /F2 10 Tf 1 0 0 1 300 700 Tm (Available) Tj ET
+BT /F2 10 Tf 1 0 0 1 430 700 Tm (Notes) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 676 Tm (Adaptive routing for inbound cases) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 676 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 430 676 Tm (GA) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 652 Tm (Bulk reassignment of open work) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 652 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 430 652 Tm (Beta) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 628 Tm (Scheduled export of audit) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 628 Tm (No) Tj ET
+BT /F1 9 Tf 1 0 0 1 300 46 Tm (11) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 727 >>
+stream
+BT /F1 9 Tf 1 0 0 1 72 742 Tm (Product Guide Availability) Tj ET
+BT /F2 10 Tf 1 0 0 1 72 700 Tm (Feature) Tj ET
+BT /F2 10 Tf 1 0 0 1 300 700 Tm (Available) Tj ET
+BT /F2 10 Tf 1 0 0 1 430 700 Tm (Notes) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 676 Tm (trails to external storage) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 676 Tm (No) Tj ET
+BT /F1 10 Tf 1 0 0 1 430 676 Tm (GA) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 652 Tm (Inline translation of case replies) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 652 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 430 652 Tm (Pilot) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 628 Tm (Retention policy per record type) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 628 Tm (No) Tj ET
+BT /F1 10 Tf 1 0 0 1 430 628 Tm (Roadmap) Tj ET
+BT /F1 9 Tf 1 0 0 1 300 46 Tm (12) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 562 >>
+stream
+BT /F1 9 Tf 1 0 0 1 72 742 Tm (Product Guide Availability) Tj ET
+BT /F2 10 Tf 1 0 0 1 72 700 Tm (Region) Tj ET
+BT /F2 10 Tf 1 0 0 1 300 700 Tm (Volume) Tj ET
+BT /F2 10 Tf 1 0 0 1 430 700 Tm (Change) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 676 Tm (Eastern corridor) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 676 Tm (18,420) Tj ET
+BT /F1 10 Tf 1 0 0 1 430 676 Tm (plus 11 percent) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 652 Tm (Western corridor) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 652 Tm (12,110) Tj ET
+BT /F1 10 Tf 1 0 0 1 430 652 Tm (plus 3 percent) Tj ET
+BT /F1 9 Tf 1 0 0 1 300 46 Tm (13) Tj ET
+endstream
+endobj
+9 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+10 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+11 0 obj
+<< /Title (Product Guide) /Creator (Sumcheck fixtures) >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000127 00000 n 
+0000000264 00000 n 
+0000000991 00000 n 
+0000001128 00000 n 
+0000001906 00000 n 
+0000002043 00000 n 
+0000002656 00000 n 
+0000002753 00000 n 
+0000002856 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R /Info 11 0 R >>
+startxref
+2930
+%%EOF

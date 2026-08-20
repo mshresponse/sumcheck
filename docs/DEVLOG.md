@@ -7,6 +7,83 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.0 cycle · Q5 — joining a table to its continuation (#13)
+
+### What it does
+
+`mergeContinuedTables()` runs over the assembled page HTML. Where a table is
+followed — across a page marker and nothing else — by a table whose header row
+is identical, the second table's body rows move into the first and the repeated
+header is dropped. It keeps absorbing, so a table spanning four pages becomes
+one rather than two.
+
+**A matching header is the only evidence accepted.** Two tables that merely
+touch a page break are two tables. The work order is explicit that proximity
+must not license a join, and the fixture holds it to that: page 3 carries a
+different table directly after a break and stays separate.
+
+### Q4's deferral was wrong, and this is the measurement that shows it
+
+Q4 deferred 66 stranded header-only tables to this task, on the reasoning that
+they were continuation headers Q5 would merge away. **That claim is false. None
+of the 66 were resolved — the count is unchanged at 66.**
+
+Two independent reasons, both measured:
+
+| | |
+| --- | ---: |
+| stranded header-only tables | 66 |
+| of those, followed by another table **on the same page**, no break between | **59** |
+| page-split table pairs remaining after Q5 | 30 |
+| of those, with identical headers (i.e. eligible and missed) | **0** |
+| of those, with differing headers (correctly declined) | 30 |
+
+The 59 are not page-boundary continuations at all. They are a header and its own
+data rows, on one page, split into two tables because the header stack's column
+clustering resolved differently from the data's — the column counts either side
+of those splits are 2-vs-3, 2-vs-5, 2-vs-6. Q5 cannot join them without matching
+headers, and their headers cannot match while the columns disagree.
+
+So the Q4 note's diagnosis held — this is the column clustering, not the merge —
+but its prediction that Q5 would absorb them did not. **The root cause is a
+grid that never resolved, and it needs the clustering fixed, not a merge rule.**
+Joining them on adjacency is exactly the heuristic the work order forbids, and
+with mismatched column counts it would misalign every cell it touched. Filed as
+a residual rather than forced.
+
+### What did merge
+
+| | Winter '27 | Net Zero |
+| --- | ---: | ---: |
+| tables before | 209 | — |
+| tables after | **206** | — |
+| merges | **3** | **26** |
+| page-split pairs | 33 → 30 | — |
+| table rows | 984 → 978 | 3,097 → 3,045 |
+
+Word-level diff across both documents: Winter '27 loses 23 words, Net Zero 104,
+and every one is a repeated column header the merge deliberately drops —
+`Feature`, `Enabled`, `Details`, `Field`. **No data row lost a word.**
+
+3 of 33 is a small return, and the reason is the one above: 30 of the remaining
+pairs have headers that genuinely differ because one side's grid collapsed. Fix
+the clustering and most of those 30 become eligible without touching this rule.
+
+### Residuals, stated rather than papered over
+
+- **Same-page header/data splits (59).** Needs column clustering, not merging.
+- **A continuation that reprints no header** stays two tables, by design.
+- **A row label split across the boundary is still not stitched.** The fixture
+  cannot even pose the case: a label-only continuation line is a one-cell row,
+  and a one-cell row rejects the whole grid, so the continuation page produces
+  no table to merge into. That is recorded in the fixture's own comment. On the
+  reference document this remains 3/8 recovered, unchanged.
+
+Corpus: every metric at baseline, marker invariant 6 = 6. Gates: check clean,
+**50/50** harness cases, **51/51** packaged-extension checks.
+
+---
+
 ## 2026-08-19 · v1.7.0 cycle · Q4 — folding a stacked column header into one row (#9)
 
 ### The fixture, and RED
