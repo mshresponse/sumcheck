@@ -1,5 +1,62 @@
 # Changelog
 
+## 1.7.0
+
+A conversion-quality cycle scoped entirely from one benchmark: the Salesforce
+Winter '27 release notes, 1,010 pages, typeset by a different engine from
+anything the converter had been tuned against. Seven defect classes came out of
+it; six are closed here.
+
+### Headings now come from the document, not from guesswork
+
+**A PDF's embedded outline is the heading authority when it has one** (#15).
+Born-digital PDFs usually state their heading tree outright — the Winter '27 file
+lists 1,968 entries — and re-deriving it from type size is guesswork against data
+already in the file. Font-size inference remains the fallback, and it is still
+what every scanned document uses.
+
+**A bullet no longer makes a heading** (#10). A line's size was the largest glyph
+on it, so a bullet drawn at 19.2 pt in front of 12.8 pt text carried the whole
+line over the heading threshold. 713 list items were headings; now they are list
+items.
+
+**Headings no longer print their own text twice** (#11). Where a PDF fakes a bold
+weight by printing the same glyphs twice a fraction of a point apart, we now
+collapse the second impression instead of reading `August 2026August 2026`.
+
+Between them: 2,630 headings became 2,011, and the 1,033 that went were the ones
+the document never claimed.
+
+### Tables
+
+**A column header wrapped across several lines is one header row** (#9). Every
+table that used to open with a header plus two rows of nonsense now emits one
+header row.
+
+**A table continued on the next page is joined to it** (#13), when the reprinted
+header matches. Proximity alone is never enough — two tables that merely touch a
+page break stay two tables.
+
+### Nothing disappears silently
+
+**Images are declared** (#12). 161 images across 131 pages of the benchmark
+produced no output and no indication at all; each page carrying one now says so,
+in the document and in the result notes. Extraction itself is still not built,
+and the Images setting now admits that instead of offering four choices that do
+nothing for PDFs.
+
+### Also
+
+- the end-to-end verification check no longer requires the converted document to
+  quote a dollar amount, which had made it fail on any document that is not an
+  invoice (#14)
+- PDF link annotations were already extracted — 99.5% of them — and the contract
+  is now pinned: external links yes, internal jumps and `javascript:` never
+
+Corpus scores are unchanged for the fourth release running: 50/50 grand totals,
+49/49 line-item codes, 52/52 amounts on their code's row, 49/50 documents with a
+real table, 44/50 headline figures, marker invariant holding at 6 = 6.
+
 ## 1.6.0
 
 The first post-launch cycle, and it is about conversion quality: the seven-issue

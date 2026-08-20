@@ -7,6 +7,97 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.0 cycle · Q9 — re-bench, gates, release
+
+### The Winter '27 document, 1.6.0 against 1.7.0
+
+| | 1.6.0 | **1.7.0** | target | |
+| --- | ---: | ---: | --- | --- |
+| headings | 2,630 | **2,011** | toward the outline's ~1,990 | met |
+| bullet list items as headings | 713 | **0** | 0 | met |
+| headings doubling their own text | 86 | **0** | 0 | met |
+| real list items | 320 | **1,315** | ~1,033 | met |
+| tables with a mangled header split | 83 | **0** | 0 | met |
+| tables with a fully correct header | 2 | **21** | ~95% parity | **missed** |
+| tables | 209 | 206 | merges reported | 3 merged |
+| pages declaring an unconverted image | 0 | **131** | every page carrying one | met |
+| markdown links | 3,612 | 3,612 | reported | unchanged, 99.5% of URI annotations |
+| wall-clock | 5.8 s | 6.8 s | — | +17%, image counting |
+
+Result header from the packaged build installed in Chrome:
+
+```
+17 MB → 2.6 MB as .md · 85% smaller · ~581k tokens (estimated)
+Removed 2008 header/footer line(s).
+161 image(s) were not converted — image extraction is not supported for PDF yet…
+```
+
+**One target missed.** Header assembly is 21 of 209 rather than ~95%. The reason
+is in the Q5 note and it is a single defect: 66 tables are stranded continuation
+headers whose column clustering collapsed before any of this cycle ran, and 59 of
+those turn out to sit on the same page as their data rather than across a page
+break. Fixing the clustering resolves both those and most of the 30 remaining
+unmergeable page-split pairs.
+
+### Net Zero, the regression baseline
+
+| | baseline | 1.7.0 | |
+| --- | ---: | ---: | --- |
+| running-head lines surviving | 5 | **5** | T2's 99.6% catch rate holds |
+| bare folio lines surviving | 1 | **1** | T2's 100% holds |
+| headings | 892 | 864 | 26 fewer, all `CONTENTS`, a cover subtitle and TOC dot-leaders |
+| table rows | 3,122 | 3,049 | header folds and 26 continuation merges |
+| wall-clock | 3.1 s | 3.8 s | |
+
+Chrome and folio numbers are identical, which is what the work order named. The
+heading and row reductions were each checked at word level: **2 tokens** differ
+across the whole document from the table work, both halves of one already
+garbled string.
+
+### Corpus, for the fourth release running
+
+| | baseline | 1.7.0 |
+| --- | ---: | ---: |
+| grand totals matched | 50/50 | **50/50** |
+| all line-item codes found | 49/49 | **49/49** |
+| each amount on its code's row | 52/52 | **52/52** |
+| `#Error` preserved | 50/50 | **50/50** |
+| documents emitting a real table | 49/50 | **49/50** |
+| headline figure recovered | 44/50 | **44/50** |
+| value-not-recovered markers | 6 = 6 | **6 = 6** |
+| prose lexicon flags | 50/50 | **50/50** |
+
+Checked after **every** task in this cycle, not only at the end. It never moved.
+That is the evidence the fallback paths are untouched: none of the 50 documents
+carries an outline, so the corpus exercises size inference exclusively.
+
+Corpus wall-clock 39.7 s for 50 pages, 0.79 s/page — unchanged, still OCR-bound.
+
+### Release
+
+- version **1.7.0** in both manifests; the `1.7.0.1` + `version_name` scaffolding
+  from Q0 removed
+- CHANGELOG entry closing every issue by number
+- `npm run check` clean · **52/52** harness cases · **52/52** packaged-extension
+  checks including the real-PDF end-to-end on the 1,010-page document
+- `npm run package` → **`dist/sumcheck-1.7.0.zip`**, 6.2 MB
+- **`dist/sumcheck-1.6.0.zip` still hashes to `86670af2b0da21e07386e5855c6091b6d06e2254e02d8ce2759a748f128ea928`** — byte-identical to Q0's record, which was the point of the whole Q0 exercise
+- **Nothing uploaded to the Chrome Web Store.**
+
+### Fixtures added this cycle
+
+| fixture | proves |
+| --- | --- |
+| `outline-headings.pdf` | the outline outranks type size, in both directions, with every heading at 11 pt |
+| `oversized-bullet.pdf` | a decorative glyph does not make a heading; a numbered line keeps its classification |
+| `overprint-heading.pdf` | faux-bold collapses while `had had`, `that that` and two `Total` cells survive |
+| `stacked-header.pdf` | a three-line header folds into one row; a one-line header is untouched |
+| `table-continuation.pdf` | a matching header merges; a different table after a break does not |
+| `dropped-image.pdf` | one declaration per page, not per placement |
+| `link-kinds.pdf` | https and mailto yes; internal jumps and `javascript:` never |
+
+---
+
 ## 2026-08-19 · v1.7.0 cycle · Q8 — the end-to-end check stops asking for money (#14)
 
 `verify-extension` takes a PDF path and drives it through the installed
