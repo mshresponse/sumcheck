@@ -33,11 +33,11 @@ Removed 2008 header/footer line(s).
 ```
 
 **One target missed.** Header assembly is 21 of 209 rather than ~95%. The reason
-is in the Q5 note and it is a single defect: 66 tables are stranded continuation
-headers whose column clustering collapsed before any of this cycle ran, and 59 of
-those turn out to sit on the same page as their data rather than across a page
-break. Fixing the clustering resolves both those and most of the 30 remaining
-unmergeable page-split pairs.
+is in the Q5 note and it is a single defect, tracked as **#16**: 66 tables are
+stranded continuation headers whose column clustering collapsed before any of
+this cycle ran, and 59 of those turn out to sit on the same page as their data
+rather than across a page break. Fixing the clustering resolves both those and
+most of the 30 remaining unmergeable page-split pairs, and unblocks #17.
 
 ### Net Zero, the regression baseline
 
@@ -322,6 +322,9 @@ headers, and their headers cannot match while the columns disagree.
 So the Q4 note's diagnosis held — this is the column clustering, not the merge —
 but its prediction that Q5 would absorb them did not. **The root cause is a
 grid that never resolved, and it needs the clustering fixed, not a merge rule.**
+Filed as **#16** rather than left as a residual: it owns the 59 same-page splits,
+the 30 unmergeable page-split pairs, and — through the merge it blocks — the
+straddling row label of #17.
 Joining them on adjacency is exactly the heuristic the work order forbids, and
 with mismatched column counts it would misalign every cell it touched. Filed as
 a residual rather than forced.
@@ -347,12 +350,16 @@ the clustering and most of those 30 become eligible without touching this rule.
 ### Residuals, stated rather than papered over
 
 - **Same-page header/data splits (59).** Needs column clustering, not merging.
-- **A continuation that reprints no header** stays two tables, by design.
+  Tracked as **#16**, which is the root-cause issue for this whole family.
+- **A continuation that reprints no header** stays two tables, by design. Not an
+  issue: under-merging is recoverable by a reader, over-merging is not.
 - **A row label split across the boundary is still not stitched.** The fixture
   cannot even pose the case: a label-only continuation line is a one-cell row,
   and a one-cell row rejects the whole grid, so the continuation page produces
   no table to merge into. That is recorded in the fixture's own comment. On the
-  reference document this remains 3/8 recovered, unchanged.
+  reference document this remains 3/8 recovered, unchanged. Tracked as **#17**,
+  and **blocked by #16** — the halves can only be stitched once the two tables
+  are one, and the merge needs headers that match.
 
 Corpus: every metric at baseline, marker invariant 6 = 6. Gates: check clean,
 **50/50** harness cases, **51/51** packaged-extension checks.
