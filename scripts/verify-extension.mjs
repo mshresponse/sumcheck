@@ -949,17 +949,45 @@ fs.rmSync(batchDir, { recursive: true, force: true });
     // Assert what is true of any scanned estimate rather than one file's total:
     // the harness takes a PDF path, and hardcoding $151.00 made it fail on
     // every document except the one it was written against.
-    const amounts = md ? (md.match(/\$[\d,]+\.\d{2}/g) || []).length : 0;
-    const hasTable = md ? /^\|/m.test(md) : false;
+    /**
+     * Assert what is true of *any* converted PDF.
+     *
+     * This check has been narrowed twice by the same mistake. It began by
+     * hardcoding `$151.00`, which failed on every document but the one it was
+     * written against; that was generalised to "some currency amount", which
+     * then failed on the 1,010-page release notes — 2.7 million characters of
+     * correct output, tables and front matter present, reported FAIL because
+     * release notes do not quote dollar figures.
+     *
+     * A gate that cries wolf gets ignored, so the assertions are now properties
+     * of a conversion rather than of a corpus: front matter, a body, a page
+     * count matching the markers in it, and some structure. The currency
+     * assertion still exists and still runs — behind a flag, for the corpus it
+     * was written for.
+     */
     const hasFrontMatter = md ? /^---[\s\S]*?\n---/.test(md) : false;
-    const ok = Boolean(md && md.length > 500 && amounts > 0 && hasTable && hasFrontMatter);
+    const declaredPages = Number(/^pages:\s*(\d+)/m.exec(md || '')?.[1] || 0);
+    const markers = (md?.match(/<!-- page \d+ -->/g) || []).length;
+    // A document with no metadata title opens straight into page 1's content, so
+    // its first marker is omitted; every later page carries one.
+    const pagesAgree = declaredPages > 0 && markers >= declaredPages - 1 && markers <= declaredPages;
+    const structural = md ? /^\|/m.test(md) || /^#{1,6}\s/m.test(md) || /^[-*]\s/m.test(md) : false;
+    const ok = Boolean(md && md.length > 500 && hasFrontMatter && pagesAgree && structural);
     record(
-      'real corpus PDF converts end to end in the app',
+      'real PDF converts end to end in the app',
       ok,
       md
-        ? `${md.length} chars · ${amounts} amount(s) · table ${hasTable ? 'present' : 'MISSING'} · front matter ${hasFrontMatter ? 'present' : 'MISSING'}`
+        ? `${md.length} chars · front matter ${hasFrontMatter ? 'present' : 'MISSING'} · ` +
+          `${declaredPages} page(s) declared, ${markers} marker(s) · ` +
+          `structure ${structural ? 'present' : 'MISSING'}`
         : 'no output rendered'
     );
+
+    // The corpus-specific assertion, kept for the corpus it belongs to.
+    if (process.argv.includes('--expect-currency')) {
+      const amounts = (md?.match(/\$[\d,]+\.\d{2}/g) || []).length;
+      record('the billing corpus PDF carries currency amounts', amounts > 0, `${amounts} amount(s)`);
+    }
     if (md && process.argv.includes('--emit')) {
       const out = path.join(os.tmpdir(), 'sumcheck-extension-e2e.md');
       fs.writeFileSync(out, md);

@@ -7,6 +7,64 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.0 cycle · Q8 — the end-to-end check stops asking for money (#14)
+
+`verify-extension` takes a PDF path and drives it through the installed
+extension. Its assertion required the output to contain a `$nn.nn` amount — a
+property of the medical billing corpus it was written against, not of a
+conversion.
+
+**This check has now been narrowed twice by the same mistake.** It began by
+hardcoding `$151.00`; that failed on every document except the one it was
+written for, and was generalised to "some currency amount" — which then failed
+on the 1,010-page release notes:
+
+```
+FAIL  real corpus PDF converts end to end in the app — 2699404 chars · 0 amount(s) · table present · front matter present
+```
+
+2.7 million characters of correct output reported as a failure because release
+notes do not quote dollar figures. A gate that cries wolf gets ignored, which is
+the real cost.
+
+### What it asserts now
+
+Properties of a conversion rather than of a corpus:
+
+| | |
+| --- | --- |
+| front matter | present |
+| body | more than 500 characters |
+| page count | the `pages:` field agrees with the `<!-- page N -->` markers |
+| structure | a table, a heading or a list is present |
+
+The page-count check is the useful addition: it catches a conversion that
+silently truncates, which the old assertion could not. A document with no
+metadata title opens straight into page 1's content and omits that first marker,
+so the range allows `pages - 1`.
+
+```
+PASS  real PDF converts end to end in the app — 2714104 chars · front matter present · 1010 page(s) declared, 1010 marker(s) · structure present
+```
+
+### The currency assertion still exists
+
+It runs behind `--expect-currency`, for the corpus it belongs to:
+
+```
+PASS  real PDF converts end to end in the app — 2088 chars · front matter present · 1 page(s) declared, 0 marker(s) · structure present
+PASS  the billing corpus PDF carries currency amounts — 5 amount(s)
+```
+
+Deleting it would have thrown away a real check on real documents; the fix was
+never to weaken the assertion but to stop applying a corpus's properties to
+every document.
+
+Gates: **52/52** harness cases; extension checks 52/52 with a PDF argument and
+53/53 with `--expect-currency`.
+
+---
+
 ## 2026-08-19 · v1.7.0 cycle · Q7 — link annotations, and what they already do
 
 **No code changed in this task, because the feature already exists.**
