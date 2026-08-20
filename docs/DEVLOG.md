@@ -7,6 +7,92 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.1 cycle · C2 — a group row does not end the table it sits in (#16)
+
+### The fixture, and RED
+
+`test/fixtures/grouped-table.pdf` — the real x positions from the reference
+document: a three-line bottom-aligned stack whose last line carries all five
+columns, a full-width `General Enhancements` group row, two data rows, a second
+group row, two more. RED reproduced the collapse exactly: a three-column header
+with the text packed into the first cell, and every data row demoted to prose.
+
+Five of nine assertions failed. The other four are the guardrails, green
+throughout.
+
+### The fix follows C1, not the work order's expectation
+
+C2 anticipated "resolve columns from data-row evidence, then map header
+fragments onto them". C1 measured that and it is backwards — these tables are
+sparse, each row filling its label column and one of four value columns, so
+clustering on data alone finds **two** columns for a five-column table. The
+header is the only row that states the full set.
+
+The actual cause is upstream of clustering: a one-cell group row ends the table
+run, severing the header from its data. `isGroupRow()` now absorbs it instead,
+on three conditions that were measured rather than chosen:
+
+| condition | why |
+| --- | --- |
+| not bold | all **116** real group rows are non-bold; a heading between two tables is not |
+| same size as the table body | same measurement, 116 of 116 |
+| a ≥2-cell line follows within the run's own gap limit | a closing paragraph is a one-cell line too |
+
+Two consequences follow from absorbing it, and both had to be handled
+explicitly:
+
+- **A group row is exempt from the two-column row test.** It spans the table by
+  design, so filling one column is not evidence of a broken grid. Every other
+  row still has to prove itself — that test is what keeps prose out of tables.
+- **A group row does not vote on where the columns are.** Letting it invented a
+  sixth column at its own left edge that every real row then left empty. Found
+  by instrumenting `buildTable`'s exit, not by reading it.
+
+### Guardrails, all asserted
+
+| | |
+| --- | --- |
+| a heading between two tables | two tables, not one — bold and larger, so not absorbed |
+| their differing widths | `Region \| Volume` stays 2 columns, `Quarter \| Target \| Actual` stays 3 |
+| headings themselves | still headings, not table rows |
+| a closing paragraph | outside the table |
+| Q4's fold, Q5's merge, single-line headers | unchanged — their fixtures pass untouched |
+
+### The corpus, which is the real risk surface
+
+A change to table detection is the most dangerous thing this project can do to a
+corpus of scanned forms. Beyond the scored metrics, the whole corpus was
+converted before and after and compared directly:
+
+| | before | after |
+| --- | ---: | ---: |
+| table rows across all 50 documents | 249 | **249** |
+| documents whose table row count changed | — | **0** |
+| words present before and absent after | — | **0** |
+
+**Byte-stable.** Every scored metric at baseline, marker invariant 6 = 6. The
+corpus has no group rows for the rule to act on, and it acted on nothing.
+
+### Spot check on the reference document
+
+Not C3 — that task measures each symptom properly. This is only evidence the
+mechanism reaches the real document:
+
+| | 1.7.0 | after C2 |
+| --- | ---: | ---: |
+| tables | 206 | **147** |
+| tables with a fully correct header | 21 | **49** |
+| stranded header-only tables | 66 | **31** |
+
+The 59-table drop is exactly the 59 same-page splits Q5 measured — the header
+stacks have rejoined their data. 31 stranded tables remain and C3 will account
+for them.
+
+Gates: check clean, **53/53** harness cases, **51/51** packaged-extension checks.
+Both pending artifacts still `86670af2…` and `f17abe1f…`.
+
+---
+
 ## 2026-08-19 · v1.7.1 cycle · C1 characterization — why the grid collapses (#16)
 
 **Measured before changing anything.** No fix in this entry. Instrumentation was

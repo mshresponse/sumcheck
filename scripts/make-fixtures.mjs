@@ -908,6 +908,116 @@ function buildLinkKindsPdf() {
   return Buffer.from(out, 'latin1');
 }
 
+/**
+ * A table whose header stack is severed from its data by a group row.
+ *
+ * Measured on a 1,010-page reference document: every table run in it ends on a
+ * one-cell line, and those lines are the section labels the tables are built
+ * from — `General Enhancements`, `Salesforce Foundations`. The header stack ends
+ * up alone, 69 such stacks resolve five columns into three, and the data starts
+ * a fresh table below.
+ *
+ * The x positions here are the real ones. The last stack line carries all five
+ * columns; the two lines above it are offset by a bottom-aligned centring that
+ * puts fragments from different columns within the 9 pt clustering tolerance.
+ *
+ * Three guardrails share the page, because absorbing a one-cell line is exactly
+ * the kind of fix that eats a document:
+ *
+ *   - a genuine two-column table followed by a genuine three-column table, which
+ *     must stay two tables
+ *   - a closing paragraph after the last table, which is also a one-cell line
+ *     and must not be swallowed
+ */
+function buildGroupedTablePdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const content = [
+    // The stack: three lines, bottom-aligned, five columns on the last.
+    line('F1', 10, 321, 720, 'Enabled for'),
+    line('F1', 10, 408, 720, 'Requires'),
+    line('F1', 10, 491, 720, 'Contact'),
+    line('F1', 10, 240, 705, 'Enabled for'),
+    line('F1', 10, 313, 705, 'administrators'),
+    line('F1', 10, 479, 705, 'Salesforce to'),
+    line('F1', 10, 128, 690, 'Feature'),
+    line('F1', 10, 255, 690, 'users'),
+    line('F1', 10, 319, 690, '/developers'),
+    line('F1', 10, 416, 690, 'setup'),
+    line('F1', 10, 494, 690, 'enable'),
+
+    // A full-width group label: one cell, and the table continues under it.
+    line('F1', 10, 90, 667, 'General Enhancements'),
+    line('F1', 10, 69, 644, 'Adaptive routing for inbound cases'),
+    line('F1', 10, 255, 644, 'Yes'),
+    line('F1', 10, 69, 621, 'Bulk reassignment of open work'),
+    line('F1', 10, 416, 621, 'Yes'),
+
+    // A second group label, mid-table.
+    line('F1', 10, 90, 598, 'Platform Services'),
+    line('F1', 10, 69, 575, 'Retention policy per record type'),
+    line('F1', 10, 494, 575, 'Yes'),
+    line('F1', 10, 69, 552, 'Inline translation of case replies'),
+    line('F1', 10, 319, 552, 'Yes'),
+
+    /**
+     * Guardrail: two genuinely different tables separated by a heading.
+     *
+     * The heading is a one-cell line with a table under it, exactly like a group
+     * row — the difference is that it is bold and set larger, which is what all
+     * 116 real group rows measured on the reference document are not. If that
+     * distinction fails, these two tables fuse into one and their columns
+     * misalign.
+     */
+    line('F2', 12, 72, 500, 'Regional Totals'),
+    line('F2', 10, 72, 476, 'Region'),
+    line('F2', 10, 260, 476, 'Volume'),
+    line('F1', 10, 72, 458, 'East'),
+    line('F1', 10, 260, 458, '18,420'),
+    line('F1', 10, 72, 440, 'West'),
+    line('F1', 10, 260, 440, '12,110'),
+
+    line('F2', 12, 72, 412, 'Quarterly Summary'),
+    line('F2', 10, 72, 388, 'Quarter'),
+    line('F2', 10, 220, 388, 'Target'),
+    line('F2', 10, 360, 388, 'Actual'),
+    line('F1', 10, 72, 370, 'Q1'),
+    line('F1', 10, 220, 370, '1,000'),
+    line('F1', 10, 360, 370, '1,140'),
+    line('F1', 10, 72, 352, 'Q2'),
+    line('F1', 10, 220, 352, '1,200'),
+    line('F1', 10, 360, 352, '1,090'),
+
+    // Guardrail: a closing paragraph is a one-cell line too.
+    line('F1', 10, 72, 320, 'All figures above are provisional until the quarter closes.'),
+  ].join('\n');
+
+  const objects = [];
+  const add = (body) => { objects.push(body); return objects.length; };
+  add('<< /Type /Catalog /Pages 2 0 R >>');
+  add('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      '/Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>');
+  add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const info = add('<< /Title (Grouped Availability) /Creator (Sumcheck fixtures) >>');
+
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 /* ------------------------------------------------------------------- PDF */
 
 function buildPdf() {
@@ -1228,6 +1338,7 @@ write('stacked-header.pdf', buildStackedHeaderPdf());
 write('table-continuation.pdf', buildTableContinuationPdf());
 write('dropped-image.pdf', buildDroppedImagePdf());
 write('link-kinds.pdf', buildLinkKindsPdf());
+write('grouped-table.pdf', buildGroupedTablePdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own

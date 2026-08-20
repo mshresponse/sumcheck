@@ -1937,6 +1937,87 @@ async function runLinkKindsCase() {
   }
 }
 
+/**
+ * A group row inside a table does not end the table (C2, #16).
+ *
+ * Measured on a 1,010-page reference document: **every** table run in it ends on
+ * a one-cell line, 228 of them, and 116 of those are followed by more table.
+ * They are the section labels the tables are built from — `General
+ * Enhancements`, `Salesforce Foundations` — sitting between a header and the
+ * rows they group. Ending the run there severs the header stack from its data;
+ * the stack alone then resolves five columns into three, because a
+ * bottom-aligned stack puts fragments from different columns inside the 9 pt
+ * clustering tolerance. 69 tables in that document collapse exactly that way.
+ *
+ * The guardrails are half this fixture. All 116 real group rows are **non-bold
+ * and the same size as the table body**; a heading between two tables is
+ * neither, and if that distinction fails, two unrelated tables fuse and their
+ * columns misalign. A closing paragraph is a one-cell line too.
+ */
+async function runGroupedTableCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>a group row does not end the table it sits in</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'grouped-table', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/grouped-table.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'grouped-table.pdf' }, { outputs: ['md'] }, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    const rows = body.split('\n').filter((l) => l.startsWith('|'));
+    const header = rows[0] || '';
+    const widthOf = (r) => r.split('|').length - 2;
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the header resolves to five columns': () =>
+          widthOf(header) === 5 || `header had ${widthOf(header)} columns: ${header.slice(0, 80)}`,
+        'the row-label column is headed': () =>
+          /\|\s*Feature\s*\|/.test(header) || `header was ${header.slice(0, 80)}`,
+        'the data rows are in the table, not prose': () =>
+          rows.some((r) => r.includes('Adaptive routing for inbound cases')) &&
+            rows.some((r) => r.includes('Inline translation of case replies')) ||
+          'data rows were emitted as text',
+        'the group labels survive as rows': () =>
+          rows.some((r) => r.includes('General Enhancements')) &&
+            rows.some((r) => r.includes('Platform Services')) ||
+          'a group label was lost',
+        'the values travel with their rows': () =>
+          rows.filter((r) => /\bYes\b/.test(r)).length === 4 ||
+          `${rows.filter((r) => /\bYes\b/.test(r)).length} rows carry a value, expected 4`,
+
+        'a heading between two tables keeps them apart': () =>
+          body.includes('| Region | Volume |') && body.includes('| Quarter | Target | Actual |') ||
+          'the two guardrail tables were fused',
+        'their rows keep their own widths': () =>
+          body.includes('| East | 18,420 |') && body.includes('| Q1 | 1,000 | 1,140 |') ||
+          'a guardrail table lost its shape',
+        'the headings are still headings': () =>
+          /^#{1,6}\s+Regional Totals$/m.test(body) && /^#{1,6}\s+Quarterly Summary$/m.test(body) ||
+          'a heading was absorbed into a table',
+        'a closing paragraph is not swallowed': () =>
+          /^All figures above are provisional until the quarter closes\.$/m.test(body) ||
+          'the closing paragraph was absorbed',
+      },
+      record.md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('grouped-table', err);
+  }
+}
+
 const summary = document.getElementById('summary');
 const container = document.getElementById('cases');
 const results = [];
@@ -1979,6 +2060,7 @@ async function run() {
     ['table-continuation', runTableContinuationCase],
     ['dropped-image', runDroppedImageCase],
     ['link-kinds', runLinkKindsCase],
+    ['grouped-table', runGroupedTableCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],

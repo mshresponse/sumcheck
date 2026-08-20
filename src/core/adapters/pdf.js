@@ -2106,6 +2106,23 @@ export function detectTables(lines, bodySize) {
         j++;
         continue;
       }
+      /**
+       * A full-width group row spanning the table — `General Enhancements` over
+       * the rows it groups — is one cell wide, and ending the run there severs a
+       * header from its own data.
+       *
+       * Measured on a 1,010-page reference document: every one of its 228 run
+       * terminations was a one-cell line, and 116 of those were followed by more
+       * table. The severed header then resolves five columns into three, because
+       * a bottom-aligned stack alone puts fragments from different columns
+       * inside the clustering tolerance — 69 tables collapsed that way.
+       */
+      if (isGroupRow(line, run, lines[j + 1], bodySize)) {
+        run.push({ line, continuations: [], group: true });
+        consumed.push(line);
+        j++;
+        continue;
+      }
       break;
     }
 
@@ -2182,10 +2199,36 @@ function isWrappedCell(line, previous, row) {
   return !next || line.x2 <= next.x;
 }
 
+/**
+ * A one-cell line that groups the rows beneath it rather than ending the table.
+ *
+ * Three conditions, all measured rather than chosen. Of the 116 real group rows
+ * in the reference document, **every one** is non-bold and set at the same size
+ * as the table body — precisely what a heading between two tables is not, and
+ * that is the distinction keeping two unrelated tables from being fused into one
+ * with misaligned columns.
+ *
+ * The third condition is that the table actually continues: a closing paragraph
+ * is a one-cell line too. Under-absorbing leaves a table split, which a reader
+ * can see; over-absorbing eats prose into a grid, which they cannot.
+ */
+function isGroupRow(line, run, next, bodySize) {
+  if (!run.length || line.cells.length !== 1) return false;
+  if (line.bold) return false;
+  const body = run[run.length - 1].line;
+  if (Math.abs((line.textSize || line.size) - (body.textSize || body.size)) > 0.6) return false;
+  if (!next || next.cells.length < 2) return false;
+  return next.y - line.y <= Math.max(next.size, bodySize) * 4;
+}
+
 function buildTable(run, bodySize) {
   const tolerance = Math.max(bodySize * 0.9, 4);
   const anchors = [];
-  for (const { line } of run) {
+  for (const { line, group } of run) {
+    // A group row spans the table rather than sitting in a column, so its own
+    // position is not evidence of one — letting it vote invents a column that
+    // every real row then leaves empty.
+    if (group) continue;
     for (const cell of line.cells) {
       const hit = anchors.find((a) => Math.abs(a.x - cell.x) <= tolerance);
       if (hit) {
@@ -2241,7 +2284,7 @@ function buildTable(run, bodySize) {
   const grid = [];
   let cells = 0;
   let misfits = 0;
-  for (const { line, continuations } of run) {
+  for (const { line, continuations, group } of run) {
     const row = columns.map(() => []);
     for (const cell of line.cells) {
       const { index, distance } = columnFor(cell.x);
@@ -2249,7 +2292,10 @@ function buildTable(run, bodySize) {
       if (distance > tolerance * 2.2) misfits++;
       row[index].push(cell);
     }
-    if (row.filter((fragments) => fragments.length).length < 2) return null;
+    // A group row spans the table by design, so filling one column is not
+    // evidence of a broken grid. Every other row still has to prove itself —
+    // that test is what keeps prose out of tables.
+    if (!group && row.filter((fragments) => fragments.length).length < 2) return null;
     // Wrapped text rejoins the cell it belongs to, so a description stays in
     // the description column instead of trailing after the amounts.
     for (const extra of continuations) {

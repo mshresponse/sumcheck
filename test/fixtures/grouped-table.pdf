@@ -1,0 +1,78 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 2026 >>
+stream
+BT /F1 10 Tf 1 0 0 1 321 720 Tm (Enabled for) Tj ET
+BT /F1 10 Tf 1 0 0 1 408 720 Tm (Requires) Tj ET
+BT /F1 10 Tf 1 0 0 1 491 720 Tm (Contact) Tj ET
+BT /F1 10 Tf 1 0 0 1 240 705 Tm (Enabled for) Tj ET
+BT /F1 10 Tf 1 0 0 1 313 705 Tm (administrators) Tj ET
+BT /F1 10 Tf 1 0 0 1 479 705 Tm (Salesforce to) Tj ET
+BT /F1 10 Tf 1 0 0 1 128 690 Tm (Feature) Tj ET
+BT /F1 10 Tf 1 0 0 1 255 690 Tm (users) Tj ET
+BT /F1 10 Tf 1 0 0 1 319 690 Tm (/developers) Tj ET
+BT /F1 10 Tf 1 0 0 1 416 690 Tm (setup) Tj ET
+BT /F1 10 Tf 1 0 0 1 494 690 Tm (enable) Tj ET
+BT /F1 10 Tf 1 0 0 1 90 667 Tm (General Enhancements) Tj ET
+BT /F1 10 Tf 1 0 0 1 69 644 Tm (Adaptive routing for inbound cases) Tj ET
+BT /F1 10 Tf 1 0 0 1 255 644 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 69 621 Tm (Bulk reassignment of open work) Tj ET
+BT /F1 10 Tf 1 0 0 1 416 621 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 90 598 Tm (Platform Services) Tj ET
+BT /F1 10 Tf 1 0 0 1 69 575 Tm (Retention policy per record type) Tj ET
+BT /F1 10 Tf 1 0 0 1 494 575 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 69 552 Tm (Inline translation of case replies) Tj ET
+BT /F1 10 Tf 1 0 0 1 319 552 Tm (Yes) Tj ET
+BT /F2 12 Tf 1 0 0 1 72 500 Tm (Regional Totals) Tj ET
+BT /F2 10 Tf 1 0 0 1 72 476 Tm (Region) Tj ET
+BT /F2 10 Tf 1 0 0 1 260 476 Tm (Volume) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 458 Tm (East) Tj ET
+BT /F1 10 Tf 1 0 0 1 260 458 Tm (18,420) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 440 Tm (West) Tj ET
+BT /F1 10 Tf 1 0 0 1 260 440 Tm (12,110) Tj ET
+BT /F2 12 Tf 1 0 0 1 72 412 Tm (Quarterly Summary) Tj ET
+BT /F2 10 Tf 1 0 0 1 72 388 Tm (Quarter) Tj ET
+BT /F2 10 Tf 1 0 0 1 220 388 Tm (Target) Tj ET
+BT /F2 10 Tf 1 0 0 1 360 388 Tm (Actual) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 370 Tm (Q1) Tj ET
+BT /F1 10 Tf 1 0 0 1 220 370 Tm (1,000) Tj ET
+BT /F1 10 Tf 1 0 0 1 360 370 Tm (1,140) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 352 Tm (Q2) Tj ET
+BT /F1 10 Tf 1 0 0 1 220 352 Tm (1,200) Tj ET
+BT /F1 10 Tf 1 0 0 1 360 352 Tm (1,090) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 320 Tm (All figures above are provisional until the quarter closes.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+7 0 obj
+<< /Title (Grouped Availability) /Creator (Sumcheck fixtures) >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000002329 00000 n 
+0000002426 00000 n 
+0000002528 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R /Info 7 0 R >>
+startxref
+2608
+%%EOF
