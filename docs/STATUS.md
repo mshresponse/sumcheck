@@ -238,6 +238,16 @@ npm run score-export <dir-of-md> <groundtruth.json>    # score against expectati
 The audit serves a corpus read-only from where it already lives and copies
 nothing, which matters for documents containing personal data.
 
+### The exam harness (outside this repository)
+
+Evaluation infrastructure lives in the audit enclave at `~/mdforge-audit/exam/`,
+never here: a 117-row corpus manifest across six tranches and twenty producer
+families, a two-tier grader with a sealed hold-out, and a pre-registration
+discipline recorded in `DEVLOG.md`. It is deliberately not committed — a
+hold-out set that ships with the code it grades is not a hold-out. The DEVLOG
+entry for 2026-08-20 carries the grader's hash, which is what the round-grade
+step checks itself against.
+
 ---
 
 ## 7. What is actually left

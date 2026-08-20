@@ -7,6 +7,251 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-20 · harness cycle · H0–H2 — corpus intake, and a grader that can be argued with
+
+No product changes. Everything built here lives in `~/mdforge-audit/exam/` — the
+enclave, not the repository. `dist/` is byte-identical to the H0 record, and the
+working tree is clean:
+
+```
+86670af2b0da21e07386e5855c6091b6d06e2254e02d8ce2759a748f128ea928  dist/sumcheck-1.6.0.zip
+f17abe1f28359e1aa2526e773b45e8506bef4c84d285d3219139f1c1b27a4416  dist/sumcheck-1.7.0.zip
+e2750b83fd5228034b6a4d410ca78f06a6a8e5e959b88da8da6d3103cc5d39c3  dist/sumcheck-1.7.1.zip
+```
+
+Gates at the checkpoint: check clean, **53/53** harness cases, **51/51** packaged-extension checks.
+
+### An ordering correction, made deliberately
+
+The order runs H0 → H1 → H2, but H1.3 requires the pre-registration entry to carry
+the "grader script hash (from H2)". A seal cannot be pre-registered before the
+grader it names exists. H0 and H2 were therefore built first and H1 waits on the
+owner's seed. Nothing about the split is decided: no sealed document has been
+drawn, let alone read.
+
+### H0 — the unified corpus
+
+`exam/MANIFEST.csv`, 117 rows — 116 present, 1 placeholder for the owner's pending
+phone photograph.
+
+| tranche | files | pool | note |
+| --- | ---: | --- | --- |
+| gfe | 50 | tuning-only | the scored corpus; ground truth `mdforge-groundtruth-50.json` |
+| sf-archive | 23 | draw | owner archive; no manifest existed, one was built |
+| realworld | 22 | draw | 17 prior + 4 collected here + 1 pending |
+| generated | 11 | draw | reviewer-authored source, known truth |
+| smoke | 9 | tuning-only | format coverage |
+| reference | 2 | tuning-only | Winter '27, Net Zero — `reference: true` |
+
+**Producer families** (104 PDFs): ABCpdf 50, Prince 14, XEP 11, pdfTeX 5, Adobe
+PDF Library 5, Skia 3, LibreOffice 2, img2pdf 2, PDFlib 2, and one each of
+ReportLab, WeasyPrint, Qt, Acrobat/Distiller, Acrobat import, LiveCycle Designer,
+Acrobat Paper Capture, cairo, Microsoft Word, LuraDocument. **Formats**: 104 pdf,
+2 jpg, and one each of adoc, docx, epub, html, ipynb, png, pptx, rtf, xlsx, zip.
+**22,770 pages.** Assertions pass: no duplicate sha256 anywhere, every file opens,
+every PDF parses and is unencrypted.
+
+Three intake decisions worth recording rather than smoothing over:
+
+- **The manifest is the corpus; the directory listing is not.** Merging by walking
+  each directory swept in every tranche's `README.md` and `generated/make_split.py`
+  as documents — 65 rows where there should have been 62. The merge is now driven
+  by the tranche manifests, and disagreement in *either* direction (a file on disk
+  nobody declared, a declared file gone missing) is reported rather than resolved
+  silently. Digests are always recomputed, never trusted from the tranche file.
+- **The scored corpus is in the manifest although it is not a candidate.** H1 can
+  only exclude from the draw what the draw can see. Its fingerprint — the 50
+  sha256s, sorted, hashed — is
+  `c88c7e82dc7263a2e13aebc7c979cf52eb9ac7d4af678c0df9ca5495d84d863b`: one value
+  that detects any movement, per the standing rule.
+- **H1's exclusions are recorded as a `pool` column**, not re-derived at split
+  time, so the reason a document never entered the draw is auditable in the
+  manifest itself.
+
+The scanned corpus's `Producer` string embeds the scanning operator's personal
+name. Reports fold it to the tool ("ABCpdf") so no DEVLOG entry or grader output
+republishes an individual's name.
+
+#### The four collected documents
+
+Two open-access medical journal PDFs (PLOS ONE via the PLOS→Arbortext→PDFlib
+pipeline; BMC/Springer via InDesign→Adobe PDF Library→iText — deliberately
+different stacks), one published clinical-note *sample*, one 1826 printed-book
+scan. All verified: HTTP 200, `%PDF` magic, `pdfinfo` parses, not encrypted,
+`pdftotext` exits 0.
+
+One sourcing constraint, handled the right way: `pmc.ncbi.nlm.nih.gov/.../pdf/`
+returns an HTML interstitial to automated requests. **No attempt was made to work
+around it.** The same two articles came from Europe PMC, the PMC partner
+repository serving the publisher-deposited PDF, and the manifest records the exact
+URLs used. Same posture as the last collection, where gao.gov/cbo.gov/bls.gov 403s
+were substituted rather than evaded.
+
+The clinical note carries its attestation inside the rendered document: labelled a
+transcription sample, "not intended for medical diagnosis, treatment, or patient
+care", names changed, referring physician as "Dr. X". No credentialed or DUA-gated
+source (MIMIC, i2b2/n2c2) was touched.
+
+### H2 — the grader
+
+`exam/grade.mjs` with `metrics.mjs`, `truth.mjs`, `serve.mjs`, `runner.html`,
+`runner.js`, `build-manifest.py`. Deterministic, no network beyond localhost. It
+drives an unmodified working-tree build in headless Chrome under the extension's
+own CSP.
+
+**Tier A** — the loop gate. The scored corpus (scored by the repo's own
+`score-export.mjs`, not a second implementation that would eventually disagree
+with it) plus five named documents: one XEP release note, one Prince guide, the
+census document, one generated PDF, the MuleSoft PDF. **55 documents in 47 s
+against a 90 s budget.** It reproduces the corpus's known figures exactly — totals
+50/50, codes 49/49, attribution 52/52, headline 44/50, marker invariant 6 = 6.
+
+**Tier B** — the round grade. Every document in the target set: headings, tables,
+fully-correct headers, stranded header-only tables, merges, list items, links,
+images declared, review flags, wall-clock, output sha256; and for known-truth
+documents, heading recall, table-cell accuracy on the availability matrix, totals
+intact, invented text. **115 documents in 283 s.**
+
+| tranche | docs | tables | correct hdr | | stranded | merges | links |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| generated | 11 | 32 | 28 | 88% | 0 | 0 | 16 |
+| gfe | 50 | 49 | 44 | 90% | 0 | 0 | 0 |
+| realworld | 20 | 721 | 419 | 58% | 17 | 0 | 744 |
+| reference | 2 | 603 | 466 | 77% | 20 | 57 | 3,126 |
+| sf-archive | 23 | 3,547 | 2,135 | 60% | **746** | 153 | 46,101 |
+| smoke | 9 | 11 | 11 | 100% | 0 | 0 | 2 |
+| **total** | **115** | **4,963** | **3,103** | **63%** | **783** | **210** | **49,989** |
+
+The 746 stranded tables in the SF archive are the defect surface H5 is aimed at,
+and they were invisible before this cycle because nothing measured that archive.
+
+**The composite** puts hard constraints first — corpus byte-stable, no data-word
+loss against the previous build with repeated-header drops excepted per the Q5
+standard, every document converted, no scored-corpus regression — and only then a
+weighted objective. If a constraint trips, the score is not reported as a verdict
+at all. Weights live in one block, each with the reason it holds its value.
+
+**The fence.** `--round-grade` requires `--fence <sha256>` and refuses on
+mismatch. The expected value comes from this entry — outside every file it covers
+— so the check cannot be satisfied by editing the grader; a hash the program
+stored about itself would be circular. It covers all seven harness files, not
+`grade.mjs` alone, because weights, metric definitions and the document list all
+change scores and fencing only the entry point would leave the deciding parts
+unfenced. `--set sealed` refuses without `--round-grade`.
+
+```
+harness sha256    b756a63ee494f59e5eaec9a66aa841ce599e8845f2e796660d58884cf9f95a9e
+grade.mjs sha256  c746761d1009806795db9d8412006531a618afd5abc959782b3e894e6891bf16
+```
+
+Four fence behaviours were tested: sealed-without-round-grade refuses,
+round-grade-without-fence refuses, wrong fence refuses with both values printed,
+correct fence runs.
+
+### Determinism, measured early
+
+H3's question got answered while validating Tier B, so it is recorded here. Two
+full Tier B runs over the tuning set, identical build:
+
+| | documents |
+| --- | ---: |
+| differ before canonicalisation | 114 / 115 |
+| **differ after canonicalisation** | **0 / 115** |
+
+Exactly one field is nondeterministic — `converted:`, a wall-clock timestamp in
+every conversion's front matter. Excluding it, all 115 documents reproduce
+byte-for-byte, **including the 52 that run OCR**, which was the named risk. Both
+runs also produced the identical composite, 1.5455.
+
+The work order asks for a decision: fix the output or exclude the field. Product
+code is off-limits outside the H5 loop, so the grader canonicalises it away and
+this is the record. `created:` is *not* excluded — it comes from the source
+document's own metadata and is stable.
+
+### What building the grader found
+
+Every one of these was the instrument reading wrong, not the product. They are
+listed because a grader nobody has tried to break is not evidence.
+
+1. **A degenerate table was scoring as a perfect one.** The DOCX path emits each
+   cell on its own line, leaving a bare `|` above the delimiter row. Read loosely
+   that is a table with a zero-cell header over a zero-cell body — and zero
+   trivially equals zero, so it counted as a *fully correct header*. A document
+   whose tables are entirely broken reported 4 tables, 4 of them perfect. The
+   parser now enforces GFM's real rule: header and delimiter must have equal,
+   non-zero cell counts. **A metric that rewards destroying a table is worse than
+   no metric.**
+2. **Output filenames collided.** Seven documents in this corpus share the stem
+   `meridian`; `meridian.docx` and `meridian.epub` both wrote `meridian.md`. The
+   per-document baseline comparison was diffing one format's output against
+   another's — a hard constraint quietly checking the wrong thing.
+3. **Heading recall read 4/10 where the truth was 10/10.** Turndown escapes
+   "1. Overview" to `1\. Overview`; the comparison did not un-escape, so every
+   numbered heading in the corpus scored as un-recalled.
+4. **Invented text saturated at maximum for both truth documents.** Two causes:
+   front matter (the rendering browser's user-agent string is not invented
+   content), and that the MuleSoft PDF is a printed *web page* while its `.adoc`
+   is only the article body — the site's navigation and footer are legitimately in
+   the PDF and absent from the source. Scored naively that is 413 invented words.
+   Truth sources now declare whether they are *complete*; a partial source grades
+   recall and cell accuracy and declines to answer the invention question.
+5. **The renderer ran out of memory at corpus scale.** Holding every conversion in
+   the page and returning them in one devtools message failed on document 100 of
+   115 with a bare "Failed to fetch" — which reads exactly like a corrupt file.
+   Results now stream out of the page as they are produced.
+6. **An archive was scoring as a failed document.** `convertFile` returns
+   `{expand: […]}` for a zip and no `outputs`, so the archive adapter working
+   exactly as designed tripped the "every document converted" constraint.
+
+The gates were then tested by planting defects rather than by trusting them — a
+changed token and an added token in the baseline. Byte-stability caught both
+documents; data-word loss caught the changed token.
+
+### The C1–C3 header number does not mean what the work order assumes
+
+This one changes a pre-registered target, so it needs the reviewer before H5.
+
+`c3-measure.py`'s "fully correct header" test was `/\|\s*Feature\s*\|/` — **does
+the header row contain a cell reading "Feature".** That is a Winter '27 idiom
+anchor, not a correctness test: it says nothing about the other four columns, and
+it cannot be computed at all for a document whose tables have different headings.
+
+The grader's measure is structural and general: at least one data row, no empty
+header cell, header width equal to the modal body-row width. On the same output,
+the same 122 tables:
+
+| | Winter '27 |
+| --- | ---: |
+| C3 proxy — header contains `\| Feature \|` | **59 / 122** (48%) |
+| grader — no empty cell, width matches body | **33 / 122** (27%) |
+
+Both are correct about different questions. The general one is used because the
+corpus is now 115 documents across twenty producer families and a per-document
+string anchor does not generalise.
+
+**H5 pre-registers "fully-correct headers ≥ 85% on Winter '27-class tuning
+documents". 85% under the proxy and 85% under this definition are not the same
+bar,** and the current baseline is 27%, not 48%. The target needs restating
+against the grader's definition before the loop runs, and that is a reviewer
+decision, not one to make inside the loop.
+
+### One product finding, filed not fixed
+
+**The DOCX path emits no valid Markdown tables.** `meridian.docx` produces 0
+parseable tables where the same content yields 4 through the HTML adapter, 4
+through PPTX, and 6 printed to PDF and read back through the PDF adapter. Each
+cell lands on its own line with blank lines around it, so the output is not GFM at
+all. The repo's `sample.docx` fixture contains no tables, which is consistent with
+this having gone unnoticed. No product change this cycle — the order permits none
+outside H5 — and this is not the defect H5 is about.
+
+### Corpus
+
+Byte-stable throughout. The scored corpus has not moved: fingerprint unchanged,
+totals 50/50, headline 44/50, marker invariant 6 = 6.
+
+---
+
 ## 2026-08-20 · standing capability — an independent baseline, two ways
 
 No product changes. One deliverable lives in the repository (`.claude/agents/`);
