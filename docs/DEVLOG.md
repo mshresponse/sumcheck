@@ -7,6 +7,40 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.1 cycle · C0 — version bump first, two artifacts to protect
+
+### The artifacts this cycle must not touch
+
+```
+dist/sumcheck-1.6.0.zip
+SHA-256  86670af2b0da21e07386e5855c6091b6d06e2254e02d8ce2759a748f128ea928
+size     6,493,701 bytes
+
+dist/sumcheck-1.7.0.zip
+SHA-256  f17abe1f28359e1aa2526e773b45e8506bef4c84d285d3219139f1c1b27a4416
+size     6,500,548 bytes
+```
+
+Two now rather than one: 1.5.0 is still in review, 1.6.0 was never submitted, and
+1.7.0 is packaged and waiting. C4 re-checks both digests.
+
+### Version
+
+`manifest.json` carries `"version": "1.7.1.1"` with
+`"version_name": "1.7.1-dev"`, and `package.json` carries `1.7.1-dev`. Same
+scheme as Q0 and for the same reason: Chrome refuses to load a manifest whose
+version is not one to four dot-separated integers, so the suffix lives in
+`version_name` where Chrome will accept it, and the fourth component keeps
+mid-cycle packages distinct from both pending artifacts and from the 1.7.1 that
+C4 will produce.
+
+Verified after the change: `npm run check` clean, **52/52** harness cases,
+**51/51** packaged-extension checks, packaging landed on
+`dist/sumcheck-1.7.1.1.zip`, and both pending zips still hash to `86670af2…` and
+`f17abe1f…`.
+
+---
+
 ## 2026-08-19 · v1.7.0 cycle · Q9 — re-bench, gates, release
 
 ### The Winter '27 document, 1.6.0 against 1.7.0

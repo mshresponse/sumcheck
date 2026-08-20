@@ -1,6 +1,6 @@
 {
   "name": "sumcheck",
-  "version": "1.7.0",
+  "version": "1.7.1-dev",
   "private": true,
   "description": "Chrome extension that converts PDFs, Office documents, EPUB, images and web pages to Markdown, HTML, plain text or structured JSON \u2014 entirely on-device.",
   "type": "module",
