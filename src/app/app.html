@@ -115,6 +115,12 @@
             <option value="strip" data-i18n="uiRemove">Remove</option>
           </select>
         </label>
+        <!-- The PDF adapter reads images only to measure a scan's resolution and
+             never emits one, so none of the four choices above changes a PDF.
+             Saying so beside the control is the honest minimum until extraction
+             exists. -->
+        <p class="field-note" data-i18n="uiImagesPdfNote">Not yet supported for PDF — pages carrying
+          images say so in the output.</p>
         <label><input type="checkbox" name="frontMatter" checked> <span data-i18n="uiAddYamlFrontMatter">Add YAML front matter</span></label>
         <label><input type="checkbox" name="readability" checked> <span data-i18n="uiStripPageFurnitureFromWebPages">Strip page furniture from web pages</span></label>
         <label><input type="checkbox" name="includeSpeakerNotes" checked> <span data-i18n="uiIncludeSpeakerNotes">Include speaker notes</span></label>

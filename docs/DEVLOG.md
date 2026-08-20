@@ -7,6 +7,71 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.0 cycle · Q6 — images are declared, never silent (#12)
+
+Extraction is out of scope this cycle. Saying nothing was not.
+
+### What the output now carries
+
+```markdown
+_(2 images not converted)_  <!-- SUMCHECK: 2 images on page 1 could not be converted — image extraction is not supported for PDF yet -->
+```
+
+One line per page that draws images, carrying a visible placeholder and a review
+marker, plus a count in the result notes: *"161 image(s) were not converted —
+image extraction is not supported for PDF yet, and each page carrying one says so
+in the output."*
+
+### Grouping, as the work order asked
+
+**One declaration per page, never one per placement.** Images are counted as
+distinct objects within a page, so a page stamping one icon four times reports
+one picture. Without that, a logo repeated down a long document buries the
+content under placeholders — which is why the fixture's first page paints the
+same object twice and asserts a single declaration.
+
+On the reference document: **131 declarations across exactly the 131 pages the
+bench measured as carrying images**, totalling 161 images. That 161 is the
+per-page distinct count summed; the bench's 106 is the document-wide distinct
+count, and the two agree — no image repeats within a page in that document.
+
+### Two details worth recording
+
+**The marker span carries `⚠`.** An empty inline node is blank to turndown, and
+blank nodes are replaced before any rule runs, so a marker with no content
+vanished silently — the same reason the unreadable-value marker has carried that
+character all along.
+
+**The placeholder uses parentheses, not brackets.** Turndown escapes `[` as `\[`
+because it could open a link, and the backslashes reach the reader:
+`_\[2 images not converted\]_`. A fixture assertion now fails if any escape
+artefact reaches the output.
+
+### Pages read by OCR are excluded
+
+On a scanned page the image *was* converted — that is what OCR did. Declaring it
+missing would be false, and it would also break the marker invariant on the
+scored corpus, where all 50 documents are scans. That corpus stays at 6 = 6.
+
+### The settings panel now tells the truth
+
+`imageMode` offers embed / extract / link / remove, and for PDFs all four do the
+same thing: nothing. A localized note sits beside the control — *"Not yet
+supported for PDF — pages carrying images say so in the output."* 127 messages,
+71 tagged elements, none empty.
+
+### Cost
+
+Counting images needs `getOperatorList()` per page, which the adapter previously
+called only for pages with no text layer. Winter '27 went from **5.4 s to 6.6 s**
+for 1,010 pages — 22%, 1.2 ms per page. That is the price of not being silent,
+and it is worth paying.
+
+Corpus: every metric at baseline, marker invariant 6 = 6. Gates: check clean,
+**51/51** harness cases, **51/51** packaged-extension checks.
+
+---
+
 ## 2026-08-19 · v1.7.0 cycle · Q5 — joining a table to its continuation (#13)
 
 ### What it does

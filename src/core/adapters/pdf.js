@@ -108,7 +108,17 @@ export async function convertPdf(bytes, ctx) {
         }
       }
 
-      pages.push({ number: n, lines, width: viewport.width, height: viewport.height, ocred });
+      pages.push({
+        number: n,
+        lines,
+        width: viewport.width,
+        height: viewport.height,
+        ocred,
+        // Counted, never emitted: extraction is not built yet, and a diagram
+        // that vanishes without trace is worse than one declared missing. A
+        // page read by OCR is excluded — there the image *was* converted.
+        images: ocred ? 0 : await countPageImages(pdfjs, page),
+      });
       page.cleanup();
       await yieldToUI();
     }
@@ -125,6 +135,12 @@ export async function convertPdf(bytes, ctx) {
     ctx.onLayout?.(pages, bodySize);
     const html = mergeContinuedTables(renderPages(pages, bodySize, opts, meta, outline), meta);
 
+    if (meta.imagesDropped) {
+      warnings.push(
+        `${meta.imagesDropped} image(s) were not converted — image extraction is not supported ` +
+          `for PDF yet, and each page carrying one says so in the output.`
+      );
+    }
     if (ocrPages) {
       warnings.push(
         `${ocrPages} of ${doc.numPages} page(s) had no text layer and were read with OCR — check those sections for recognition errors.`
@@ -1231,6 +1247,34 @@ function bindOutline(pages, entries) {
   return bound;
 }
 
+/**
+ * How many distinct images a page draws.
+ *
+ * Distinct objects rather than paint operations: a page that stamps one icon
+ * four times has one picture on it, and counting placements would inflate every
+ * figure and every placeholder. Failure returns 0 — a count is a courtesy, and
+ * losing it must never cost the page.
+ */
+async function countPageImages(pdfjs, page) {
+  try {
+    const ops = await page.getOperatorList();
+    const paints = new Set([
+      pdfjs.OPS.paintImageXObject,
+      pdfjs.OPS.paintJpegXObject,
+      pdfjs.OPS.paintImageXObjectRepeat,
+    ]);
+    const names = new Set();
+    let inline = 0;
+    for (let i = 0; i < ops.fnArray.length; i++) {
+      if (paints.has(ops.fnArray[i])) names.add(String(ops.argsArray[i]?.[0] ?? i));
+      else if (ops.fnArray[i] === pdfjs.OPS.paintInlineImageXObject) inline++;
+    }
+    return names.size + inline;
+  } catch {
+    return 0;
+  }
+}
+
 /* ------------------------------------------------- continued tables */
 
 /**
@@ -1605,6 +1649,7 @@ function renderPages(pages, bodySize, opts, meta, outline) {
     outline: bindOutline(pages, outline),
     outlineSeen: 0,
     outlineLevel: 0,
+    imagesDropped: 0,
   };
   if (state.outline.size) meta.outlineHeadings = state.outline.size;
 
@@ -1620,9 +1665,25 @@ function renderPages(pages, bodySize, opts, meta, outline) {
       out.push(renderBlocks(columnLines, bodySize, opts, state));
       state.titleUsed = true;
     }
+    if (page.images) {
+      state.imagesDropped += page.images;
+      const count = page.images === 1 ? 'An image' : `${page.images} images`;
+      const label = page.images === 1 ? 'image not converted' : `${page.images} images not converted`;
+      // The span carries `⚠` rather than nothing: turndown treats a blank inline
+      // node as blank and drops it before any rule runs, which is why the
+      // unreadable-value marker carries the same character.
+      out.push(
+        // Parentheses, not brackets: turndown escapes `[` as `\[` because it
+        // could open a link, and the backslashes reach the reader.
+        `<p><em>(${escapeHtml(label)})</em> ` +
+          `<span data-smc-review="${count} on page ${page.number} could not be converted — ` +
+          `image extraction is not supported for PDF yet">⚠</span></p>`
+      );
+    }
   }
   meta.tablesBuilt = state.tablesBuilt;
   meta.tablesUnresolved = state.tablesUnresolved;
+  meta.imagesDropped = state.imagesDropped || undefined;
   return out.filter(Boolean).join('\n');
 }
 

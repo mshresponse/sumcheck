@@ -780,6 +780,70 @@ function buildTableContinuationPdf() {
   return Buffer.from(out, 'latin1');
 }
 
+/**
+ * A page that draws an image, and a page that draws the same one again.
+ *
+ * The PDF adapter reads images only to measure a scan's resolution; it never
+ * emits one, so 161 image placements across 131 pages of a reference document
+ * produced no output and no indication that anything had been there. Silence is
+ * the one failure this converter is not allowed.
+ *
+ * Two pages, so the count and the grouping can both be asserted: one line per
+ * page carrying images, never one per placement.
+ */
+function buildDroppedImagePdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+  // A 2x2 RGB image, uncompressed: six bytes a row, two rows.
+  const pixels = '\xff\x00\x00\x00\xff\x00\x00\x00\xff\xff\xff\x00';
+  const draw = (x, y, w, h) => `q ${w} 0 0 ${h} ${x} ${y} cm /Im0 Do Q`;
+
+  const page1 = [
+    line('F1', 11, 72, 720, 'The diagram below shows the request flow.'),
+    draw(72, 560, 180, 120),
+    line('F1', 11, 72, 530, 'Each stage validates its input before continuing.'),
+    draw(300, 560, 180, 120),
+  ].join('\n');
+  const page2 = [
+    line('F1', 11, 72, 720, 'A second page with one more illustration.'),
+    draw(72, 560, 180, 120),
+    line('F1', 11, 72, 530, 'The text around it must be unaffected.'),
+  ].join('\n');
+
+  const pages = [page1, page2];
+  const objects = [];
+  const add = (body) => { objects.push(body); return objects.length; };
+  add('<< /Type /Catalog /Pages 2 0 R >>');
+  const kids = pages.map((_, i) => `${3 + i * 2} 0 R`).join(' ');
+  add(`<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`);
+  const fontObj = 3 + pages.length * 2;
+  const imgObj = fontObj + 1;
+  for (const content of pages) {
+    const contentObj = objects.length + 2;
+    add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+        `/Resources << /Font << /F1 ${fontObj} 0 R >> /XObject << /Im0 ${imgObj} 0 R >> >> ` +
+        `/Contents ${contentObj} 0 R >>`);
+    add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  }
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  add('<< /Type /XObject /Subtype /Image /Width 2 /Height 2 /ColorSpace /DeviceRGB ' +
+      `/BitsPerComponent 8 /Length ${pixels.length} >>\nstream\n${pixels}\nendstream`);
+  const info = add('<< /Title (Flow Overview) /Creator (Sumcheck fixtures) >>');
+
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 /* ------------------------------------------------------------------- PDF */
 
 function buildPdf() {
@@ -1098,6 +1162,7 @@ write('oversized-bullet.pdf', buildOversizedBulletPdf());
 write('overprint-heading.pdf', buildOverprintHeadingPdf());
 write('stacked-header.pdf', buildStackedHeaderPdf());
 write('table-continuation.pdf', buildTableContinuationPdf());
+write('dropped-image.pdf', buildDroppedImagePdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own

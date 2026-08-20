@@ -564,5 +564,9 @@
   "toastDiagnosticsCopied": {
     "message": "Diagnostic info copied — counts and settings only",
     "description": "Confirmation shown after the diagnostic block is copied."
+  },
+  "uiImagesPdfNote": {
+    "message": "Not yet supported for PDF — pages carrying images say so in the output.",
+    "description": "Shown beside the Images setting. PDF image extraction is not implemented, so the four choices have no effect for PDFs."
   }
 }

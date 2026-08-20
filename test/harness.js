@@ -1792,6 +1792,81 @@ async function runTableContinuationCase() {
   }
 }
 
+/**
+ * An image we cannot convert has to say so (Q6, #12).
+ *
+ * The PDF adapter reads images only to measure a scan's resolution and never
+ * emits one. On a reference document that meant 161 placements across 131 pages
+ * produced nothing at all — no placeholder, no marker, no warning — and a reader
+ * had no way to know a diagram had been there.
+ *
+ * Extraction is out of scope this cycle. Saying so is not.
+ *
+ * Page 1 draws the same image object twice. The output must carry one line for
+ * the page, not one per placement: a logo repeated down a document must not
+ * bury the content under placeholders.
+ */
+async function runDroppedImageCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>an unconverted image is declared, once per page</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'dropped-image', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/dropped-image.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'dropped-image.pdf' }, { outputs: ['md'] }, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body + '\n\n' + JSON.stringify(result.warnings);
+
+    const markers = body.match(/<!-- SUMCHECK: [^>]*image[^>]*-->/g) || [];
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the output declares the image': () =>
+          markers.length > 0 || 'no image marker anywhere in the output',
+        'the marker names the page': () =>
+          markers.some((m) => /page 1\b/.test(m)) || `markers were ${JSON.stringify(markers)}`,
+        'both pages are declared': () =>
+          markers.some((m) => /page 2\b/.test(m)) || 'page 2 was not declared',
+        /**
+         * Page 1 paints the same object twice. One line per page, never one per
+         * placement — otherwise a repeated logo buries the document.
+         */
+        'one declaration per page, not per placement': () =>
+          markers.length === 2 || `${markers.length} markers for 2 pages`,
+        'a reader sees something, not just a comment': () =>
+          /\(image not converted\)/i.test(body) || 'no visible placeholder beside the marker',
+        /**
+         * Turndown escapes `[` as `\[` because it could open a link, and the
+         * backslashes reach the reader. The placeholder uses parentheses.
+         */
+        'the placeholder carries no escape artefacts': () =>
+          !/\\\[|\\\]/.test(body) || 'the placeholder reached the output with backslashes in it',
+        'the result notes carry a count': () =>
+          result.warnings.some((w) => /image/i.test(w) && /\d/.test(w)) ||
+          `warnings were ${JSON.stringify(result.warnings)}`,
+        'the surrounding text is untouched': () =>
+          body.includes('The diagram below shows the request flow.') &&
+          body.includes('The text around it must be unaffected.') ||
+          'text near the image was damaged',
+      },
+      record.md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('dropped-image', err);
+  }
+}
+
 const summary = document.getElementById('summary');
 const container = document.getElementById('cases');
 const results = [];
@@ -1832,6 +1907,7 @@ async function run() {
     ['overprint-heading', runOverprintCase],
     ['stacked-header', runStackedHeaderCase],
     ['table-continuation', runTableContinuationCase],
+    ['dropped-image', runDroppedImageCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],
