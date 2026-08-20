@@ -35,37 +35,66 @@ documents.
 | | reported for the original pipeline | this pipeline |
 | --- | ---: | ---: |
 | headings | ~1,990 | **1,968** |
-| tables | ~109 | **109** |
+| tables | ~109 | **108** |
 | images | ~104 | **106** |
-| links | ~1,179 | **1,258 emitted** (1,363 counted) |
-| wall-clock | 93.9 s | **45.9 s** |
+| links | ~1,179 | **1,258** |
+| wall-clock | 93.9 s | **39.3 s** |
 
-Within reason on all four, and the divergences are the interesting part:
-**where this pipeline differs from the original's self-report, it agrees with
-the measurements taken independently during the bench addendum.**
+Within reason on all four, and every divergence is explained rather than
+absorbed:
 
-- **1,968 headings** is exactly the outline entry count verified with PyMuPDF at
-  the bench. The original's 1,990 had ~22 more from somewhere.
-- **106 images** is exactly the distinct-xref count verified then. The original's
-  104 was two short.
-- **1,258 links emitted** is exactly the document's URI-annotation count — 100%
-  of them, against the original's 1,179. Zero `javascript:` targets.
+- **1,968 headings** is the exact size of the embedded outline — confirmed three
+  ways by the author (`get_toc(simple=True)`, `simple=False`, and a manual walk
+  of `doc.outline`), and it matches the count verified independently with PyMuPDF
+  during the bench addendum. The emitted level histogram (67/315/405/837/344) is
+  the outline's own. The original's extra ~22 come from somewhere outside the
+  outline; they were not chased, because inventing 22 headings to close a gap is
+  the failure the brief warned against.
+- **1,258 links, and the 1,179 is now explained exactly.** Precisely 79 of the
+  document's URI annotations fall inside a `find_tables()` bounding box, and
+  1,258 − 79 = 1,179. `find_tables().extract()` returns plain strings, so the
+  span structure a link needs is gone by cell-render time; this pipeline recovers
+  each anchor from the page spans and substitutes it back. Its count is a strict
+  superset. Only `http/https/mailto` are emitted — a whitelist, not a
+  `javascript:` blacklist, so `data:` and casing tricks cannot slip through.
+  Verified in the output: 1,258 http/mailto links, **0** targets of any other
+  scheme.
+- **108 tables, not 109.** Raw `find_tables()` returns 109; one is a ruled box on
+  page 5 containing only the running head. It is rejected before the page model
+  is built, deliberately — that box extends over real prose, so rejecting it at
+  render time would have silently eaten the paragraph beneath it.
+- **106 images** is the distinct-xref count, matching the bench. 171 placements
+  exist because one 15×15 icon is re-placed on 49 pages; placeholders carry the
+  xref so repeats are visibly the same asset. The remaining gap of 2 against the
+  original's 104 is unexplained and left that way.
 
-So the sanity check passes in the direction that matters: the numbers that
-disagree do so because the *original self-report* was approximate, not because
-this pipeline is wrong. Its reported `links` metric (1,363) counts prose links
-plus relative launch-action targets emitted inside table cells; the 1,258 figure
-is http/mailto links present in the output. A grader column showing `links`
-should be read as the former.
+Generalisation, Net Zero guide (1,349 pages): **282 headings, 152 tables, 4
+images, 80 links, 24.5 s**. Raw `find_tables()` reports 1,210 there, but ~1,000
+are single-row — a ruled `Field | Details` header bar repeated on nearly every
+object-reference page. A header with no body row is not a table, so single-row
+detections are emitted as text. That rule is a no-op on the Salesforce document,
+which has no single-row tables, which is what made it safe to add.
 
-Generalisation, Net Zero guide (1,349 pages): **282 headings, 4 images, 89
-links, 1,210 tables, 23.8 s** — and 282 and 4 are again exactly the outline
-entry count and distinct image count measured independently at the bench.
+Verified here rather than taken on trust: both documents converted twice, `cmp`
+byte-identical each time; and the reported metrics cross-checked against the
+emitted Markdown by grep — 1,968 heading lines, 108 table separators, 1,258
+links, 0 non-whitelisted schemes.
 
-Third document, the MuleSoft ground-truth pair: **9 headings, 5 tables** against
+Third document, the MuleSoft ground-truth pair: **9 headings, 2 tables** against
 a source that states 10 headings and 4 tables. That PDF is a Chrome print with no
-embedded outline, so the pipeline took its font-size fallback and still landed
-9 of 10 — which is exactly the kind of thing the pair exists to reveal.
+embedded outline, so the pipeline took its font-size fallback — 9 of 10 headings,
+and it finds only half the tables because the rendered page rules them lightly.
+Exactly the kind of thing the pair exists to reveal, and the reason a
+known-answer document is worth more than another converter's opinion.
+
+### A correction to this entry's own numbers
+
+The verification figures above were re-measured. The first set published here —
+109 tables, 1,363 links, 45.9 s, and Net Zero at 1,210 tables / 89 links — came
+from running the script while the subagent was **still writing it**: 36,003 bytes
+at the time, 40,818 when it finished. The instruction not to work the same files
+as a running agent existed for this reason and I ran it anyway. The corrected
+figures are above; the headings and images counts were unaffected.
 
 ### 2. `.claude/agents/baseline-converter.md` — the expensive one
 
