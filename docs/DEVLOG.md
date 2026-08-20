@@ -7,6 +7,128 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.1 cycle · C1 characterization — why the grid collapses (#16)
+
+**Measured before changing anything.** No fix in this entry. Instrumentation was
+added to `buildTable` and the run loop, run over the whole 1,010-page document,
+and reverted; the suite is green either side of it.
+
+### The work order's expected direction is wrong, and the measurement says so
+
+C2 anticipated "resolve columns from data-row evidence, then map header
+fragments onto those columns". Clustering was run twice for every table run —
+once over all rows as today, once over the rows below the leading header stack —
+and excluding the header does not widen the grid. **It narrows it:**
+
+| with header → without | tables |
+| --- | ---: |
+| 3 → 3 | 69 |
+| **5 → 2** | 13 |
+| **4 → 1** | 4 |
+| 6 → 3 | 3 |
+
+Data rows in these tables are sparse by design — each row fills its label column
+and exactly one of the four value columns, so `Yes` appears in a different place
+on every row. Clustering on data alone finds two columns for a five-column
+table. **The header is the only row that states the full column set**, and
+taking its vote away would make this worse, not better.
+
+### The actual mechanism, in two linked parts
+
+**Part 1 — a one-cell group row ends the table.** Every run termination in the
+document is the same cause:
+
+| why a table run ended | count |
+| --- | ---: |
+| **next line has 1 cell** | **228** |
+| end of page | 48 |
+
+And the one-cell lines are not stray prose. They are the section labels these
+tables are built from — `General Enhancements`, `Salesforce Foundations`,
+`Salesforce My Trust Center` — full-width group rows sitting between the header
+and the rows they group. Sampled directly:
+
+```
+run of 3 rows, last row x = [128, 255, 319, 416, 494]
+  next: gap 23pt, x = [90]  'General Enhancements'
+```
+
+That is the header stack, complete, with **all five columns present in its last
+row** — severed from its own data by a group label. The data rows then start a
+new run, which is the 59 same-page splits reported in Q5.
+
+**Part 2 — the severed stack cannot resolve its own columns.** 78 runs end up
+header-only. Of those:
+
+| widest row → resolved columns | runs |
+| --- | ---: |
+| **5 → 3** | **69** |
+| 5 → 4 | 3 |
+| 5 → 2 | 3 |
+| 5 → 1 | 3 |
+
+The tolerance is **9.0 pt** (`max(bodySize × 0.9, 4)`), and the anchor merge is
+greedy with a running mean. A bottom-aligned stack offsets each line, so
+fragments from *different* columns on *different* lines land inside it:
+
+```
+x = [321, 408, 491]
+x = [240, 313, 479]
+x = [128, 255, 319, 416, 494]
+
+neighbouring positions within 9 pt, which therefore merge: 6, 2, 8, 3
+```
+
+`313 / 319 / 321` become one anchor, `408 / 416` another, `491 / 494` a third.
+Eleven fragment positions collapse to seven anchors, and the `n >= 2` filter
+leaves three columns. Five columns become three, with the header text packed
+into the first — exactly the output Q5 reported and could not merge.
+
+### The information is in the file
+
+Docling assembles **95** of these headers into five clean columns from the same
+positional data:
+
+```markdown
+| Feature | Enabled for users | Enabled for administrators /developers | Requires administrator setup | Contact Salesforce to enable |
+```
+
+against ours on the same document:
+
+```markdown
+| Enabled for<br>Enabled for administrators administrator | Requires<br>setup | Contact<br>Salesforce to<br>enable |
+```
+
+Nothing is missing from the PDF. The five columns are stated outright in the last
+line of every stack we sever.
+
+### What this implies for C2
+
+**Part 1 is the fix; part 2 is a symptom of it.** Keep the header stack and its
+data rows in one run — absorb a full-width one-cell group row instead of ending
+the table on it — and clustering sees the data rows' reinforcement *and* the
+stack's complete last row together. Measured above: runs that keep both resolve
+five columns.
+
+That one change is expected to reach all three symptoms:
+
+- the 59 same-page splits stop existing, because there is no split
+- both sides of a page break then resolve to the same five columns, so their
+  headers match and **Q5's existing merge rule fires unchanged** — which is what
+  the work order requires
+- and #17's straddling labels become reachable, since the tables now form
+
+Part 2's arithmetic remains true for a stack that is genuinely alone — a
+continuation page whose data begins after it. That case becomes rare once part 1
+lands, and C2 will report whether any remain rather than pre-emptively widening a
+tolerance that the corpus depends on.
+
+**The guardrail C2 must carry:** a one-cell line may only be absorbed when the
+table continues below it. A paragraph after a table is also a one-cell line, and
+swallowing it would be a far worse defect than the one being fixed.
+
+---
+
 ## 2026-08-19 · v1.7.1 cycle · C0 — version bump first, two artifacts to protect
 
 ### The artifacts this cycle must not touch
