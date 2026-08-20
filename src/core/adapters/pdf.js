@@ -2237,7 +2237,12 @@ function foldStackedHeader(grid, rendered) {
       const text = cellString(rendered[i][column]).trim();
       if (text) parts.push(text);
     }
-    return parts.join('<br>');
+    // Structure, not a string with markup in it. `renderTable` turns this into
+    // real `<br>` elements with each part escaped separately — the treatment T1
+    // gave definition pairs — so every emitter sees a break rather than four
+    // literal characters that only look right in Markdown.
+    if (parts.length > 1) return { stack: parts };
+    return parts[0] || '';
   });
   return { rows: [header, ...rendered.slice(span)], stackedHeader: true };
 }
@@ -2245,6 +2250,7 @@ function foldStackedHeader(grid, rendered) {
 /** A rendered cell is a string, or the `{pairs}` shape T1 introduced. */
 function cellString(cell) {
   if (typeof cell === 'string') return cell;
+  if (Array.isArray(cell?.stack)) return cell.stack.join(' ');
   return (cell?.pairs || []).map((pair) => pair.join(' ')).join(' ');
 }
 
@@ -2308,6 +2314,9 @@ function renderTable(table) {
    * the break is markup, the content never is.
    */
   const cell = (value, tag) => {
+    if (value && Array.isArray(value.stack)) {
+      return `<${tag}>${value.stack.map(escapeHtml).join('<br>')}</${tag}>`;
+    }
     if (value && Array.isArray(value.pairs)) {
       const body = value.pairs
         .map(([label, text]) => `${escapeHtml(label)}: ${escapeHtml(text)}`)

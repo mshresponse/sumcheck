@@ -1651,8 +1651,9 @@ async function runStackedHeaderCase() {
 
   try {
     const bytes = new Uint8Array(await (await fetch('fixtures/stacked-header.pdf')).arrayBuffer());
-    const result = await convertFile({ bytes, name: 'stacked-header.pdf' }, { outputs: ['md'] }, {});
-    const md = result.outputs[0].content;
+    const result = await convertFile({ bytes, name: 'stacked-header.pdf' }, { outputs: ['md', 'json'] }, {});
+    const md = result.outputs.find((o) => o.format === 'md').content;
+    const doc = JSON.parse(result.outputs.find((o) => o.format === 'json').content);
     record.warnings = result.warnings;
     const body = md.replace(/^---[\s\S]*?\n---\n/, '');
     record.md = body;
@@ -1682,6 +1683,17 @@ async function runStackedHeaderCase() {
         'the data rows survive with their values': () =>
           rows.filter((r) => /\bYes\b/.test(r)).length === 3 ||
           `${rows.filter((r) => /\bYes\b/.test(r)).length} row(s) carry a value, expected 3`,
+        /**
+         * The break has to be a real element, not four escaped characters that
+         * happen to survive the trip to Markdown looking right. T1 set this
+         * contract for definition pairs and it holds for stacked headers too:
+         * every emitter sees a break, and the JSON carries no markup.
+         */
+        'the break is structure, not literal characters': () => {
+          const header = doc.blocks.find((b) => b.type === 'table');
+          const text = JSON.stringify(header?.header || header?.text || '');
+          return !text.includes('<br>') || `JSON carries literal markup: ${text.slice(0, 80)}`;
+        },
         'an ordinary single-line header is untouched': () =>
           body.includes('| Region | Volume | Change |') || 'the control table changed',
         'and its rows too': () =>
