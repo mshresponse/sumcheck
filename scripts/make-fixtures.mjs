@@ -955,12 +955,17 @@ function buildGroupedTablePdf() {
     line('F1', 10, 69, 621, 'Bulk reassignment of open work'),
     line('F1', 10, 416, 621, 'Yes'),
 
-    // A second group label, mid-table.
+    // A second group label, mid-table — and the row under it opens with a
+    // wrapped label, so the line immediately after the group row carries one
+    // cell too. Without a bounded look past it the group row is not recognised
+    // and the table ends here; measured on the reference document, that shape
+    // accounts for 139 of the one-cell lines that still ended a run.
     line('F1', 10, 90, 598, 'Platform Services'),
-    line('F1', 10, 69, 575, 'Retention policy per record type'),
-    line('F1', 10, 494, 575, 'Yes'),
-    line('F1', 10, 69, 552, 'Inline translation of case replies'),
-    line('F1', 10, 319, 552, 'Yes'),
+    line('F1', 10, 69, 575, 'Retention policy for every record'),
+    line('F1', 10, 69, 560, 'type in the org'),
+    line('F1', 10, 494, 560, 'Yes'),
+    line('F1', 10, 69, 537, 'Inline translation of case replies'),
+    line('F1', 10, 319, 537, 'Yes'),
 
     /**
      * Guardrail: two genuinely different tables separated by a heading.
@@ -971,27 +976,27 @@ function buildGroupedTablePdf() {
      * distinction fails, these two tables fuse into one and their columns
      * misalign.
      */
-    line('F2', 12, 72, 500, 'Regional Totals'),
-    line('F2', 10, 72, 476, 'Region'),
-    line('F2', 10, 260, 476, 'Volume'),
-    line('F1', 10, 72, 458, 'East'),
-    line('F1', 10, 260, 458, '18,420'),
-    line('F1', 10, 72, 440, 'West'),
-    line('F1', 10, 260, 440, '12,110'),
+    line('F2', 12, 72, 478, 'Regional Totals'),
+    line('F2', 10, 72, 452, 'Region'),
+    line('F2', 10, 260, 452, 'Volume'),
+    line('F1', 10, 72, 432, 'East'),
+    line('F1', 10, 260, 432, '18,420'),
+    line('F1', 10, 72, 414, 'West'),
+    line('F1', 10, 260, 414, '12,110'),
 
-    line('F2', 12, 72, 412, 'Quarterly Summary'),
-    line('F2', 10, 72, 388, 'Quarter'),
-    line('F2', 10, 220, 388, 'Target'),
-    line('F2', 10, 360, 388, 'Actual'),
-    line('F1', 10, 72, 370, 'Q1'),
-    line('F1', 10, 220, 370, '1,000'),
-    line('F1', 10, 360, 370, '1,140'),
-    line('F1', 10, 72, 352, 'Q2'),
-    line('F1', 10, 220, 352, '1,200'),
-    line('F1', 10, 360, 352, '1,090'),
+    line('F2', 12, 72, 376, 'Quarterly Summary'),
+    line('F2', 10, 72, 350, 'Quarter'),
+    line('F2', 10, 220, 350, 'Target'),
+    line('F2', 10, 360, 350, 'Actual'),
+    line('F1', 10, 72, 332, 'Q1'),
+    line('F1', 10, 220, 332, '1,000'),
+    line('F1', 10, 360, 332, '1,140'),
+    line('F1', 10, 72, 314, 'Q2'),
+    line('F1', 10, 220, 314, '1,200'),
+    line('F1', 10, 360, 314, '1,090'),
 
     // Guardrail: a closing paragraph is a one-cell line too.
-    line('F1', 10, 72, 320, 'All figures above are provisional until the quarter closes.'),
+    line('F1', 10, 72, 276, 'All figures above are provisional until the quarter closes.'),
   ].join('\n');
 
   const objects = [];

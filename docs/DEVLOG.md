@@ -7,6 +7,115 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.1 cycle · C3 — reaping, and the account of what did not come
+
+### Every target row
+
+| symptom | 1.7.0 | after C3 | target | |
+| --- | ---: | ---: | --- | --- |
+| same-page header/data splits | 59 | **18** | 0 | **missed** |
+| tables with a fully correct header | 21/206 | **59/122** | ~95% parity | **missed** — 10% → 48%, Docling 87% |
+| page-split pairs merged by Q5's rule | 3 | **8** | most of the 30 | **missed** |
+| straddling row labels recovered | 4/7 | 3/5 | improved | **flat** — 57% → 60% |
+| tables emitted | 206 | **122** | — | 84 fewer |
+| stranded header-only tables | 66 | **20** | — | |
+
+Column-header assembly at the sampled boundaries, same script on both outputs:
+**3/10 → 6/10** (Docling 9/10).
+
+**One target reached in spirit, none in number.** The defect class is much
+smaller and the document is substantially better, and the headline goal — parity
+with the reference — is not met. What follows is why, measured.
+
+### One further change, inside C2's rule
+
+After C2 the remaining rejections were dominated by a single shape. Instrumenting
+`isGroupRow` over the whole document:
+
+| outcome on a one-cell line that would end a run | count |
+| --- | ---: |
+| absorbed as a group row | 167 |
+| **rejected: the next line also has one cell** | **139** |
+| rejected: size differs from the body | 25 |
+| rejected: nothing follows | 9 |
+
+Those 139 are a group row followed by a row whose *label wraps* — the line right
+after the group row carries one cell too, and the values arrive a line later.
+`nextGridRow()` now looks past at most two such lines, bounded by the run's own
+spacing, because a closing paragraph is also a sequence of one-cell lines and an
+unbounded look would walk over one into whatever came next.
+
+Measured effect: stranded 31 → **20**, correct headers 49 → **59**, tables 147 →
+**122**. The fixture gained the shape it exists for — a group row whose following
+row opens with a wrapped label — because a rule without a fixture is not a rule.
+
+Q5's merge rule is untouched, as the work order requires. Its merges rose **3 →
+8** purely because more headers now genuinely match.
+
+### The 20 stranded tables, specifically
+
+C1 predicted the genuinely-alone stacks would become rare. They did — 66 → 20,
+and 18 of the 20 are still followed by a table on the same page rather than
+across a break, so they are *not* the "alone continuation" case C1 imagined.
+
+They are the same shape as before, one step further out: a header stack whose
+group row is followed by two or more one-cell lines before any row with values.
+Extending the look further would reach them and would also start absorbing
+prose; the bound stays at two.
+
+**Q5's merge does not reach them and cannot.** All 20 resolve to three columns
+while the table below them resolves to five or six, so their headers differ —
+and a merge on anything other than a matching header is the heuristic join the
+work order forbids. Of the 40 page-split pairs remaining, **0** have identical
+headers, so the rule is declining correctly rather than missing them.
+
+### Part 2's tolerance arithmetic: tested, and deliberately left alone
+
+C1 identified the second half of the mechanism — a 9.0 pt clustering tolerance
+against fragments 2–8 pt apart across the stack's offset lines. The obvious move
+is to tighten it. **That was tried, at half the current value:**
+
+| | 9.0 pt (shipped) | 4.5 pt (tested) |
+| --- | ---: | ---: |
+| stranded header-only tables | 20 | **0** |
+| **tables with a fully correct header** | **59** | **47** |
+| tables | 122 | 95 |
+| corpus | byte-stable | byte-stable |
+
+It does exactly what C1 predicted for the stacks — every stranded table
+disappears — and it **costs twelve correct headers**, because it over-segments
+tables that were resolving properly. Header widths shift toward four columns
+where five is right.
+
+So the answer to "does the tolerance need anything" is **no, and not because the
+corpus forbids it.** The corpus is indifferent: byte-identical at both settings,
+249 table rows either way. It is the reference document that says no. Trading
+twelve correct headers for twenty empty stranded ones is a worse document, and
+the stranded tables are visible while a silently over-segmented table is not.
+
+The tolerance stays at `max(bodySize × 0.9, 4)`, untouched.
+
+### Why the ~95% target remains out of reach
+
+The 37 tables still resolving to three columns are all the same thing: a stack
+clustered without enough data-row evidence beside it. Reaching parity needs the
+clustering to treat a line's own cells as definitionally distinct — a line's
+fragments are separated by wide gaps and can never be the same column — and to
+align lines to each other afterwards, rather than pooling every fragment from
+every row into one greedy pass. That is a different algorithm, not a tuning, and
+it is the honest next issue rather than something to attempt inside a
+single-defect cycle whose corpus guarantee is the point.
+
+### Corpus
+
+Byte-stable through every step of C3, checked after the lookahead and again
+after the fixture change: **249 table rows before and after, 0 documents changed,
+0 words lost**, every scored metric at baseline, marker invariant 6 = 6.
+
+Gates: check clean, **53/53** harness cases, **51/51** packaged-extension checks.
+
+---
+
 ## 2026-08-19 · v1.7.1 cycle · C2 — a group row does not end the table it sits in (#16)
 
 ### The fixture, and RED

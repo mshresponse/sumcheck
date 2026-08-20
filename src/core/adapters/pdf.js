@@ -2117,7 +2117,7 @@ export function detectTables(lines, bodySize) {
        * a bottom-aligned stack alone puts fragments from different columns
        * inside the clustering tolerance — 69 tables collapsed that way.
        */
-      if (isGroupRow(line, run, lines[j + 1], bodySize)) {
+      if (isGroupRow(line, run, nextGridRow(lines, j, bodySize), bodySize)) {
         run.push({ line, continuations: [], group: true });
         consumed.push(line);
         j++;
@@ -2197,6 +2197,29 @@ function isWrappedCell(line, previous, row) {
   if (index < 0) return false;
   const next = row.cells[index + 1];
   return !next || line.x2 <= next.x;
+}
+
+/**
+ * The next line that could be a table row, looking past a wrapped row label.
+ *
+ * A group row is often followed not by a row but by the first line of a row
+ * whose label wraps — one cell, then another, then the line carrying the values.
+ * Measured on the reference document, that shape accounts for 139 of the
+ * one-cell lines that still ended a run after group rows were absorbed.
+ *
+ * Bounded deliberately at two intervening lines and by the run's own spacing. A
+ * closing paragraph is also a sequence of one-cell lines, and an unbounded look
+ * would walk over one into whatever came next.
+ */
+function nextGridRow(lines, j, bodySize) {
+  let y = lines[j].y;
+  for (let k = j + 1; k <= j + 3 && k < lines.length; k++) {
+    const line = lines[k];
+    if (line.y - y > Math.max(line.size, bodySize) * 4) return null;
+    if (line.cells.length >= 2) return line;
+    y = line.y;
+  }
+  return null;
 }
 
 /**
