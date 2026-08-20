@@ -7,6 +7,215 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-20 · harness cycle · H1/H5 — pre-registration, written before any tuning
+
+**This entry is the pre-registration.** It is written before a single experiment
+runs, and everything in it is fixed from here: the seed, the sealed set, the
+grader that judges, and the targets. Nothing below may be revised in the light
+of a result. If the round misses, the miss is the finding.
+
+### The split
+
+`make_split.py` (sha256 `5df5f8e7…`, used unmodified) over a filtered draw pool,
+**seed 5, sealed fraction 0.4**.
+
+The pool was 54 documents. Beyond H1's stated exclusions — the two reference
+documents, the 50-document scored corpus and the format-smoke files, all
+permanently tuning-side and already marked `tuning-only` in the manifest's `pool`
+column — two more were held out of the draw by `make-draw-pool.py`
+(`bc9f55bb…`):
+
+- the owner's phone photograph, `status: pending`. A sealed list naming a file
+  nobody can hash is not a sealed list, and letting it fall to the tuning side
+  would have decided by accident something that should be decided on purpose.
+- `mulesoft_scheduler_concept.groundtruth.adoc` — truth material, not a document
+  the converter is asked to read. Drawing it would have put a source file in the
+  exam.
+
+Result: **22 sealed, 32 tuning-side from the draw**, giving a 93-document tuning
+set. The sealed documents are 298,004,970 bytes and 6,223 pages, copied to
+`exam/sealed/`, every copy's digest verified against the manifest, then
+`chmod -R a-w`. A write probe is refused.
+
+**The standing rule: only the round-grade step may read `exam/sealed/`.** It is
+enforced, not merely asked for — `grade.mjs` refuses `--set sealed` without
+`--round-grade`, and every other set (including `all`) now excludes sealed
+documents structurally.
+
+### The sealed set
+
+```
+a28983bc66394ccb65e78a9eadaafb8a194222e87523dd0dc7624d87a656acfb  bis_quarterly_review.pdf
+cfb0751f9ef9f60e356f4808f3231c03af802ae63a4fc0f391bdc174bd3fe28a  govinfo_us_budget_2024.pdf
+0d7adedb25e8d7ed8efe403020fab2116611600c0d3626dcc968d85eae0a0d92  irs_f1040_1990_scan.pdf
+9f8b40783922af30641300f99b8cc4217938e447419438c70c00730468f9714c  meridian.docx
+93cd865a0e3a44f2ff6baf42b4d32f3dfde3ec70a29d5da2e4d86217c43fd04c  meridian_libreoffice_docx.pdf
+4fc5b969d8746fc5568c65fba602ed82c3b8a718397f8d00c08362be9f397b97  meridian_libreoffice_html.pdf
+288bc1a2b88170d5dcf972928972beea5d3b9397318eeefd005a38fae196da27  meridian_pdflatex.pdf
+d40b3fa905ed31521bc631f6465fea9d010af904c7e63b4833f3a60d103c43b1  meridian_reportlab.pdf
+13494164f4898e35341f68d4af11a2132c6da645de9a7e154e0b38ebed6f62b4  meridian_scanned_100dpi.pdf
+95437a9923cb7f679a3c1ae0ffe5c039cef9563b649262e7b3f20f2b03cadf2e  mtsamples_discharge_summary_multiple_trauma.pdf
+d791f960f435f7cd6e13aa8eef1df2e397026140e25ed82f455d099b09db5327  nasa_ntrs_19930091189.pdf
+fc63bcd61715d0181dd8e85998b1e6201ae3515fc6626102101cab1841e11ec6  nist_sp800-53r5.pdf
+7a1219dad919f17bd87de8b871c75553fdbc8b3150bcd84ff0af344feb6d76b4  pmc_bmc_public_health_menarche_age.pdf
+85c25809aeb3288485c8a1610a55b38372b80082847da09147faa38c0dbfbf80  pmc_plos_one_digital_eye_strain.pdf
+9ff3ebbabe0fb73f0b98a6859dea865c8fea80e5287aa41e413a76d6c14b1843  salesforce_spring23_release_notes.pdf
+dc27ce7751a497f4e85ed02d4c2b2124a3fb8873ae604a4fe623bde799fd0949  salesforce_spring26_release_notes.pdf
+f592114b9873b15c63f97cf15448d7cb3475dfcb74f21b10fe5e83cbc7de5e5f  salesforce_summer23_release_notes.pdf
+cc5e23450dbf0a79f2499fa7876a0df1c1774ded33ee20d18f664a7e1be8b264  salesforce_winter22_release_notes.pdf
+c766f6c4a9def5003bb34d1113ca79daebc13c6c08cc05771c1f64ff574c993e  salesforce_winter26_release_notes.pdf
+32485b663ecd02febff642bb290583ae295ead14660dce01e5dc0767384511f7  set_up_and_maintain_net_zero_cloud_8-20-2026.pdf
+90eafed3d0daac727784ab3af203057e3914592528119a110886902511d50835  tableau_next_8-20-2026.pdf
+6d098cf680fe791f1e66cf39a199aebc2dcab700a54535563e0c57b3162ea456  who_sitrep_001_2020.pdf
+```
+
+### The seal incident, and the reviewer's ruling
+
+The seed-5 draw sealed two of the five documents Tier A names as its per-iteration
+gate — the XEP release note and the Prince guide. Tier A runs on **every** loop
+iteration, so left alone that would have read sealed documents dozens of times
+before the round grade. The subset had been named at H2, before any split
+existed; the collision was structural, not bad luck with a number.
+
+I asked whether to redraw. **The reviewer ruled that a seed chosen after seeing
+the seed-5 draw is seed-shopping and forbidden, and that the draw stands.** That
+ruling is correct and is recorded here because the temptation it refuses is
+exactly the one this whole structure exists to remove.
+
+The ruling required an exposure report. Audited by timestamp — `sealed.txt`'s
+mtime is the draw — every conversion artifact created after the draw is the 105
+files of a single Tier A run: 55 documents (the 50 scored-corpus documents plus
+five named), plus 50 staged copies. **All five named are tuning-side. No
+sealed-assigned document was converted or displayed after the draw.** Post-draw
+handling of sealed-assigned documents was filenames only: `make_split.py`'s
+output, `cat sealed.txt`, and a table of filename plus a SEALED/tuning label.
+
+**Demotions: none.** No document meets the exposure test, so no `pool` value
+changes on that ground.
+
+Two fixes, both standing regardless of seed:
+
+- The two collided documents were replaced with the nearest tuning-side
+  equivalents in the same producer family: `salesforce_spring22_release_notes.pdf`
+  (XEP 4.20, 649 pp, for a 621 pp one) and `marketing_cloud_next_8-20-2026.pdf`
+  (Prince 15.4, 460 pp, for a 179 pp guide).
+- **A structural guard**, which matters more than the re-pick: `grade.mjs` now
+  refuses to run Tier A at all if any named document is sealed, and `--set all`
+  no longer reaches sealed documents — that was a one-flag path into the
+  hold-out. Both refusals were tested. A named subset is a list a human
+  maintains, and the next person to edit it will not be thinking about the split
+  either.
+
+### Recorded limitation: the seal guards feedback, not baseline knowledge
+
+Required by the reviewer, and it is a real limit on what this hold-out proves.
+
+H2's Tier B validation converted all 115 documents — including the 22 that seed 5
+later assigned to sealed — to establish a baseline, before the seal existed.
+Those outputs are preserved at `exam/baseline/pre-seal-115/` rather than deleted,
+because they are the evidence of this limitation and because they let the round
+grade check byte-stability on the sealed set.
+
+So the sealed set is **not** an unseen set in the strongest sense. What it
+guarantees is narrower and still worth having: **no sealed document's score
+influences any keep-or-discard decision during tuning.** The loop's `tuning`
+target set excludes them structurally, Tier A cannot name them, and no
+per-experiment composite is computed over them. The seal guards tuning-time
+feedback. It does not claim the documents were never converted.
+
+### The fence
+
+```
+harness sha256   e0f6f5177f9f566207ea6c415b62fea07f32c710a15fcfa0c46712751bd7a866
+grade.mjs        03b6ad4eebefc6db0a58f2c909e997d09d25bde8401d7ff252c4f6c2e1b4e180
+metrics.mjs      9e30796507842093db317ae5c4afee8f0ef109bf552008a1ee4c3c7128db4256
+truth.mjs        1ef329715af77a0860b50f97df0134d0e1805a1d4da022e5b25faf8a371f11b6
+serve.mjs        4cabd302303f13051aa556e78efeeea748d9370da0db8c8d8c87eb576b37e4d1
+runner.js        f7de2da2f5f8921082baae452e92e8b8d06305f5bb6fd8ffd26a324156d889be
+runner.html      105a48a789182563d2d7841733865abc0f50fac6d6968ba7ca13eb64a0d0bc79
+build-manifest.py ccd6b12b99cb4852ab7e98ff1ec42a76e5122d64798d731005a3f7bd9e36b1b0
+```
+
+**The harness hash moved from `b756a63e…` to `e0f6f517…`**, and the reason is the
+Tier A re-pick and the sealed-set guard above. The H0–H2 entry's value was correct
+when written; this one supersedes it. The change is legitimate because it happened
+before any tuning and is recorded rather than silent — but it is exactly the kind
+of movement a fence exists to make visible, so it is called out rather than
+quietly updated.
+
+Not fenced, recorded for auditability — none of these can influence a score, and
+`HARNESS_FILES` is deliberately unchanged so the fence value above stays stable:
+
+```
+loop.mjs            62e0da5ae8d9c4f12917701293fe4a98f708adc929e02033c87751c4e325000b
+score-reference.mjs 7843d506ace0821983c7ee7b5f680911d63e4b6edd339e2e5a9e241e795904e3
+make-draw-pool.py   bc9f55bb729ea527d8c9fa119fa11c855e0aa3fbc4ab5a8de548e6ca8be8cd6b
+```
+
+### H5 — the assignment
+
+Replace the greedy pooled column clustering with line-first column resolution: a
+line's own fragments are separated by wide gaps and are **definitionally
+distinct**, so they can never be pooled into one column; lines are aligned to each
+other afterwards rather than every fragment from every row being fed into one
+greedy pass. Editable surface: `src/core/adapters/pdf.js` and, if useful, one
+constants module. Nothing else, ever `exam/`.
+
+### The targets, restated under the grader's measure
+
+The C1–C3 series counted a header as correct if it contained a cell reading
+"Feature" — a Winter '27 idiom anchor, not a correctness test. The reviewer ruled
+the target be restated against the grader's structural definition (at least one
+data row, no empty header cell, header width equal to the modal body-row width),
+anchored on the best reference score under that same measure. Scored with the
+grader's own code:
+
+| converter | tables | fully-correct hdr | stranded | *[deprecated proxy]* |
+| --- | ---: | ---: | ---: | ---: |
+| sumcheck 1.7.1 | 122 | **33 (27.0%)** | 20 | *59 (48.4%)* |
+| reference-pipeline (PyMuPDF) | 108 | **108 (100.0%)** | 0 | *95 (88.0%)* |
+| docling 2.120.3 (`--no-ocr`) | 109 | **109 (100.0%)** | 0 | *95 (87.2%)* |
+
+Best reference 100.0% → within 5 points = 95.0% → the 75% floor does not bind.
+
+**Pre-registered targets:**
+
+1. **Winter '27 fully-correct headers ≥ 95.0%** (baseline **27.0%**, 33/122). This
+   is the document the reference score was measured on.
+2. **Winter '27-class tuning documents ≥ 95.0%** — the 2 reference documents plus
+   the 16 tuning-side SF-archive documents, 18 in all (baseline **67.0%**,
+   2,185/3,259).
+3. **Stranded header-only tables → 0** on those 18 documents (baseline **530**;
+   Winter '27 alone **20**).
+4. **No regression in any other metric.**
+5. **Corpus byte-stable** — the 50-document scored corpus unchanged, and its
+   fingerprint `c88c7e82…` unmoved. Checked before every experiment.
+
+The deprecated `| Feature |` proxy is reported alongside as a continuity column,
+clearly labelled, and is not a target.
+
+**A caveat that belongs in the pre-registration, not in the post-hoc excuse.**
+Both references reach 100% partly by construction: they build a grid model, so
+header width equals body width automatically. A line-clustering converter has to
+earn what a grid model gets free. 27% → 95% is a large ask, and it is being
+registered as ruled rather than negotiated down. If the loop falls short, that
+result is the deliverable and will be reported as a miss, not reframed.
+
+### Baseline at the moment of pre-registration
+
+Tuning set **93 documents**, composite **1.8469**, every hard constraint holding,
+scored corpus byte-stable (totals 50/50, codes 49/49, attribution 52/52, headline
+44/50, marker invariant 6 = 6).
+
+The composite is not comparable to the 1.5455 recorded at H2: that was over 115
+documents, this is over 93, and a macro-average changes when the population does.
+Only within-population comparisons mean anything, which is why the loop compares
+each experiment against this baseline and not against any earlier number.
+
+**The sealed set is read exactly once more, at the round grade.**
+
+---
+
 ## 2026-08-20 · harness cycle · H0–H2 — corpus intake, and a grader that can be argued with
 
 No product changes. Everything built here lives in `~/mdforge-audit/exam/` — the
