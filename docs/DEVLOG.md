@@ -7,6 +7,66 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-20 · store listing — rejected for Keyword Spam, and what it cost
+
+Docs only. No product change, no version change, `dist/` untouched.
+
+### The rejection, verbatim
+
+The Chrome Web Store rejected the 1.5.0 submission. The stated reason was
+**"Keyword Spam"**. The violating content identified was the format enumeration
+in the description's Images bullet:
+
+```
+PNG, JPEG, TIFF, WebP, BMP, GIF)
+```
+
+### The listing was accurate, and that is the point
+
+Sumcheck does read every one of those formats. The bullet was not padding and not
+aspirational — each name was verifiable from `SUPPORTED_EXTENSIONS` in
+`src/core/convert.js` and exercised by the format-smoke set.
+
+That is why this is worth a DEVLOG entry rather than a quiet edit. The policy is
+not asking whether a claim is true. A run of six format names in parentheses
+reads as keyword stuffing to a reviewer regardless of how carefully each one was
+earned, and the accuracy of the list is no defence. The whole listing was written
+under a rule that every claim must be checkable from the repository — and that
+rule turns out not to be sufficient. A claim can be perfectly checkable and still
+be the wrong *shape* for the surface it appears on.
+
+### The correction
+
+Resubmitted with `dist/sumcheck-1.7.1.zip` and a softened description:
+
+| bullet | before | after |
+| --- | --- | --- |
+| Images | `Images (PNG, JPEG, TIFF, WebP, BMP, GIF) via OCR` | `Images, read with on-device OCR` |
+| Email / web pages | `EPUB, HTML, saved web pages and .mhtml, email (.eml)` | `EPUB, HTML, saved web pages, email` |
+| Data files | `CSV/TSV, JSON, JSONL, YAML, XML, Jupyter notebooks, subtitles, RTF` | `Data files — CSV, JSON, YAML and more` |
+
+`store/LISTING.md` now carries the resubmitted text plus a warning against
+re-adding the enumerations — the failure mode here is a well-meaning future edit
+that puts them back precisely because they are, after all, true.
+`store/CHECKLIST.md` gains a *Rejection and correction* section, and its package
+row now records 1.7.1 as the submitted artifact rather than 1.5.0.
+
+**The format list was moved, not deleted.** It belongs in the README and the
+product UI, where it helps someone decide whether the tool reads their file and
+is not subject to store copy review.
+
+Nothing about the product changed: no permission, no capability, no withdrawn
+claim. Only the store description's wording.
+
+### Record-keeping
+
+The listing text recorded here is reconstructed from the submission rather than
+pasted from the dashboard. If any wording differs, the dashboard is authoritative
+and these files should be corrected to match it — noted in `store/LISTING.md` as
+well, so the uncertainty travels with the copy instead of being forgotten.
+
+---
+
 ## 2026-08-20 · harness cycle · H5 round report — a miss, and what the miss was about
 
 Thirteen experiments, **one kept**. The pre-registered assignment did not land.

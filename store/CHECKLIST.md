@@ -13,7 +13,7 @@ Legend: **✅ done** · **⬜ open** (needs a human decision or an account) ·
 
 | # | Requirement | Status |
 | --- | --- | --- |
-| 1 | ZIP format | ✅ `npm run package` → `dist/sumcheck-1.5.0.zip` |
+| 1 | ZIP format | ✅ `npm run package`. **Resubmitted with `dist/sumcheck-1.7.1.zip`** after the 1.5.0 rejection below; 1.5.0's local file is no longer the submitted artifact |
 | 2 | Under the 2 GB package limit | ✅ **6.2 MB** |
 | 3 | Valid `manifest.json` | ✅ `npm run check` validates every referenced path |
 | 4 | Manifest V3 | ✅ `manifest_version: 3` |
@@ -28,7 +28,7 @@ Legend: **✅ done** · **⬜ open** (needs a human decision or an account) ·
 | --- | --- | --- |
 | 9 | Name, ≤ 45 characters | ✅ 36 — `store/LISTING.md` |
 | 10 | Summary, ≤ 132 characters | ✅ 121 — `store/LISTING.md` |
-| 11 | Detailed description | ✅ `store/LISTING.md` |
+| 11 | Detailed description | ✅ `store/LISTING.md` — **softened after a Keyword Spam rejection**; see *Rejection and correction* below before editing it |
 | 12 | Category | ✅ Productivity → Workflow & Planning |
 | 13 | Language | ✅ English (US); `_locales/en` ships and `default_locale` is set |
 | 14 | Store icon 128×128 PNG | ✅ `icons/icon-128.png` |
@@ -69,8 +69,8 @@ Legend: **✅ done** · **⬜ open** (needs a human decision or an account) ·
 
 | # | Check | Status |
 | --- | --- | --- |
-| 32 | `npm test` | ✅ 41/41 |
-| 33 | `npm run verify-extension` | ✅ 47/47 against a real unpacked install *and* the packaged zip |
+| 32 | `npm test` | ✅ 53/53 |
+| 33 | `npm run verify-extension` | ✅ 51/51 against a real unpacked install *and* the packaged zip |
 | 34 | `npm run check` | ✅ green |
 | 35 | Conversion quality re-scored on the 50-document corpus | ✅ all five metrics at 100%, marker invariant asserted by the scorer |
 | 36 | Third-party licences enumerated | ✅ `THIRD_PARTY_NOTICES.md`, 13 components, all permissive |
@@ -94,6 +94,38 @@ The product homepage is <https://sumcheck.app> and the source is public at
 <https://github.com/mshresponse/sumcheck>, which is
 what makes the listing's "verifiable by inspection" claim checkable rather than
 rhetorical.
+
+## Rejection and correction — Keyword Spam, 1.5.0
+
+The 1.5.0 submission was **rejected**. The stated reason was **"Keyword Spam"**,
+and the violating content identified was the format enumeration in the
+description's Images bullet:
+
+```
+PNG, JPEG, TIFF, WebP, BMP, GIF)
+```
+
+**The listing was accurate.** The extension does read every one of those formats.
+That is exactly why the rejection is worth recording rather than quietly fixing:
+the policy is not about whether a claim is true, it is about how a run of format
+names reads, and a truthful enumeration can still be keyword stuffing in a
+reviewer's eyes.
+
+The owner resubmitted with `dist/sumcheck-1.7.1.zip` and a softened description:
+
+| bullet | before | after |
+| --- | --- | --- |
+| Images | `Images (PNG, JPEG, TIFF, WebP, BMP, GIF) via OCR` | `Images, read with on-device OCR` |
+| Email / web pages | `EPUB, HTML, saved web pages and .mhtml, email (.eml)` | `EPUB, HTML, saved web pages, email` |
+| Data files | `CSV/TSV, JSON, JSONL, YAML, XML, Jupyter notebooks, subtitles, RTF` | `Data files — CSV, JSON, YAML and more` |
+
+`store/LISTING.md` now carries that text and a warning against re-adding the
+enumerations. **The precise format list belongs in the README and the product
+UI**, where it is useful and not subject to store copy review — it was not
+deleted, only moved out of the listing.
+
+Nothing about the product changed. No permission, no capability and no claim was
+withdrawn; only the store description's wording.
 
 ## Sources
 
