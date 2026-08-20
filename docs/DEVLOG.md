@@ -7,6 +7,105 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.1 cycle · C4 — re-bench, gates, release
+
+### Winter '27, 1.7.0 against 1.7.1
+
+| | 1.7.0 | **1.7.1** |
+| --- | ---: | ---: |
+| tables | 206 | **122** |
+| tables with a fully correct header | 21 | **59** |
+| stranded header-only tables | 66 | **20** |
+| headings | 2,011 | 2,010 |
+| bullets emitted as headings | 0 | 0 |
+| headings doubling their own text | 0 | 0 |
+| images declared | 131 | 131 |
+| markdown links | 3,612 | **3,058** |
+| wall-clock | 6.8 s | 6.5 s |
+
+### Net Zero
+
+| | 1.7.0 | 1.7.1 |
+| --- | ---: | ---: |
+| running-head lines surviving | 5 | **4** |
+| bare folio lines surviving | 1 | **1** |
+| headings | 864 | 863 |
+| table rows | 3,049 | 3,310 |
+| wall-clock | 3.8 s | 3.7 s |
+
+T2's chrome catch improves by one line and its folio result is unchanged. The
++261 table rows are content that was prose and is now in the tables it belongs
+to.
+
+### Word-level diffs, itemized as the work order requires
+
+**Net Zero: 94 words lost, 0 gained.** `Field` ×21, `Details` ×19, `Description`
+×4, `Name` ×4 — repeated column headers that merged tables no longer print
+twice. The acceptable category.
+
+**Winter '27: 4,999 words lost, 0 gained** — and that number needs splitting,
+because almost all of it is link targets rather than text. Comparing with link
+targets removed from both sides:
+
+| | count |
+| --- | ---: |
+| visible words lost | **61** |
+| of which repeated column headers (`Enabled`, `for`, `Feature`, `users`, `Contact`, `enable`) | **61** |
+| visible words gained | 0 |
+| link targets lost | **554** |
+
+**No data word is lost from either document.** The 61 are dropped repeated
+headers, which the Q5 standard names as acceptable.
+
+### The 554 links: a real cost, measured and shipped knowingly
+
+`buildCells()` has never carried `href` — a table cell holds text, x, width and
+weight, and nothing else. So wherever this cycle correctly turned prose into a
+table row, the links on that text went with the prose. 554 of 3,612, 15%.
+
+This is a pre-existing gap made newly visible rather than a new defect, and the
+trade is favourable on a document whose tables are the point — but 15% of links
+is not a rounding error, and shipping it silently would be exactly the kind of
+thing this project does not do. Filed separately; the CHANGELOG says it in the
+release notes rather than in a footnote.
+
+### Corpus, the gate that mattered
+
+| | baseline | 1.7.1 |
+| --- | ---: | ---: |
+| grand totals matched | 50/50 | **50/50** |
+| all line-item codes found | 49/49 | **49/49** |
+| each amount on its code's row | 52/52 | **52/52** |
+| `#Error` preserved | 50/50 | **50/50** |
+| documents emitting a real table | 49/50 | **49/50** |
+| headline figure recovered | 44/50 | **44/50** |
+| value-not-recovered markers | 6 = 6 | **6 = 6** |
+| prose lexicon flags | 50/50 | **50/50** |
+
+And beyond the scoreboard, which is what a table-detection change actually needs:
+**249 table rows before and after, 0 documents changed, 0 words lost.** Checked
+after C2, after C3's lookahead, and again here.
+
+### Release
+
+- version **1.7.1** in both manifests; the `1.7.1.1` + `version_name` scaffolding
+  removed
+- CHANGELOG entry naming the known link trade in the release notes, not a footnote
+- `npm run check` clean · **53/53** harness cases · **52/52** packaged-extension
+  checks including the real-PDF end-to-end on all 1,010 pages
+- `npm run package` → **`dist/sumcheck-1.7.1.zip`**, 6.2 MB
+- **both pending artifacts byte-identical to C0's record** —
+  `86670af2…` and `f17abe1f…`
+- **Nothing uploaded to the Chrome Web Store.**
+
+### Fixture added
+
+`grouped-table.pdf` — a header stack severed by a group row, a second group row
+followed by a wrapped label, and three guardrails on one page: a heading between
+two tables of different widths, those widths, and a closing paragraph.
+
+---
+
 ## 2026-08-19 · v1.7.1 cycle · C3 — reaping, and the account of what did not come
 
 ### Every target row

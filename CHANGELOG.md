@@ -1,5 +1,52 @@
 # Changelog
 
+## 1.7.1
+
+One defect, three symptoms, and the measurements that found it was not the defect
+anyone expected.
+
+### Tables keep their headers
+
+A long table in a reference manual is broken up by full-width group rows —
+`General Enhancements`, `Platform Services` — sitting between the column header
+and the rows they group. Those rows are one cell wide, and a one-cell row used to
+**end the table**. The header was severed from its own data, and a header stack
+read on its own resolves five columns into three with the labels packed into the
+first.
+
+A group row is now absorbed into the table it belongs to, on conditions measured
+rather than guessed: not bold, the same size as the table body, and a real row
+following it. Every one of the 116 group rows in the benchmark document is
+non-bold and body-sized; a heading between two tables is neither, which is what
+keeps two unrelated tables from being fused.
+
+On the 1,010-page benchmark: **206 tables become 122**, tables carrying a fully
+correct header go from **21 to 59**, and the continuation-merge introduced in
+1.7.0 now fires 8 times instead of 3 — not because that rule changed, but
+because headers finally match.
+
+### Known trade in this release
+
+Where prose correctly becomes a table row, **any link on that text is lost** —
+table cells have never carried link targets. On the benchmark this costs 554 of
+3,612 links. No visible text is lost; the 61 words that changed are repeated
+column headers that a merged table no longer prints twice. The gap is
+pre-existing and newly visible, and it is tracked separately.
+
+### Still open
+
+Header assembly reaches 48% of tables against the reference implementation's
+87%. The remaining cases need column clustering to treat each line's own
+fragments as definitionally distinct rather than pooling every row into one pass
+— a different algorithm, not a tuning. The clustering tolerance was tested at
+half its value: it removes every remaining stranded header and costs twelve
+correct ones, so it stays as it was.
+
+Corpus scores are unchanged for the fifth release running, and this time that was
+the point: a change to table detection is the most dangerous thing that can be
+done to a corpus of scanned forms. All 50 documents convert byte-identically —
+249 table rows before and after, zero words changed.
+
 ## 1.7.0
 
 A conversion-quality cycle scoped entirely from one benchmark: the Salesforce

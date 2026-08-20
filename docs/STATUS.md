@@ -1,6 +1,6 @@
 # Sumcheck — where the project stands
 
-**Version 1.7.0 · 19 August 2026 · written for whoever picks this up next**
+**Version 1.7.1 · 19 August 2026 · written for whoever picks this up next**
 
 > **Renamed 17 August 2026: MDForge → Sumcheck.** "MDForge" collided with a
 > same-pitch Windows app, a dental platform on mdforge.com, a PyPI package and
@@ -94,7 +94,7 @@ which smears one-pixel strokes. Measured against ground truth:
 | 1.5× (v1.0.0) | 12/14 |
 | **2× (current)** | **14/14** |
 
-52 automated cases pass (`npm test`), covering every adapter plus regressions for
+53 automated cases pass (`npm test`), covering every adapter plus regressions for
 a 96 dpi billing form, a shaded callout, a wrapped-cell table, a real corpus page,
 the rescue pass re-reading ink it had already read, nested key-value structure
 inside a table cell, running heads and printed folios, a wrapped display title,
@@ -193,7 +193,7 @@ Task 4.
 
 ## 4. Not verified at all
 
-- **Any input format not in the corpus.** The 52 automated cases cover every
+- **Any input format not in the corpus.** The 53 automated cases cover every
   adapter, but only PDFs have been tested against real third-party documents.
 - **Capturing a page without `activeTab`.** Chrome grants `activeTab` only on a
   real toolbar or context-menu click, which no headless driver can synthesise.
