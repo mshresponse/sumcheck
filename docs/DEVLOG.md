@@ -7,6 +7,183 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-20 · harness cycle · round 2 report — a miss, and the residual splits three ways
+
+Round 2 kept nothing. The assignment improved every structural metric it targets
+and was discarded on a single hard constraint. The finding is the composition of
+what blocked it.
+
+### The targets
+
+Carried over unchanged from round 1. Measured on the round-2 grader (fence
+`6691f736…`), against the round-2 baseline (composite **1.9011**).
+
+| # | target | baseline | best measured | verdict |
+| --- | --- | ---: | ---: | --- |
+| 1 | Winter '27 fully-correct headers ≥ 95.0% | 27.0% | 42.3% | **miss** |
+| 2 | Winter-'27-class ≥ 95.0% (18 docs) | 67.0% | 69.4% | **miss** |
+| 3 | stranded header-only → 0 | 20 / 530 | **0** / 460 | met on Winter '27, missed class-wide |
+| 4 | no regression in any other metric | — | — | **miss** |
+| 5 | corpus byte-stable | — | — | met, acceptance carried forward |
+
+All figures are **bench state** — measured from a change that was discarded. They
+are not in any kept or shipped build.
+
+Composite would have been **1.9011 → 2.0066**. Tuning set: stranded −85, correct
+headers +15, list items +477, links +204, tables −108, headings −56.
+
+### The residual, split three ways
+
+The assignment was discarded on `no data-word loss`: six documents, 88 tokens.
+Each token was classified by **raw occurrence count** — no normalisation of any
+kind — which answers "is this text actually missing" rather than "does the
+constraint report it".
+
+| document | cell-asymmetry | other artefact | genuine | evidence |
+| --- | ---: | ---: | ---: | --- |
+| eurlex_gdpr_32016R0679 | 29 | 0 | 0 | GDPR's numbered paragraphs, table → list |
+| marketing_cloud_next_8-20-2026 | 4 | 0 | 0 | raw counts identical: 242, 117, 87 |
+| salesforce_spring24_release_notes | 4 | 0 | 0 | |
+| reports_and_dashboards_8-20-2026 | 1 | 0 | 0 | |
+| crm_analytics_8-20-2026 | 3 | **5** | **1** | `casesensitive` 4→3 is the only real one |
+| archive_org_anatomy_of_melancholy_1826 | 0 | 0 | **41** | `quocunque` 6→5, `peri` 1→0, `tiam` 3→2 |
+| **total** | **41** | **5** | **42** | |
+
+**This refines the number the ruling stated.** The ruling put the split at 41
+artefact / 47 genuine. Measured, it is **46 artefact / 42 genuine**, because five
+of `crm_analytics`'s six have identical raw counts — `searchString` 15→15,
+`replacementString` 6→6, `valueToBeRemoved` 9→9. They are present in both texts
+and counted differently for a reason the cell-aware clause does not address and
+which **is not yet diagnosed**. They appear in code contexts, so inline-code or
+fence handling is the first place to look, and they are registered rather than
+patched speculatively.
+
+So of `crm_analytics`'s six, **one** is genuine loss, not six. Slightly more than
+half of everything that blocked round 2 was the instrument.
+
+**The cell-asymmetry, stated once more because it is the larger half.**
+`contentOnly()` normalises `4. In the row…` but not `| 4. In the row…` — the same
+ordered-list numbering one structure deeper. When the converter turns a numbered
+procedure from a table into the list it always was, the baseline keeps the literal
+digit, the output has it normalised away, and the difference is charged as content
+loss against a document that got better. Four documents clear entirely once it is
+fixed.
+
+### The 42 genuine tokens
+
+Real converter loss, and round 3's first work:
+
+- **41 on the 1826 book** — a 589-page double-column OCR'd 1826 printing, the
+  hardest document in the corpus. Raw counts really do fall.
+- **1 on `crm_analytics`** — `casesensitive` 4→3.
+
+### What was resolved inside the loop
+
+**A bug of my own making, caught by the constraint.** The stacked-header link fix
+pushed cell *values* into the fold. A stack line can be a definition-list cell
+(`{pairs}`), which has neither `.html` nor `.text`, so `render()` stringified the
+object and emitted **`[object Object]` in place of the cell's content**. On the
+1826 book that swallowed whole footnote lines — `Mirnrit prassentia famam.
+1 Lipsius, Judic. de Seneca.` went from present to absent. Fixed; recovered 23
+tokens, and `Lipsius` and `Seneca` returned to identical raw counts.
+
+That is the data-word-loss constraint doing exactly what it exists for, on a
+defect I introduced and would not have found by reading. It is worth setting
+beside the artefact analysis: the same constraint that blocked the round for bad
+reasons also caught real destruction. Both are true.
+
+### The experiments
+
+**15 loop runs: 1 kept, 14 discarded.** The kept one is round 1's hyperlink
+prerequisite (experiment 7), judged on hard constraints under explicit
+authorisation.
+
+A bookkeeping defect, recorded rather than tidied: `nextExperimentNumber()` counts
+`## Experiment N` headings, and two hand-written investigation notes used that
+same heading pattern. The journal therefore shows `Experiment 12` twice and skips
+15, and reads as 17 entries for 15 runs. The entries themselves are correct and
+append-only; only the numbering drifted. A counter that can be perturbed by prose
+is the kind of thing that quietly makes a record untrustworthy, so it is named
+here and fixed in round 3's pre-registration.
+
+### The sealed set — read carried forward, unspent
+
+**The round-2 sealed read was not used.** Round 2 kept nothing, so a sealed grade
+would have converted 22 documents with a build identical to the one round 1
+already graded, and compared it against itself. No information, and a real cost:
+every read narrows what the hold-out can still tell us. The read is permission,
+not obligation, and it is spent only when there is a kept state worth validating.
+
+The sealed set has been read exactly once, in round 1, on the kept prerequisite,
+where it showed the hyperlink fix generalising to unseen documents: 16,670 →
+24,043 links, 11 documents gaining, none losing. It carries forward with a budget
+of one.
+
+### Corpus and gates
+
+Scored corpus fingerprint `c88c7e82…` unmoved and checked before every experiment.
+`dist/` byte-identical to the H0 record. `exam/sealed/` still `dr-xr-xr-x`, writes
+refused. `grade.mjs` unchanged at `741ed087…`; harness fence still `6691f736…`.
+Working tree clean. 53/53 harness cases, 51/51 packaged-extension checks.
+
+---
+
+## Round 3 pre-registration — for review, before anything runs
+
+### (a) The grader correction, registered and not yet applied
+
+`exam/round3/contentOnly-cell-aware.patch`, with its evidence in
+`exam/round3/README.md`. It is applied at the round-3 boundary and **the new
+hashes are recorded in the DEVLOG before any round-3 tuning**, exactly as round
+2's corrections were. Until then `grade.mjs` stays at `741ed087…` and the fence at
+`6691f736…`.
+
+Applying it is expected to clear four documents entirely and reduce
+`crm_analytics` from 9 tokens to 6. It is **not** expected to unblock the round —
+42 genuine tokens remain, and that is the point of the next item.
+
+The second artefact class (5 tokens, raw-identical, on `crm_analytics`) is
+**registered but deliberately not patched**. It has no diagnosis yet. A grader
+correction written from a symptom rather than a cause is how an instrument stops
+measuring what it claims to, and round 2 is the argument for that caution.
+
+### (b) The assignment: the 42 genuine tokens lead
+
+1. **The 1826 book, 41 tokens.** Diagnose why a 589-page double-column OCR'd
+   printing loses text under line-first clustering. This is converter work in
+   `src/core/adapters/pdf.js`, not instrument work.
+2. **`crm_analytics`, 1 token** (`casesensitive` 4→3).
+3. **Then** re-gate the preserved clustering assignment —
+   `journal.d/round2-assignment-current.patch`: line-first resolution, exact
+   monotone assignment, the list-run guard, stacked-header link preservation with
+   the `[object Object]` fix.
+
+### (c) Targets carry at 95%
+
+Unchanged, and the round-2 report does not argue otherwise. Winter '27 and the
+Winter-'27-class documents against the grader's structural definition, anchored on
+the best reference score (100%, reached by both PyMuPDF and Docling). Stranded →
+0, no other metric regressed, corpus byte-stable.
+
+Round 2 reached 42.3% on Winter '27 from a 27.0% baseline. The gap to 95% is not
+closed by the work above, and nothing here is a claim that it will be. The bar is
+not renegotiated because two rounds missed it.
+
+### (d) Seed, sealed set, and read budget
+
+**Seed 5, unchanged. The 22 sealed documents and their sha256s, unchanged** — as
+recorded in the H1 pre-registration and still `chmod a-w`. **Sealed read budget:
+one**, the carried, unspent round-2 read, to be spent only on a kept state worth
+validating.
+
+### (e) One harness fix, outside the fence
+
+`nextExperimentNumber()` will match a stricter pattern so prose headings cannot
+perturb the count. `loop.mjs` is not in `HARNESS_FILES` and cannot affect a score;
+its new hash is recorded with the round-3 boundary hashes.
+
+---
+
 ## 2026-08-20 · store listing — rejected for Keyword Spam, and what it cost
 
 Docs only. No product change, no version change, `dist/` untouched.
