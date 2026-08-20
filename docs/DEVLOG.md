@@ -7,6 +7,67 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.0 cycle · Q7 — link annotations, and what they already do
+
+**No code changed in this task, because the feature already exists.**
+
+The work order asks to extract PDF link annotations and wrap the overlapping
+text as a Markdown link, citing the independent pipeline's 1,179. The bench
+addendum had already established that we do this and that `pdfLinks` has
+defaulted on all along. Measured again on the Winter '27 document with this
+build:
+
+| | count |
+| --- | ---: |
+| Markdown links emitted | **3,612** |
+| of which `http(s)` | 1,252 — against **1,258** URI annotations in the file, **99.5%** |
+| of which relative `/apex/…` | 2,360 — from the file's 3,969 launch actions |
+| `javascript:` URLs emitted | **0** |
+| links emitted across the 50-document scored corpus | **0** — it carries none, and that stays true |
+
+Writing code here would have been writing a second implementation of something
+already shipped. What was genuinely missing was any statement of the **contract**
+— which annotation kinds are excluded, and why.
+
+### The fixture, which is green from the first run
+
+`test/fixtures/link-kinds.pdf` carries one annotation of each kind that matters,
+and seven assertions pin the outcome:
+
+| annotation | outcome |
+| --- | --- |
+| `https://example.com/methodology` | becomes a link |
+| `mailto:maintainers@example.com` | becomes a link |
+| internal jump to page 2 | **stays plain text** |
+| `javascript:alert(1)` | **never becomes a link, in Markdown or HTML** |
+
+There is no RED here and the note says so plainly rather than dressing a
+green-from-the-start case as a fix.
+
+The internal-jump exclusion is a judgement: "go to page 2 of this file" cannot
+be followed out of a Markdown document, so a link would promise something it
+cannot deliver. Noted as a residual in the work order and it stays one.
+
+The `javascript:` exclusion is not a judgement, it is a security property, and
+**nothing asserted it until now**. Whether pdf.js declines to expose the URL or
+the sanitizer strips the href, the outcome is the same — and it is the outcome
+that is now locked, so a future change to either would fail the suite rather
+than ship a document that executes script when clicked.
+
+### One thing worth flagging rather than fixing
+
+2,360 of the emitted links are relative `/apex/…` targets from the file's launch
+actions. They preserve information a reader would otherwise lose, and they are
+not resolvable without knowing the host they came from. Left as they are — the
+work order scopes this task to http/https/mailto and says nothing about relative
+targets, and silently dropping 2,360 links to tidy the output would be a worse
+trade than leaving them.
+
+Corpus: every metric at baseline, marker invariant 6 = 6. Gates: check clean,
+**52/52** harness cases, **51/51** packaged-extension checks.
+
+---
+
 ## 2026-08-19 · v1.7.0 cycle · Q6 — images are declared, never silent (#12)
 
 Extraction is out of scope this cycle. Saying nothing was not.

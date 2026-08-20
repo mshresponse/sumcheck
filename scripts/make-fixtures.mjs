@@ -844,6 +844,70 @@ function buildDroppedImagePdf() {
   return Buffer.from(out, 'latin1');
 }
 
+/**
+ * Four link annotations, one of each kind that matters.
+ *
+ * Link extraction already exists and `pdfLinks` defaults on — measured on a
+ * 1,010-page document, 1,252 of its 1,258 URI annotations reach the output. What
+ * had never been pinned down is which kinds are *excluded*, and one of those is
+ * a security property rather than a formatting preference.
+ *
+ *   - an https target, which must become a link
+ *   - a mailto target, which must become a link
+ *   - an internal jump to page 2, which must stay plain text: a reader cannot
+ *     follow "go to page 2 of this file" out of a Markdown document
+ *   - a `javascript:` target, which must never become a link anywhere
+ */
+function buildLinkKindsPdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const page1 = [
+    line('F1', 11, 72, 700, 'Read the methodology note for details.'),
+    line('F1', 11, 72, 670, 'Write to the maintainers with corrections.'),
+    line('F1', 11, 72, 640, 'See the appendix later in this document.'),
+    line('F1', 11, 72, 610, 'Run the helper to refresh the cache.'),
+  ].join('\n');
+  const page2 = [line('F1', 11, 72, 700, 'Appendix A. Reference tables.')].join('\n');
+
+  const objects = [];
+  const add = (body) => { objects.push(body); return objects.length; };
+  add('<< /Type /Catalog /Pages 2 0 R >>');
+  add('<< /Type /Pages /Kids [3 0 R 6 0 R] /Count 2 >>');
+  // Page 1 carries all four annotations.
+  add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      '/Resources << /Font << /F1 8 0 R >> >> /Contents 4 0 R /Annots 5 0 R >>');
+  add(`<< /Length ${page1.length} >>\nstream\n${page1}\nendstream`);
+  add('[' +
+      '<< /Type /Annot /Subtype /Link /Rect [72 694 300 712] /Border [0 0 0] ' +
+      '/A << /S /URI /URI (https://example.com/methodology) >> >> ' +
+      '<< /Type /Annot /Subtype /Link /Rect [72 664 300 682] /Border [0 0 0] ' +
+      '/A << /S /URI /URI (mailto:maintainers@example.com) >> >> ' +
+      '<< /Type /Annot /Subtype /Link /Rect [72 634 300 652] /Border [0 0 0] ' +
+      '/Dest [6 0 R /XYZ 72 720 0] >> ' +
+      '<< /Type /Annot /Subtype /Link /Rect [72 604 300 622] /Border [0 0 0] ' +
+      '/A << /S /URI /URI (javascript:alert%281%29) >> >>' +
+      ']');
+  add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      '/Resources << /Font << /F1 8 0 R >> >> /Contents 7 0 R >>');
+  add(`<< /Length ${page2.length} >>\nstream\n${page2}\nendstream`);
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  const info = add('<< /Title (Link Kinds) /Creator (Sumcheck fixtures) >>');
+
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 /* ------------------------------------------------------------------- PDF */
 
 function buildPdf() {
@@ -1163,6 +1227,7 @@ write('overprint-heading.pdf', buildOverprintHeadingPdf());
 write('stacked-header.pdf', buildStackedHeaderPdf());
 write('table-continuation.pdf', buildTableContinuationPdf());
 write('dropped-image.pdf', buildDroppedImagePdf());
+write('link-kinds.pdf', buildLinkKindsPdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own

@@ -1,0 +1,54 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 8 0 R >> >> /Contents 4 0 R /Annots 5 0 R >>
+endobj
+4 0 obj
+<< /Length 315 >>
+stream
+BT /F1 11 Tf 1 0 0 1 72 700 Tm (Read the methodology note for details.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 670 Tm (Write to the maintainers with corrections.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 640 Tm (See the appendix later in this document.) Tj ET
+BT /F1 11 Tf 1 0 0 1 72 610 Tm (Run the helper to refresh the cache.) Tj ET
+endstream
+endobj
+5 0 obj
+[<< /Type /Annot /Subtype /Link /Rect [72 694 300 712] /Border [0 0 0] /A << /S /URI /URI (https://example.com/methodology) >> >> << /Type /Annot /Subtype /Link /Rect [72 664 300 682] /Border [0 0 0] /A << /S /URI /URI (mailto:maintainers@example.com) >> >> << /Type /Annot /Subtype /Link /Rect [72 634 300 652] /Border [0 0 0] /Dest [6 0 R /XYZ 72 720 0] >> << /Type /Annot /Subtype /Link /Rect [72 604 300 622] /Border [0 0 0] /A << /S /URI /URI (javascript:alert%281%29) >> >>]
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 8 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 68 >>
+stream
+BT /F1 11 Tf 1 0 0 1 72 700 Tm (Appendix A. Reference tables.) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+9 0 obj
+<< /Title (Link Kinds) /Creator (Sumcheck fixtures) >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000261 00000 n 
+0000000627 00000 n 
+0000001123 00000 n 
+0000001249 00000 n 
+0000001367 00000 n 
+0000001464 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R /Info 9 0 R >>
+startxref
+1534
+%%EOF

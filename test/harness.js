@@ -1867,6 +1867,76 @@ async function runDroppedImageCase() {
   }
 }
 
+/**
+ * Which PDF link annotations become links, and which must not (Q7).
+ *
+ * Link extraction already existed and `pdfLinks` defaults on: measured on a
+ * 1,010-page document, 1,252 of its 1,258 URI annotations reach the output,
+ * plus 2,360 launch-action targets. **This case is green from the first run —
+ * there is no defect here to fix.** What had never been pinned down is which
+ * kinds are excluded, and one of those is a security property rather than a
+ * formatting preference:
+ *
+ *   - `javascript:` must never become a link. The protection is structural —
+ *     DOMPurify strips the href during sanitizing, and the anchor collapses to
+ *     its text — but nothing asserted it, so nothing would have caught a change
+ *     to the sanitizer config.
+ *   - an internal jump stays plain text: "go to page 2 of this file" cannot be
+ *     followed out of a Markdown document.
+ */
+async function runLinkKindsCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>link annotations: external yes, internal and javascript no</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'link-kinds', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/link-kinds.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'link-kinds.pdf' }, { outputs: ['md', 'html'] }, {});
+    const md = result.outputs.find((o) => o.format === 'md').content;
+    const html = result.outputs.find((o) => o.format === 'html').content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    renderChecks(
+      box,
+      record,
+      {
+        'an https annotation becomes a link': () =>
+          body.includes('[Read the methodology note for details.](https://example.com/methodology)') ||
+          'the https link was not emitted',
+        'a mailto annotation becomes a link': () =>
+          body.includes('[Write to the maintainers with corrections.](mailto:maintainers@example.com)') ||
+          'the mailto link was not emitted',
+        'an internal jump stays plain text': () =>
+          body.includes('See the appendix later in this document.') &&
+            !/\[See the appendix[^\]]*\]\(/.test(body) ||
+          'an internal destination was emitted as a link',
+        'a javascript: annotation never becomes a link': () =>
+          !/javascript:/i.test(body) || 'a javascript: URL reached the Markdown output',
+        'nor in the HTML output': () =>
+          !/javascript:/i.test(html) || 'a javascript: URL reached the HTML output',
+        'and its text survives as text': () =>
+          body.includes('Run the helper to refresh the cache.') ||
+          'the text under the javascript: annotation was dropped',
+        'the linked text is not duplicated': () =>
+          (body.match(/Read the methodology note/g) || []).length === 1 ||
+          'the link text appears more than once',
+      },
+      record.md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('link-kinds', err);
+  }
+}
+
 const summary = document.getElementById('summary');
 const container = document.getElementById('cases');
 const results = [];
@@ -1908,6 +1978,7 @@ async function run() {
     ['stacked-header', runStackedHeaderCase],
     ['table-continuation', runTableContinuationCase],
     ['dropped-image', runDroppedImageCase],
+    ['link-kinds', runLinkKindsCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],
