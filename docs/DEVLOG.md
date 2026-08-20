@@ -7,6 +7,101 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-20 · standing capability — an independent baseline, two ways
+
+No product changes. One deliverable lives in the repository (`.claude/agents/`);
+everything else is in the audit enclave.
+
+### 1. `~/mdforge-audit/reference-pipeline.py` — the cheap comparator
+
+A single-file PyMuPDF converter: outline-based headings, `find_tables()`
+extraction, link annotations, image counting, running-head and folio stripping.
+Deterministic, offline, no dependency beyond PyMuPDF.
+
+```
+~/dl/bin/python reference-pipeline.py <input.pdf> [--out x.md] [--json m.json]
+```
+Metrics go to stdout as JSON regardless, so a caller never has to parse prose.
+
+**It was written by a subagent with no exposure to this repository, and that was
+deliberate.** By this point I had read essentially all of `src/core/adapters/`,
+so a "clean-room" implementation authored by me would have been clean-room in
+name only. A fresh context is the only way the word means anything. The prompt
+forbade reading `~/mdforge/`, any converted output, and the enclave's analysis
+documents.
+
+### Verification against the known figures
+
+| | reported for the original pipeline | this pipeline |
+| --- | ---: | ---: |
+| headings | ~1,990 | **1,968** |
+| tables | ~109 | **109** |
+| images | ~104 | **106** |
+| links | ~1,179 | **1,258 emitted** (1,363 counted) |
+| wall-clock | 93.9 s | **45.9 s** |
+
+Within reason on all four, and the divergences are the interesting part:
+**where this pipeline differs from the original's self-report, it agrees with
+the measurements taken independently during the bench addendum.**
+
+- **1,968 headings** is exactly the outline entry count verified with PyMuPDF at
+  the bench. The original's 1,990 had ~22 more from somewhere.
+- **106 images** is exactly the distinct-xref count verified then. The original's
+  104 was two short.
+- **1,258 links emitted** is exactly the document's URI-annotation count — 100%
+  of them, against the original's 1,179. Zero `javascript:` targets.
+
+So the sanity check passes in the direction that matters: the numbers that
+disagree do so because the *original self-report* was approximate, not because
+this pipeline is wrong. Its reported `links` metric (1,363) counts prose links
+plus relative launch-action targets emitted inside table cells; the 1,258 figure
+is http/mailto links present in the output. A grader column showing `links`
+should be read as the former.
+
+Generalisation, Net Zero guide (1,349 pages): **282 headings, 4 images, 89
+links, 1,210 tables, 23.8 s** — and 282 and 4 are again exactly the outline
+entry count and distinct image count measured independently at the bench.
+
+Third document, the MuleSoft ground-truth pair: **9 headings, 5 tables** against
+a source that states 10 headings and 4 tables. That PDF is a Chrome print with no
+embedded outline, so the pipeline took its font-size fallback and still landed
+9 of 10 — which is exactly the kind of thing the pair exists to reveal.
+
+### 2. `.claude/agents/baseline-converter.md` — the expensive one
+
+An `opus` subagent whose brief is the owner's, verbatim, and whose value is that
+it has never seen this project. Reserved for genuinely new document families —
+a new producer, a layout idiom the corpus does not cover, a disputed conversion.
+Its cost is recorded here when it runs. The pipeline above is what handles
+routine comparison; the agent is not a regression check and must not become one.
+
+### 3. `~/mdforge-audit/reference-comparator.mjs` — staged, not wired
+
+**The H2 grader does not exist yet.** `exam/grade.mjs` is specified in
+`WORK_ORDER_HARNESS.md` and that order has not been run — there is no `exam/`
+directory. So the comparator is built and proven, and wiring is a two-line
+import whenever H2 is built:
+
+```js
+const ref = await compare(pdfPath);     // never throws
+row.reference = formatColumn(ref);      // '—' when unavailable
+```
+
+Two properties make "context, not a constraint" structural rather than
+aspirational: `compare()` resolves `{available: false, reason}` on every failure
+path instead of throwing, and the file contains no threshold, target or
+comparison anywhere. A grader that wanted to gate on it would have to write that
+gate itself.
+
+**One defect found by testing it rather than reasoning about it.** Handed a
+Markdown file, the first version returned `{available: true}` with numbers in it
+— a README produced "5 headings, 17 tables", because PyMuPDF will paginate
+almost anything. A grader would have printed that as a comparator column and
+nothing would have looked wrong. It now checks for `%PDF` magic bytes first and
+answers with a dash.
+
+---
+
 ## 2026-08-19 · v1.7.1 cycle · C4 — re-bench, gates, release
 
 ### Winter '27, 1.7.0 against 1.7.1
