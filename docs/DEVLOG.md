@@ -7,6 +7,223 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-20 · harness cycle · H5 round report — a miss, and what the miss was about
+
+Thirteen experiments, **one kept**. The pre-registered assignment did not land.
+The reason it did not land is the round's finding, and it is not about the
+converter.
+
+### The targets, as pre-registered
+
+| # | target | baseline | best measured | verdict |
+| --- | --- | ---: | ---: | --- |
+| 1 | Winter '27 fully-correct headers ≥ 95.0% | 27.0% | 42.3% | **miss** |
+| 2 | Winter-'27-class ≥ 95.0% (18 docs) | 67.0% | 69.4% | **miss** |
+| 3 | stranded header-only → 0 | — | — | **split, see below** |
+| 4 | no regression in any other metric | — | — | **miss** |
+| 5 | corpus byte-stable | — | — | met, with recorded acceptance |
+
+**Target 3 is reported precisely rather than favourably.** On Winter '27 itself,
+stranded header-only tables went **20 → 0** — met. Across the 18 Winter-'27-class
+documents they went 530 → 460 — not met. Both figures are **bench state**: they
+come from a change that was measured and then discarded, and are not in any
+shipped or kept build.
+
+Targets 1, 2 and 4 are misses. Target 5 was met only after the reviewer
+explicitly accepted five scored-corpus diffs (below).
+
+### What *was* kept: the hyperlink prerequisite
+
+One change survived the loop, authorized as a named prerequisite and judged on
+hard constraints alone. Its contribution is reported separately from the
+assignment, and it is the round's one unambiguous win.
+
+| | tuning (93 docs) | **sealed (22 docs, unseen)** |
+| --- | ---: | ---: |
+| links before | 33,319 | 16,670 |
+| links after | **43,625** | **24,043** |
+| recovered | **+10,306** | **+7,373** |
+| documents gaining | 20 | 11 |
+| documents losing | **0** | **0** |
+
+Every other metric identical on the tuning set. `buildCells()` had built cells as
+`{text, x, x2, bold}` and dropped `href`, so a table cell could not hold a link;
+issue #18 is closed with the corrected figure (its 554 estimate was Winter '27
+alone). **It generalises**: the sealed set was converted once, on the kept state,
+and gained 7,373 links with no document losing any. That is the round grade
+earning its single read rather than spending it on a formality.
+
+### The finding: the instrument, not the converter
+
+The clustering assignment reached a composite of **1.8469 → 1.9522** with the
+scored corpus byte-stable, and was discarded on `no data-word loss` across six
+documents. Every one was examined, and two of the three loss populations are
+**artefacts of what the constraint counts**:
+
+| population | evidence |
+| --- | --- |
+| **the product's own review markers** | 503 of 553 "lost" tokens on the 1826 book are `SUMCHECK` marker text; `meridian_scanned_150dpi` is **100%** marker text. Moving prose into a table means the lexicon validator no longer runs over it, so there are fewer flags — the annotations changed, the document did not |
+| **Markdown ordered-list renumbering** | 122 on eurlex |
+| link tokens in a link grid | 62 on `crm_analytics` — **real**, and fixed (below) |
+
+The eurlex case states the problem exactly. GDPR's numbered paragraphs were
+rendered by the baseline as a malformed two-column table that happened to
+preserve the literal digits:
+
+```
+| 1.<br>personal data and rules relating to the free movement of personal data. | This Regulation lays down rules … |
+| 2. | This Regulation protects fundamental rights … |
+```
+
+They now render as the list they are:
+
+```
+1. This Regulation lays down rules …
+1. This Regulation protects fundamental rights …
+```
+
+Markdown ordered lists renumber themselves — every item is written `1.` and the
+renderer numbers them 1, 2, 3. **Nothing is lost. The literal digits changed.**
+`dataWordLoss` cannot tell that from content vanishing, so it charged 122 losses
+against a document that got strictly better.
+
+**The grader was not touched.** A constraint that blocks a change is precisely
+the one you may not edit while that change is on the bench. The correction is
+pre-registered below for the next round instead.
+
+### The corpus movement, accepted and verified
+
+Five scored-corpus documents changed, and the change is the same defect the
+cycle exists to fix:
+
+```
+- | Service date | Service Description with Procedure Code | Quantity Charge |  | Total |
++ | Service date | Service Description with Procedure Code | Quantity | Charge | Total |
+```
+
+Accepted under the reviewer's ruling only after mechanical verification: each
+differs by **exactly one line**, with an **identical word sequence** before and
+after — only cell boundaries moved. Every scored dimension unchanged: totals
+50/50, codes 49/49, attribution 52/52, headline 44/50, marker invariant 6 = 6.
+The superseded baseline is archived at `exam/baseline/gfe-preaccept-2026-08-20`,
+and the source PDFs never moved — fingerprint `c88c7e82…`, checked before every
+experiment.
+
+### Round grade — tuning and sealed, side by side
+
+The sealed set was read **once**, on the kept state.
+
+| metric | tuning (93) | sealed (22) |
+| --- | ---: | ---: |
+| tables | 3,757 | 1,206 |
+| fully-correct headers | 2,507 | 596 |
+| correct-header rate | **66.7%** | **49.4%** |
+| stranded header-only | 547 | 236 |
+| links | 43,625 | 24,043 |
+| composite | 1.8469 | 0.7877 |
+
+The composites are **not comparable** — different document populations, and a
+macro-average moves when the population does. The correct-header rate is
+comparable, and the 17-point gap is the honest signal: the sealed set is harder,
+carrying `meridian_pdflatex` and `meridian_reportlab` (their own documents, no
+shared source), a 1990 scanned tax form, and `salesforce_summer23_release_notes`
+at 9/74 with 65 stranded. Nothing was tuned against these documents, and it
+shows.
+
+### Four more findings
+
+1. **The objective was blind to links.** A change recovering 10,306 links and
+   moving nothing else scored 1.8469 → 1.8469. It could never have been kept on
+   merit, and was kept only under an explicit reviewer authorization.
+2. **A kept change had no durable home.** Kept changes lived only in the working
+   tree, so the first discard after a keep ran `git checkout --` and destroyed
+   the kept work, leaving a baseline nothing could reproduce. Nothing in the
+   harness was watching for it. The loop now commits on keep, so HEAD *is* the
+   last kept state.
+3. **`foldStackedHeader` dropped links** by rebuilding stack lines through
+   `cellString()`. Noted when #18 was closed and not fixed then; better column
+   resolution folds far more headers, and CRM Analytics' link grid lost 62 link
+   tokens through it. Diagnosed and fixed under authorization; **not kept** —
+   held for round 2. After the fix: 0 URL tokens lost, links +204.
+4. **A mislabelled experiment.** Experiment 10's hypothesis claimed three
+   changes; its patch contained one, because a prior discard had reverted the
+   others and the tree was not checked first. Caught by reading the saved patch.
+   The journal is append-only, so the entry stands with a correction beside it.
+   The procedural lesson is that a hypothesis is a claim about a diff and nothing
+   was verifying that the diff matched the words.
+
+---
+
+## Round 2 pre-registration — written before any further tuning
+
+### (a) `WEIGHTS` gains a links term
+
+```
+linkDensity: 0.50
+```
+
+Scored as links per page against a saturation point of 8, not against a target
+count, because no document declares how many links it *should* have. **The
+weakness, stated rather than hidden:** a document with genuinely few links cannot
+score highly here. That is tolerable only because the composite compares builds
+over a *fixed* document set, where such documents contribute the same constant to
+every round. It is meaningless as an absolute quality figure and must not be read
+as one.
+
+### (b) `dataWordLoss` is corrected
+
+Both sides are normalised before diffing:
+
+- the converter's own `SUMCHECK` review-marker text and `data-smc-review` spans
+  are removed
+- line-leading ordered-list numbering is replaced by a constant marker
+
+This narrows what the constraint calls content. It does **not** soften what it
+does about real loss.
+
+**Measured, and it does not clear the way.** Re-applying the corrected constraint
+to the discarded assignment's saved outputs, six documents still trip — the 1826
+book with 64 tokens that are now genuine OCR words (`quocunque`, `poeta`,
+`Seneca`), and residual list-numbering forms the normalisation does not yet cover
+(GDPR's `(6)` parenthesised markers). Round 2 must resolve those on their merits.
+Recorded here so that a later pass cannot be mistaken for the correction having
+done the work.
+
+### (c) The new fence
+
+```
+harness sha256   6691f73666d92788267f93732c3cc1386919ccc0c60ddc7f239d135a60dcf0c7
+grade.mjs        741ed087044aafb64a3ac12b4e161bf49450de2ac4dce4de9632fae48d5f290d
+loop.mjs         c72dc080fa99cf41e8f0a26cc918fe7b911cdc60cf9897bfd970058887c14426  (unfenced)
+```
+
+It moved from `e0f6f517…` for exactly the two reasons above and nothing else.
+Round 1's grader is what round 1 was judged by; this one governs round 2.
+
+### (d) Targets carry over unchanged
+
+**95% remains the bar** — Winter '27 and the Winter-'27-class documents, both
+against the grader's structural definition, both anchored on the best reference
+score (100%, reached by both PyMuPDF and Docling). Stranded header-only → 0, no
+other metric regressed, corpus byte-stable. The targets are not renegotiated
+because a round missed them.
+
+### (e) The round-2 assignment
+
+The preserved clustering patches — line-first column resolution, exact monotone
+assignment, the list-run guard — plus the stacked-header link fix, re-run through
+the loop against the corrected constraints. Seed 5 and the sealed set are
+unchanged; **the sealed set's round-2 read happens at that round's grade**, and
+it has now been read exactly once.
+
+### Corpus and gates
+
+Scored corpus fingerprint `c88c7e82…` unmoved. `dist/` byte-identical to the H0
+record. 53/53 harness cases, 51/51 packaged-extension checks. Thirteen
+experiments journalled with every patch preserved in `exam/journal.d/`.
+
+---
+
 ## 2026-08-20 · harness cycle · H1/H5 — pre-registration, written before any tuning
 
 **This entry is the pre-registration.** It is written before a single experiment
