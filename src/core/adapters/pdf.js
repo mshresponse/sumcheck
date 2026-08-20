@@ -2143,17 +2143,109 @@ function buildTable(run, bodySize) {
     return labels.length >= 2 && values.length >= 2;
   });
 
-  const rows = grid.map((row) =>
+  const rendered = grid.map((row) =>
     row.map((fragments, index) =>
       definitionColumn[index] ? cellPairs(fragments, tolerance) : joinFragments(fragments)
     )
   );
+  const { rows, stackedHeader } = foldStackedHeader(grid, rendered);
   // Scattered misfits are alignment noise; widespread ones mean this was never
   // a table.
   if (misfits / Math.max(1, cells) > 0.35) return null;
 
   const headerIsBold = run[0].line.cells.every((c) => c.bold);
-  return { rows, header: headerIsBold || rows.length > 2 };
+  return { rows, header: stackedHeader || headerIsBold || rows.length > 2 };
+}
+
+/**
+ * The stack as the empty row-label column reveals it: the label column is blank
+ * on every line above the one carrying its own heading.
+ */
+function stackByEmptyLabelColumn(grid) {
+  let span = 0;
+  while (span < grid.length && !grid[span][0].length) span++;
+  return span && span < grid.length ? span + 1 : 0;
+}
+
+/**
+ * The stack as its left edge reveals it, for tables whose columns did not
+ * resolve cleanly — which is what happens to a header stranded at the top of a
+ * continuation page with no data rows under it to anchor the grid.
+ *
+ * A bottom-aligned stack steps leftward line by line, because each line is
+ * wider than the one above:
+ *
+ *        321 ->      Enabled for   Requires    Contact
+ *    240 ->     Enabled for  administrators  administrator
+ *  128 ->  Feature    users     /developers      setup
+ *   69 ->  Align Demand Plans with          Yes          <- data starts here
+ *
+ * Data rows share one left edge instead. So the stack is the leading run of
+ * strictly decreasing left edges, minus its last line when the rows below sit
+ * at that same edge — that line is the first data row, not the last header
+ * line.
+ */
+function stackByLeftEdge(grid) {
+  const lefts = grid.map((row) => {
+    const xs = row.flat().map((cell) => cell.x);
+    return xs.length ? Math.min(...xs) : Infinity;
+  });
+  if (lefts.some((x) => !Number.isFinite(x))) return 0;
+  let span = 1;
+  while (span < lefts.length && lefts[span] < lefts[span - 1]) span++;
+  if (span < lefts.length && lefts[span] === lefts[span - 1]) span--;
+  return span;
+}
+
+/**
+ * Fold a column header printed across several visual lines into one header row.
+ *
+ * Reference manuals set wide headers as a bottom-aligned stack:
+ *
+ *                                 Enabled for      Requires       Contact
+ *                  Enabled for   administrators  administrator  Salesforce to
+ *       Feature       users       /developers        setup         enable
+ *
+ * Read line by line that is a header row followed by two data rows of nonsense,
+ * which is what 87 of 209 tables in one reference document produced.
+ *
+ * The signal is positional and already in the grid: the row-label column is
+ * empty on every line of the stack except the last, where its own heading sits.
+ * A wrapped data row is the opposite — its label continues in exactly that
+ * column. That is what makes the two distinguishable without reading a word.
+ *
+ * Cells are joined with `<br>`, the in-cell break T1 established, so the header
+ * reads as printed and stays one row.
+ */
+function foldStackedHeader(grid, rendered) {
+  let span = stackByEmptyLabelColumn(grid);
+  if (!span) span = stackByLeftEdge(grid);
+  if (span < 2) return { rows: rendered, stackedHeader: false };
+
+  // Beyond four lines this is not a header any more; leave it rather than fold
+  // half a table into one row.
+  if (span > 4) return { rows: rendered, stackedHeader: false };
+  // Every line of a stack carries something. A blank one means these are data
+  // rows that happen to start with an empty cell.
+  if (rendered.slice(0, span).some((row) => !row.some((cell) => cellString(cell).trim()))) {
+    return { rows: rendered, stackedHeader: false };
+  }
+
+  const header = rendered[0].map((_, column) => {
+    const parts = [];
+    for (let i = 0; i < span; i++) {
+      const text = cellString(rendered[i][column]).trim();
+      if (text) parts.push(text);
+    }
+    return parts.join('<br>');
+  });
+  return { rows: [header, ...rendered.slice(span)], stackedHeader: true };
+}
+
+/** A rendered cell is a string, or the `{pairs}` shape T1 introduced. */
+function cellString(cell) {
+  if (typeof cell === 'string') return cell;
+  return (cell?.pairs || []).map((pair) => pair.join(' ')).join(' ');
 }
 
 /**

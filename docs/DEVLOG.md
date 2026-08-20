@@ -7,6 +7,81 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-19 · v1.7.0 cycle · Q4 — folding a stacked column header into one row (#9)
+
+### The fixture, and RED
+
+`test/fixtures/stacked-header.pdf` — a bottom-aligned three-line header of five
+columns, plus a control table with an ordinary one-line header that must come
+out unchanged. RED reproduced the defect exactly: a header row and two data rows
+of nonsense. Four of eight assertions failed; the four controls were green
+throughout.
+
+### Two positional signals, because the tables come in two shapes
+
+**Where the grid resolves cleanly**, the row-label column is empty on every line
+of the stack except the last, where its own heading sits. A wrapped *data* row is
+the opposite — its label continues in exactly that column. That difference
+separates the two without reading a word, and it folded 21 tables.
+
+**Where the grid does not resolve**, that signal is invisible: a header stranded
+at the top of a continuation page has no data rows beneath it to anchor the
+column clustering, and five columns collapse into three with the header text
+packed into the first. Those tables have a second signature — a bottom-aligned
+stack steps leftward line by line, because each line is wider than the one above:
+
+```
+      321 ->        Enabled for    Requires      Contact
+  240 ->     Enabled for   administrators  administrator
+128 ->  Feature     users      /developers      setup
+ 69 ->  Align Demand Plans with            Yes            <- data starts here
+```
+
+Data rows share one left edge instead. So the stack is the leading run of
+strictly decreasing left edges, minus its last line when the rows below sit at
+that same edge — that line is the first data row, not the last header line. The
+control table's edges are `72, 72, 72`, which is not a stack, and it does not
+fold.
+
+Cells are joined with `<br>`, the in-cell break T1 established.
+
+### Results, including where it falls short
+
+| Winter '27 | before | after Q4 |
+| --- | ---: | ---: |
+| tables carrying a mangled header split | **87** | **0** |
+| tables whose header row is fully correct | 2 | **23** |
+| table rows | 1,162 | 984 |
+
+**The mangled-header class is gone.** Every table now emits one header row and no
+junk data rows.
+
+**The target was parity with the ~95% reference and this does not reach it.** 23
+of 209 headers are fully correct. The other 66 are the stranded continuation
+headers: they now fold into a single header row instead of a header plus two junk
+rows, but their *contents* are still distributed wrongly across three columns,
+because the column clustering that produced those three columns is what was
+wrong in the first place. Folding cannot repair a grid that was never resolved.
+
+Those 66 are exactly the tables Q5 exists to merge into their continuation on the
+following page. Merged, they inherit that table's resolved columns and the
+question disappears. Attacking the clustering here instead would mean rewriting
+column detection for a case Q5 removes — which is why the shortfall is reported
+rather than papered over.
+
+### No content lost
+
+Net Zero folds 41 table rows into 16. A word-level diff across the whole
+1,349-page document finds **2 tokens** different, both halves of one already
+garbled string. The rows did not disappear; their text moved into `<br>`-joined
+header cells.
+
+Corpus: every metric at baseline, marker invariant 6 = 6. Gates: check clean,
+**49/49** harness cases, **51/51** packaged-extension checks. `dist/sumcheck-1.6.0.zip`
+still `86670af2…`.
+
+---
+
 ## 2026-08-19 · v1.7.0 cycle · Q3 — collapsing faux-bold overprint (#11)
 
 The cause is in the characterization note below, written before this fix: the

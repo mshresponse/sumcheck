@@ -1620,6 +1620,84 @@ async function runOverprintCase() {
   }
 }
 
+/**
+ * A column header wrapped across several visual lines is one header row
+ * (Q4, #9).
+ *
+ * Reference-manual tables print a stacked, bottom-aligned header:
+ *
+ *                                 Enabled for      Requires       Contact
+ *                  Enabled for   administrators  administrator  Salesforce to
+ *      Feature        users       /developers        setup         enable
+ *
+ * Measured on a 1,010-page document, 87 of 209 tables opened with that stack
+ * read as a header plus two junk data rows, and only 2 came out right. Two
+ * independent implementations assemble it correctly from the same positional
+ * data, so the fragments already say what is header and what is body: the
+ * row-label column is empty on every stack line but the last, which is exactly
+ * what a wrapped data row never does — its label continues in that column.
+ *
+ * The second table in the fixture is an ordinary one-line header and must come
+ * out byte for byte as it did before.
+ */
+async function runStackedHeaderCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>a stacked column header assembles into one header row</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'stacked-header', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/stacked-header.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'stacked-header.pdf' }, { outputs: ['md'] }, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    const rows = body.split('\n').filter((l) => l.startsWith('|'));
+    const first = rows[0] || '';
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the stack becomes one header row': () =>
+          /Enabled for<br>administrators/.test(first) ||
+          `header row was ${JSON.stringify(first.slice(0, 90))}`,
+        'the row-label column is headed': () =>
+          /\|\s*Feature\s*\|/.test(first) || 'the Feature label is not in the header row',
+        'every stack label reaches it': () =>
+          ['Enabled for', 'users', 'administrators', 'Requires', 'setup', 'Contact', 'enable'].every(
+            (t) => first.includes(t)
+          ) || `header row lost labels: ${JSON.stringify(first.slice(0, 90))}`,
+        'no junk data row is left behind': () =>
+          !rows.slice(2).some((r) => /administrators/.test(r) || /\/developers/.test(r)) ||
+          'a header fragment is still a data row',
+        'the wrapped data row keeps its whole label': () =>
+          rows.some((r) => r.includes('Align Demand Plans with Product Demand Insights')) ||
+          'the wrapped row label was damaged',
+        'the data rows survive with their values': () =>
+          rows.filter((r) => /\bYes\b/.test(r)).length === 3 ||
+          `${rows.filter((r) => /\bYes\b/.test(r)).length} row(s) carry a value, expected 3`,
+        'an ordinary single-line header is untouched': () =>
+          body.includes('| Region | Volume | Change |') || 'the control table changed',
+        'and its rows too': () =>
+          body.includes('| East | 18,420 | +11% |') && body.includes('| West | 12,110 | +3% |') ||
+          'the control table rows changed',
+      },
+      record.md,
+      result
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').innerHTML = `<span class="fail">ERROR</span> ${escapeHtml(err.message)}`;
+    console.error('stacked-header', err);
+  }
+}
+
 const summary = document.getElementById('summary');
 const container = document.getElementById('cases');
 const results = [];
@@ -1658,6 +1736,7 @@ async function run() {
     ['outline-headings', runOutlineHeadingCase],
     ['oversized-bullet', runOversizedBulletCase],
     ['overprint-heading', runOverprintCase],
+    ['stacked-header', runStackedHeaderCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],

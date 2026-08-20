@@ -1,0 +1,69 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 1522 >>
+stream
+BT /F2 12 Tf 1 0 0 1 72 730 Tm (Feature Availability) Tj ET
+BT /F1 10 Tf 1 0 0 1 321 700 Tm (Enabled for) Tj ET
+BT /F1 10 Tf 1 0 0 1 408 700 Tm (Requires) Tj ET
+BT /F1 10 Tf 1 0 0 1 491 700 Tm (Contact) Tj ET
+BT /F1 10 Tf 1 0 0 1 240 685 Tm (Enabled for) Tj ET
+BT /F1 10 Tf 1 0 0 1 313 685 Tm (administrators) Tj ET
+BT /F1 10 Tf 1 0 0 1 396 685 Tm (administrator) Tj ET
+BT /F1 10 Tf 1 0 0 1 479 685 Tm (Salesforce to) Tj ET
+BT /F1 10 Tf 1 0 0 1 128 670 Tm (Feature) Tj ET
+BT /F1 10 Tf 1 0 0 1 255 670 Tm (users) Tj ET
+BT /F1 10 Tf 1 0 0 1 319 670 Tm (/developers) Tj ET
+BT /F1 10 Tf 1 0 0 1 416 670 Tm (setup) Tj ET
+BT /F1 10 Tf 1 0 0 1 494 670 Tm (enable) Tj ET
+BT /F1 10 Tf 1 0 0 1 69 647 Tm (Align Demand Plans with) Tj ET
+BT /F1 10 Tf 1 0 0 1 422 647 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 69 632 Tm (Product Demand Insights) Tj ET
+BT /F1 10 Tf 1 0 0 1 69 609 Tm (Benchmark Manufacturing Pricing) Tj ET
+BT /F1 10 Tf 1 0 0 1 422 609 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 69 586 Tm (Track Unusable Inventory) Tj ET
+BT /F1 10 Tf 1 0 0 1 255 586 Tm (Yes) Tj ET
+BT /F2 12 Tf 1 0 0 1 72 540 Tm (Regional Results) Tj ET
+BT /F2 10 Tf 1 0 0 1 72 515 Tm (Region) Tj ET
+BT /F2 10 Tf 1 0 0 1 220 515 Tm (Volume) Tj ET
+BT /F2 10 Tf 1 0 0 1 330 515 Tm (Change) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 495 Tm (East) Tj ET
+BT /F1 10 Tf 1 0 0 1 220 495 Tm (18,420) Tj ET
+BT /F1 10 Tf 1 0 0 1 330 495 Tm (+11%) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 480 Tm (West) Tj ET
+BT /F1 10 Tf 1 0 0 1 220 480 Tm (12,110) Tj ET
+BT /F1 10 Tf 1 0 0 1 330 480 Tm (+3%) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+7 0 obj
+<< /Title (Availability Matrix) /Creator (Sumcheck fixtures) >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000001825 00000 n 
+0000001922 00000 n 
+0000002024 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R /Info 7 0 R >>
+startxref
+2103
+%%EOF

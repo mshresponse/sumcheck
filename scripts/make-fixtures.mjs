@@ -596,6 +596,90 @@ function buildOverprintHeadingPdf() {
   return Buffer.from(out, 'latin1');
 }
 
+/**
+ * A three-line stacked column header, bottom-aligned, as reference-manual
+ * tables print them.
+ *
+ *                                   Enabled for      Requires       Contact
+ *                    Enabled for   administrators  administrator  Salesforce to
+ *        Feature        users       /developers        setup         enable
+ *
+ * Five columns wrapped across three visual lines. The row-label column's own
+ * heading sits on the last line, so the first column is empty on the lines
+ * above it — which is exactly what a wrapped *data* row never does, since its
+ * label continues in that column. That difference is the signal.
+ *
+ * The second table is the control: an ordinary one-line header that must come
+ * out exactly as it does today.
+ */
+function buildStackedHeaderPdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const content = [
+    line('F2', 12, 72, 730, 'Feature Availability'),
+
+    // The stacked header, bottom-aligned across three baselines 15pt apart.
+    line('F1', 10, 321, 700, 'Enabled for'),
+    line('F1', 10, 408, 700, 'Requires'),
+    line('F1', 10, 491, 700, 'Contact'),
+    line('F1', 10, 240, 685, 'Enabled for'),
+    line('F1', 10, 313, 685, 'administrators'),
+    line('F1', 10, 396, 685, 'administrator'),
+    line('F1', 10, 479, 685, 'Salesforce to'),
+    line('F1', 10, 128, 670, 'Feature'),
+    line('F1', 10, 255, 670, 'users'),
+    line('F1', 10, 319, 670, '/developers'),
+    line('F1', 10, 416, 670, 'setup'),
+    line('F1', 10, 494, 670, 'enable'),
+
+    // Data rows. The first wraps, and its label continues in column one.
+    line('F1', 10, 69, 647, 'Align Demand Plans with'),
+    line('F1', 10, 422, 647, 'Yes'),
+    line('F1', 10, 69, 632, 'Product Demand Insights'),
+    line('F1', 10, 69, 609, 'Benchmark Manufacturing Pricing'),
+    line('F1', 10, 422, 609, 'Yes'),
+    line('F1', 10, 69, 586, 'Track Unusable Inventory'),
+    line('F1', 10, 255, 586, 'Yes'),
+
+    // Control: an ordinary single-line header, which must not change.
+    line('F2', 12, 72, 540, 'Regional Results'),
+    line('F2', 10, 72, 515, 'Region'),
+    line('F2', 10, 220, 515, 'Volume'),
+    line('F2', 10, 330, 515, 'Change'),
+    line('F1', 10, 72, 495, 'East'),
+    line('F1', 10, 220, 495, '18,420'),
+    line('F1', 10, 330, 495, '+11%'),
+    line('F1', 10, 72, 480, 'West'),
+    line('F1', 10, 220, 480, '12,110'),
+    line('F1', 10, 330, 480, '+3%'),
+  ].join('\n');
+
+  const objects = [];
+  const add = (body) => { objects.push(body); return objects.length; };
+  add('<< /Type /Catalog /Pages 2 0 R >>');
+  add('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      '/Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>');
+  add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const info = add('<< /Title (Availability Matrix) /Creator (Sumcheck fixtures) >>');
+
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 /* ------------------------------------------------------------------- PDF */
 
 function buildPdf() {
@@ -912,6 +996,7 @@ write('diagnostics.pdf', buildDiagnosticsPdf());
 write('outline-headings.pdf', buildOutlineHeadingsPdf());
 write('oversized-bullet.pdf', buildOversizedBulletPdf());
 write('overprint-heading.pdf', buildOverprintHeadingPdf());
+write('stacked-header.pdf', buildStackedHeaderPdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own
