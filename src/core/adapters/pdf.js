@@ -376,18 +376,60 @@ function buildCells(group) {
   let prevEnd = null;
   for (const item of group) {
     const gap = prevEnd === null ? 0 : item.x - prevEnd;
+    const lead = gap > item.size * 0.18 ? ' ' : '';
     if (!cur || gap > item.size * 1.4) {
       if (cur) cells.push(cur);
-      cur = { text: item.text, x: item.x, x2: item.x + item.width, bold: item.bold };
+      cur = {
+        text: item.text, x: item.x, x2: item.x + item.width, bold: item.bold,
+        // The link lives on the glyph run and nowhere else. Dropping it here is
+        // why a table cell could never carry a hyperlink: `renderTable` had
+        // nothing left to emit. Carried alongside the text rather than merged
+        // into it, so the cell's own text is untouched.
+        segments: [{ text: item.text, href: item.href }],
+      };
     } else {
-      cur.text += (gap > item.size * 0.18 ? ' ' : '') + item.text;
+      cur.text += lead + item.text;
+      cur.segments.push({ text: lead + item.text, href: item.href });
       cur.x2 = item.x + item.width;
       cur.bold = cur.bold && item.bold;
     }
     prevEnd = item.x + item.width;
   }
   if (cur) cells.push(cur);
-  return cells.map((c) => ({ ...c, text: c.text.replace(/\s+/g, ' ').trim() })).filter((c) => c.text);
+  return cells
+    .map((c) => {
+      const text = c.text.replace(/\s+/g, ' ').trim();
+      return { ...c, text, segments: normalizeSegments(c.segments, text) };
+    })
+    .filter((c) => c.text);
+}
+
+/**
+ * Apply the cell's own whitespace normalisation across the segment sequence.
+ *
+ * The cell text is `raw.replace(/\s+/g, ' ').trim()`; the segments have to end
+ * up spelling exactly that, or the two disagree and the link markup would shift
+ * the text. **If the reconstruction is not exact, the segments are discarded**
+ * and the cell renders as plain text — the same bytes it produced before. That
+ * safety valve is why adding links cannot change a document that has none, and
+ * cannot change the text of one that does.
+ */
+function normalizeSegments(segments, target) {
+  const out = [];
+  let prevEndsSpace = true; // leading whitespace is trimmed away
+  for (const segment of segments) {
+    let text = String(segment.text).replace(/\s+/g, ' ');
+    if (prevEndsSpace) text = text.replace(/^ /, '');
+    if (!text) continue;
+    out.push({ text, href: segment.href });
+    prevEndsSpace = / $/.test(text);
+  }
+  for (let i = out.length - 1; i >= 0; i--) {
+    out[i].text = out[i].text.replace(/ $/, '');
+    if (out[i].text) break;
+    out.pop();
+  }
+  return out.map((seg) => seg.text).join('') === target ? out : [{ text: target }];
 }
 
 /* -------------------------------------------------------------------- OCR */
@@ -2454,8 +2496,9 @@ function foldStackedHeader(grid, rendered) {
 /** A rendered cell is a string, or the `{pairs}` shape T1 introduced. */
 function cellString(cell) {
   if (typeof cell === 'string') return cell;
+  if (typeof cell?.html === 'string') return cell.text;
   if (Array.isArray(cell?.stack)) return cell.stack.join(' ');
-  return (cell?.pairs || []).map((pair) => pair.join(' ')).join(' ');
+  return (cell?.pairs || []).map((pair) => pair.map(partText).join(' ')).join(' ');
 }
 
 /**
@@ -2482,8 +2525,54 @@ function renderAligned(run) {
 
 /** A cell with no internal structure: its fragments, in reading order. */
 function joinFragments(fragments) {
-  return fragments.map((f) => f.text).join(' ');
+  const text = fragments.map((f) => f.text).join(' ');
+  const segments = [];
+  fragments.forEach((fragment, i) => {
+    if (i) segments.push({ text: ' ' });
+    for (const segment of fragment.segments || [{ text: fragment.text }]) segments.push(segment);
+  });
+  return linkedCell(text, segments);
 }
+
+/**
+ * A cell value that carries a hyperlink, as pre-escaped inline HTML.
+ *
+ * Only `href` is applied — never bold, italic or mono. Those were never
+ * rendered inside a table cell, and applying them now would change the output
+ * of every table in the corpus that contains bold text. This change is meant to
+ * add links and move nothing else, so a cell with no link returns the identical
+ * string it always did.
+ */
+function linkedCell(text, segments) {
+  if (!segments.some((segment) => segment.href)) return text;
+  if (segments.map((segment) => segment.text).join('') !== text) return text;
+  /**
+   * Merge consecutive segments that share one href into a single anchor.
+   *
+   * A link annotation spanning several visual lines arrives as one fragment per
+   * line. Emitting an anchor for each repeats the entire URL on every line and
+   * splits tokens that were whole: the census report prints a four-line URL
+   * inside a table cell, and per-fragment anchors turned
+   * `library/publications/2023/demo/p60-279.` into `library/` plus
+   * `publications/2023/demo/p60-279.` — a text change, not just an ugly one.
+   */
+  const merged = [];
+  for (const segment of segments) {
+    const previous = merged[merged.length - 1];
+    if (previous && previous.href === segment.href) previous.text += segment.text;
+    else merged.push({ text: segment.text, href: segment.href });
+  }
+  let html = '';
+  for (const segment of merged) {
+    const escaped = escapeHtml(segment.text);
+    html += segment.href ? `<a href="${escapeHtml(segment.href)}">${escaped}</a>` : escaped;
+  }
+  return { html, text };
+}
+
+/** The plain text of a cell value, whatever shape it arrived in. */
+const partText = (value) =>
+  value && typeof value === 'object' && typeof value.text === 'string' ? value.text : String(value ?? '');
 
 /**
  * Split a definition-list cell into its label/value pairs.
@@ -2502,12 +2591,14 @@ function cellPairs(fragments, tolerance) {
   const left = Math.min(...fragments.map((f) => f.x));
   const pairs = [];
   for (const fragment of fragments) {
-    if (fragment.x - left <= tolerance) pairs.push({ label: fragment.text, values: [] });
-    else if (pairs.length) pairs[pairs.length - 1].values.push(fragment.text);
+    if (fragment.x - left <= tolerance) pairs.push({ label: fragment, values: [] });
+    else if (pairs.length) pairs[pairs.length - 1].values.push(fragment);
     else return joinFragments(fragments); // a value before any label
   }
   if (!pairs.some((pair) => pair.values.length)) return joinFragments(fragments);
-  return { pairs: pairs.map(({ label, values }) => [label, values.join(' ')]) };
+  // Each part goes through joinFragments so a link inside a definition list
+  // survives too — the label and the value are cells in their own right.
+  return { pairs: pairs.map(({ label, values }) => [joinFragments([label]), joinFragments(values)]) };
 }
 
 function renderTable(table) {
@@ -2517,17 +2608,21 @@ function renderTable(table) {
    * line break a GFM table cell can carry. Every part is escaped individually;
    * the break is markup, the content never is.
    */
+  // Already-escaped inline HTML passes through; everything else is escaped
+  // here exactly as before.
+  const render = (value) =>
+    value && typeof value.html === 'string' ? value.html : escapeHtml(partText(value));
   const cell = (value, tag) => {
     if (value && Array.isArray(value.stack)) {
       return `<${tag}>${value.stack.map(escapeHtml).join('<br>')}</${tag}>`;
     }
     if (value && Array.isArray(value.pairs)) {
       const body = value.pairs
-        .map(([label, text]) => `${escapeHtml(label)}: ${escapeHtml(text)}`)
+        .map(([label, text]) => `${render(label)}: ${render(text)}`)
         .join('<br>');
       return `<${tag}>${body}</${tag}>`;
     }
-    return `<${tag}>${escapeHtml(value)}</${tag}>`;
+    return `<${tag}>${render(value)}</${tag}>`;
   };
   const head = table.header
     ? `<thead><tr>${first.map((c) => cell(c, 'th')).join('')}</tr></thead>`
