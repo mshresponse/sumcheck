@@ -7,6 +7,105 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-21 · harness cycle · round 5 report — the battery works, and it points upstream
+
+Round 5 kept nothing. The redesigned constraint did what it was built to do: it
+cleared 37 of 43 reported occurrences as representation, charged 6, and the 6
+turned out to name a defect **outside the pre-registered assignment**. That
+attribution is the round's finding.
+
+### Boundary
+
+`round5/constraint.patch` applied. Both hashes matched the pre-registered
+prospective values to the character — `grade.mjs` `7527f03f…`, fence `a8c9e5ef…`
+(from `2aed6d09…`). Validation suite re-run against the applied grader:
+
+| case | result |
+| --- | --- |
+| a. round-2 `[object Object]` destruction | **CHARGES** 51 occurrences, 3 documents |
+| b. synthetic deletion | **CHARGES** 20 occurrences |
+| c1. identical text | 0 *(weak by construction)* |
+| c2. round-1 hyperlink keep | **0** |
+| d. current assignment | 6 charged, 37 cleared |
+
+The applied grader reproduces the standalone battery exactly, so the instrument
+validated and the instrument in force are the same one. It is **more** sensitive
+to destruction than the constraint it replaced — 51 against 29, 20 against 11.
+
+### Re-gate — Experiment 18, DISCARD
+
+Every other hard constraint passed; corpus byte-stable; composite would have been
+**1.9011 → 2.0066**; Winter '27 27.0% → 42.3%, stranded 20 → 0. Discarded on six
+charged occurrences, each naming the tests it failed:
+
+```
+1              [failed R1; R2 (skipped: token shorter than 4)]
+accipiimt      [failed R1; R2 canonical stream (1→0)]
+affligit       [failed R1; R2 canonical stream (1→0)]
+formidantopes  [failed R1; R2 canonical stream (1→0)]
+snbjecerit     [failed R1; R2 canonical stream (1→0)]
+casesensitive  [failed R1; R2 canonical stream (45→44)]
+```
+
+The auditability requirement earns its keep here: a charge that names its failed
+tests can be argued with, and arguing with these is what produced the finding
+below.
+
+### The finding: the six trace to failed two-column detection
+
+The torn row is the page's **two print columns read across the gutter**:
+
+```
+| disse; …apta sunt. git homines adeo et corrodit… | / Invidia affli- |
+```
+
+Reading order is `…apta sunt.` → `/ Invidia affli-` → `git homines adeo…`.
+`affli-` ends the left print column and `git` opens the right, so `affligit` is
+torn by the layout being misread — not by cell assignment.
+
+**Why the guard misses it.** `splitColumns()` declines to split a page when more
+than 20% of its lines cross the midline — sensible when the crossers are titles
+and footnotes. But `buildLines()` assembles glyph runs into lines by y *before*
+that check, so on this document a single line spans both print columns and
+**every** line counts as crossing. The guard sees 100% crossing, concludes "not a
+two-column page", and hands gutter-spanning lines to table detection, which finds
+a two-column grid because that is exactly what is in front of it.
+
+**It is pre-existing.** The assignment makes it more visible, it does not cause it:
+
+| | tables | 2-column | long prose cells in those |
+| --- | ---: | ---: | ---: |
+| 1826 book, baseline | 170 | 100 | 147 |
+| 1826 book, with the assignment | 209 | 132 | 222 |
+| Winter '27, for contrast | 104 | 23 | 139 |
+
+### Experiment 19 — a hypothesis, refuted and recorded
+
+**Hypothesis:** the interleaving came from the continuation path, which assigned
+wrapped fragments by nearest column rather than monotonically.
+
+**Measured: no effect.** Composite identical at 2.0066, the same six tokens
+charged. The reason is now clear — a continuation here carries a *single* cell,
+and monotone assignment of one cell *is* nearest-column, which is what it already
+did. The fix was aimed at the wrong stage.
+
+Reverted rather than kept for looking plausible. A change that measurably does
+nothing is not harmless: it is a false explanation sitting in the codebase.
+
+### Sealed set
+
+**Unspent for the fourth round.** Nothing kept, so a sealed grade would compare an
+unchanged build against itself. Read exactly once, in round 1, on the kept
+hyperlink prerequisite. Budget one carries.
+
+### Corpus and gates
+
+Fingerprint `c88c7e82…` unmoved. `dist/` byte-identical. `grade.mjs` unchanged
+since the boundary at `7527f03f…`, fence `a8c9e5ef…`. Tree clean. 19 experiments
+journalled: **1 kept, 18 discarded.**
+
+---
+
 ## 2026-08-21 · harness cycle · round-5 boundary — the recovery battery applied
 
 Recorded **before any round-5 tuning**. Nothing has run against this grader yet.
