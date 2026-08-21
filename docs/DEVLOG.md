@@ -7,6 +7,83 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-21 · harness cycle · round-6 boundary — the baseline corrected, and a round-2 attribution set right
+
+Recorded before any round-6 tuning. **No grader change; the fence does not move.**
+`grade.mjs` `7527f03f…`, harness fence `a8c9e5ef…`, both unchanged.
+
+### The correction, and what it re-attributes
+
+In round 2 the reviewer accepted five scored-corpus diffs and I copied the
+accepted outputs into `exam/baseline/gfe` and `exam/baseline/tuning`. **Those
+outputs came from the clustering assignment, which was discarded and never kept.**
+Both baselines have since held text no build in the repository can reproduce.
+
+This is an append-only correction to the round-2 record, not a rewrite of it: the
+acceptance was real and the diffs were reviewed, but they were attributed to "the
+corpus baseline" when they belonged to **a bench state** — a measurement of a
+candidate change, not a property of the shipping converter. Banking a candidate's
+output as a baseline is how a gate stops describing the thing it gates.
+
+Both baselines were byte-identical to each other on all five, so it was one defect
+rather than two. It had been failing Tier A byte-stability silently ever since;
+S0's pre-packaging check is what surfaced it, and the cause predated the change
+being checked.
+
+### What the baselines now record
+
+Restored from a fresh Tier A run of the kept build. The header goes back to the
+**defective** form, and that is correct — a baseline records what the build does,
+not what we would prefer it did:
+
+```
+before (banked candidate)  | Service date | … | Quantity | Charge | Total |
+after  (what HEAD emits)   | Service date | … | Quantity Charge |  | Total |
+```
+
+The improvement returns when the clustering assignment lands, and it will arrive
+then as a measured gain rather than a number already on the books.
+
+```
+49caaed7b20372e1039fac2d2b9c948282ab879f1382c32722438d2a24edd061  Good Faith Estimate (37).pdf.md
+11930711d5144d1fedf756768dc155c2744f0ec02ad654c0ca09691039cca9c7  Good Faith Estimate (38).pdf.md
+0a171f4167da6fbb67037202d67f0df6c18e2b458241e37552b1d4712d346778  Good Faith Estimate (39).pdf.md
+81245ea803e6b79ef9ed58da320d6c5aa1dec49b38f2c384d416ddb801e5bc97  Good Faith Estimate (40).pdf.md
+962e30c909a570e845e55e2d795ffa08113f370309e3a2e3b29029dfedf9dc42  Good Faith Estimate (41).pdf.md
+```
+
+### Verification
+
+| check | result |
+| --- | --- |
+| Tier A byte-stability | **zero** — all outputs identical |
+| every other Tier A hard constraint | pass |
+| validation suite (a) `[object Object]` destruction | **CHARGES** 51 occurrences, 3 documents |
+| validation suite (b) synthetic deletion | **CHARGES** 20 occurrences |
+| validation suite (c1) identical text / (c2) round-1 keep | 0 / 0 |
+
+### The expected tripwire, recorded before it fires
+
+When step (d)2 re-gates the clustering assignment on this corrected baseline,
+**GFE 37–41 will move again** — that is the same diff returning as a candidate,
+which is now exactly what it is.
+
+Per the reviewer's clarification, recorded here so it is not improvised later: the
+byte-stability tripwire **fires and escalates** with the per-document diffs for
+review. It does not auto-discard, and it is **not** silently accepted on the
+strength of the round-2 precedent. That acceptance is context, not authorisation;
+the diffs are re-reviewed against the current bench state. The round-6 target
+"scored corpus unmoved" binds every experiment except a movement escalated and
+accepted through this protocol.
+
+### Unchanged
+
+Seed 5, the 22 sealed documents and their hashes, **sealed read budget one**
+(carried unspent through four rounds). Scored corpus fingerprint `c88c7e82…`.
+`dist/` byte-identical, `1.7.2` (`724d2fd0…`) submitted and pending.
+
+---
+
 ## 2026-08-21 · harness cycle · round-6 pre-registration — the gutter, and a baseline that must be corrected first
 
 For review before anything is applied or run. `grade.mjs` `7527f03f…`, fence
