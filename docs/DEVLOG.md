@@ -7,6 +7,85 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-20 · harness cycle · round-3 boundary — the registered correction applied
+
+Recorded **before any round-3 tuning**, as pre-registered. Nothing has been run
+against this grader yet.
+
+### Applied
+
+`exam/round3/contentOnly-cell-aware.patch`, registered unapplied at the end of
+round 2 with its evidence. `contentOnly()` now normalises ordered-list numbering
+inside a table cell (`| 4. In the row…`) as well as at line start (`4. In the
+row…`) — the same numbering one structure deeper.
+
+Measured on round 2's discarded assignment, this accounts for **41 of 88**
+reported data-word-loss tokens and clears four documents entirely (eurlex 29,
+marketing_cloud_next 4, salesforce_spring24 4, reports_and_dashboards 1), plus 3
+of crm_analytics's 9. Proven not to be loss: on `marketing_cloud_next` the raw
+occurrence counts of `4`, `6` and `7` are identical at 242, 117 and 87 before and
+after.
+
+### The new hashes
+
+```
+grade.mjs         3c869cccc5fa4cfa187c6e673527d69886797e3a194f1b22730e1928a662b4e3
+metrics.mjs       9e30796507842093db317ae5c4afee8f0ef109bf552008a1ee4c3c7128db4256
+truth.mjs         1ef329715af77a0860b50f97df0134d0e1805a1d4da022e5b25faf8a371f11b6
+serve.mjs         4cabd302303f13051aa556e78efeeea748d9370da0db8c8d8c87eb576b37e4d1
+runner.js         f7de2da2f5f8921082baae452e92e8b8d06305f5bb6fd8ffd26a324156d889be
+runner.html       105a48a789182563d2d7841733865abc0f50fac6d6968ba7ca13eb64a0d0bc79
+build-manifest.py ccd6b12b99cb4852ab7e98ff1ec42a76e5122d64798d731005a3f7bd9e36b1b0
+
+HARNESS FENCE     aca908f513e471b8796ff78afa5aca25a5871fa3d3d337aecc07f2f776933cc9
+```
+
+Moved from the round-2 fence `6691f736…` for this correction and nothing else.
+Round 2 was judged by the round-2 grader; this one governs round 3.
+
+Also at this boundary, **outside the fence**:
+
+```
+loop.mjs          f5e4425080379ff5c07e093f7ebce9570bdc868d8d9257afd179d3c0d428abfb
+```
+
+`nextExperimentNumber()` matched `^## Experiment (\d+)`, which also matched
+hand-written investigation notes using that heading. The journal ended round 2
+showing `Experiment 12` twice, skipping 15, and reading as 17 entries for 15
+runs. The pattern now requires the `— KEEP|DISCARD` suffix this script always
+writes and a note has no reason to imitate. The counter now reports **15**, which
+is the true tally: 1 kept, 14 discarded. `loop.mjs` is not in `HARNESS_FILES` and
+cannot affect a score.
+
+### No re-baseline, and why
+
+`contentOnly()` is read by `dataWords()`, which is read by `dataWordLoss()` and
+nothing else — a hard constraint, not a term in the objective. The correction
+cannot move a composite. The round-2 tuning baseline therefore stands unchanged
+at **1.9011** and was not rebuilt; rebuilding it would have re-converted 93
+documents to produce identical numbers.
+
+### Still registered, still unpatched
+
+The **second artefact class** — 5 tokens on `crm_analytics` (`searchString`
+15→15, `replacementString` 6→6, `valueToBeRemoved` 9→9, raw counts identical, so
+not loss) — has no diagnosis and is not patched. If round-3 loop work produces
+one, the finding is registered and the correction waits for the round-4 boundary,
+unless it blocks a keep, in which case it escalates.
+
+### Round 3 as approved
+
+Assignment order: the 1826 book's 41 genuine tokens, then `crm_analytics`'s
+single genuine token (`casesensitive` 4→3), then re-gate the preserved clustering
+assignment from `journal.d/round2-assignment-current.patch`. Targets 95%, seed 5,
+sealed set and its hashes unchanged, **sealed read budget one** — spent only on a
+kept state worth validating.
+
+`dist/` byte-identical, scored corpus fingerprint `c88c7e82…` unmoved,
+`exam/sealed/` untouched.
+
+---
+
 ## 2026-08-20 · store listing — the reconstruction gap, found and closed
 
 Amends the earlier entry of the same date rather than rewriting it. That entry
