@@ -7,6 +7,114 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-20 · harness cycle · round 4 report — 42 reported losses, 0 text lost
+
+Round 4 kept nothing. The boundary predicted its own effect and was exactly right;
+the assignment then discarded on a constraint whose entire remaining content is
+representation. All counts in **occurrences**, distinct in brackets.
+
+### The prediction held
+
+The round-4 boundary entry stated the expected effect **before** measuring:
+47 → 42 occurrences, `crm_analytics` 6 → 1, the 1826 book unmoved at 41.
+
+Measured after applying: **42 (42 distinct) across 2 documents — 1826: 41 (41),
+crm_analytics: 1 (1).** Exact on every figure, including the one predicted *not*
+to move. No deviation to report.
+
+### The assignment, measured on the corrected instrument
+
+| | baseline | assignment |
+| --- | ---: | ---: |
+| composite | 1.9011 | **2.0066** |
+| Winter '27 fully-correct headers | 27.0% | **42.3%** |
+| Winter '27 stranded header-only | 20 | **0** |
+| scored corpus | — | **byte-stable** |
+| data-word loss | — | 42 occurrences, 2 documents |
+
+Discarded on the last row. Target 1 (≥95%) misses at 42.3% on its own merits.
+
+### Every reported occurrence, traced
+
+The approved next step was "the genuinely-gone residual as converter work". **There
+is no genuinely-gone residual**, and no converter work was performed because the
+diagnosis found nothing to fix.
+
+| population | occ | evidence |
+| --- | ---: | --- |
+| cell-boundary splits, halves contiguous | 19 | `citetur` 2→2, `cunque` 25→25, `ex-` 6→7 |
+| still present as a substring | 10 | |
+| contiguous once delimiters and hyphens are removed | 6 | `Speciosissimi` → `Spe` \| `ciosissimi` |
+| halves present but separated | 5 | `proverbium` → `pro` + `verbium` |
+| a corruption the converter no longer emits | 1 | `casesensitive`; `case` 667→667, `sensitive` 129→129 |
+| an artefact of round 4's own dehyphenation rule | 1 | `calumA` |
+| **genuine text loss** | **0** | |
+
+**The corruption case is worth stating plainly.** The baseline contained
+`casesensitive` — two column fragments run together. The improved converter emits
+them correctly separated. The constraint charged the *removal of a corruption* as
+a loss.
+
+**The last token indicts the instrument.** `calumA` resisted every recovery test.
+Its cause:
+
+```
+baseline: "Scoffs, calum- <!-- SUMCHECK … -->"  → marker stripped → newline → rule fires → "calumA…"
+new     : "Scoffs, calum- |"                    → cell boundary   → rule does not fire
+```
+
+Round 4's own newline-anchored dehyphenation fires on one side and not the other,
+**creating** a difference where the text has none. It removed 41 real false
+positives and produced one. That is a good trade and still worth recording: a
+normalisation added to fix the measure can perturb it.
+
+### Both remedies measured, both rejected
+
+**Widening dehyphenation across a cell delimiter** — built offline, not applied.
+Helps the 1826 book (41 → 22) and **newly harms three documents that currently
+pass**: census 0 → 5, marketing_cloud_next 0 → 2, crm_analytics 1 → 2. The caution
+registered at the boundary — that joining across a table boundary is a stronger
+claim than "a word wrapped" — is vindicated by measurement, not overturned.
+
+**Rejoining at the converter** — the pattern occurs 105 times across 7 documents
+(census 63, PMC 22, 1826 10), so it is not a 1826 peculiarity. And it is circular:
+joining `ex-` + `citetur` into `excitetur` removes the tokens `ex` and `citetur`,
+so on any document whose baseline has them split, the fix trips the constraint
+that compares representations.
+
+### What the cycle has established
+
+The clustering assignment is, on the corrected instrument, a strict improvement
+that loses no text: **+15.3 points of header correctness on the reference
+document, stranded tables to zero, corpus byte-stable, composite up 0.1055, and
+zero words missing anywhere in a 93-document tuning set.** It cannot be kept.
+
+The constraint that blocks it is one-sided by design, and that design is right —
+it is what caught `[object Object]` silently replacing cell content. But a
+one-sided comparison of *representations* cannot distinguish "text was destroyed"
+from "text is arranged differently", and after four boundaries of evidenced
+normalisations the residual is entirely the latter.
+
+That is the finding of round 4, and of the cycle so far: **the instrument is now
+the binding constraint on the assignment, and no further normalisation reachable
+by evidence changes that.** The three ways forward — widen and accept three newly
+harmed documents, rejoin and accept the circularity, or conclude the assignment
+cannot land under this gate — differ in what they cost, not in what they measure.
+
+### Sealed set
+
+**Unspent for the third round running.** Nothing was kept, so a sealed grade would
+compare an unchanged build against itself. Read exactly once, in round 1, on the
+kept hyperlink prerequisite. Budget one carries.
+
+### Corpus and gates
+
+Fingerprint `c88c7e82…` unmoved. `dist/` byte-identical. `grade.mjs` unchanged
+since the boundary at `f27d57f6…`, fence `2aed6d09…`. Tree clean. 17 experiments
+journalled: **1 kept, 16 discarded.**
+
+---
+
 ## 2026-08-20 · harness cycle · round-4 boundary — three normalisations and a labelled message
 
 Recorded **before any round-4 tuning**, as pre-registered. Nothing has run against
