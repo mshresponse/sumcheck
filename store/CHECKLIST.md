@@ -116,8 +116,8 @@ The owner resubmitted with `dist/sumcheck-1.7.1.zip` and a softened description:
 | bullet | before | after |
 | --- | --- | --- |
 | Images | `Images (PNG, JPEG, TIFF, WebP, BMP, GIF) via OCR` | `Images, read with on-device OCR` |
-| Email / web pages | `EPUB, HTML, saved web pages and .mhtml, email (.eml)` | `EPUB, HTML, saved web pages, email` |
-| Data files | `CSV/TSV, JSON, JSONL, YAML, XML, Jupyter notebooks, subtitles, RTF` | `Data files — CSV, JSON, YAML and more` |
+| Email / web pages | `EPUB, HTML, saved web pages and .mhtml, email (.eml)` | `EPUB, HTML, saved web pages, and email files` |
+| Data files | `CSV/TSV, JSON, JSONL, YAML, XML, Jupyter notebooks, subtitles, RTF` | `Data and text files — CSV, JSON, XML, Jupyter notebooks, RTF and more` |
 
 `store/LISTING.md` now carries that text and a warning against re-adding the
 enumerations. **The precise format list belongs in the README and the product

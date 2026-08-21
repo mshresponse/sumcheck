@@ -7,6 +7,43 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-20 · store listing — the reconstruction gap, found and closed
+
+Amends the earlier entry of the same date rather than rewriting it. That entry
+recorded the Chrome Web Store rejection and the softened copy, and flagged that
+its listing text was **reconstructed from a description of the submission rather
+than pasted from the dashboard**, with the dashboard authoritative if the two
+ever differed.
+
+They differed. The dashboard text, confirmed verbatim, corrects two bullets:
+
+| bullet | as reconstructed | **as actually submitted** |
+| --- | --- | --- |
+| Email / web pages | `EPUB, HTML, saved web pages, email` | `EPUB, HTML, saved web pages, and email files` |
+| Data files | `Data files — CSV, JSON, YAML and more` | `Data and text files — CSV, JSON, XML, Jupyter notebooks, RTF and more` |
+
+The Images bullet was already right in substance — no format parenthetical.
+
+**`YAML` was in the reconstruction and is not in the submitted text.** It has been
+removed. That is the part worth naming: the reconstruction did not merely drop
+`XML`, `Jupyter notebooks` and `RTF`, it *added* a format the submission does not
+contain. A gap that only loses detail is a smaller problem than one that invents
+it, because store copy is a record of what was filed and an invented entry makes
+the file disagree with the filing in the direction nobody thinks to check.
+
+`store/LISTING.md` now matches the dashboard exactly, and its caveat has been
+replaced with a statement that it was verified verbatim, plus an instruction to
+reconcile against the dashboard rather than against memory. The before/after table
+in `store/CHECKLIST.md` is corrected to match.
+
+The 2026-08-20 rejection entry above is left exactly as written. It was accurate
+about the rejection, the reason and the fix, and it was accurate about its own
+uncertainty — which is what made this correction possible rather than invisible.
+
+Docs only. Nothing in `src/`, `dist/` untouched, no version movement.
+
+---
+
 ## 2026-08-20 · harness cycle · round 2 report — a miss, and the residual splits three ways
 
 Round 2 kept nothing. The assignment improved every structural metric it targets

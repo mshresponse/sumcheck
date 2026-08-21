@@ -37,10 +37,12 @@ Convert PDFs, Office files and web pages to Markdown, HTML, text or JSON. Runs e
 > stuffing however accurate each one is. The full, precise format list belongs in
 > the README and the product UI, not in store copy.
 >
-> The text below is what was resubmitted with `dist/sumcheck-1.7.1.zip`. It is
-> reconstructed here from the submission rather than pasted from the dashboard,
-> so if any wording differs from what the dashboard holds, the dashboard is
-> authoritative and this file should be corrected to match it.
+> The text below is what was resubmitted with `dist/sumcheck-1.7.1.zip`,
+> **verified verbatim against the dashboard** on 2026-08-20. An earlier revision
+> of this file reconstructed the wording from a description of the submission and
+> got two bullets wrong; the caveat that the dashboard is authoritative did its
+> job and this copy now matches it exactly. Keep it that way — reconcile against
+> the dashboard, not against memory.
 
 ```
 Sumcheck turns documents into Markdown without sending them anywhere.
@@ -55,9 +57,9 @@ WHAT IT CONVERTS
 
 • PDF — including scanned pages, read with on-device OCR
 • Word, Excel, PowerPoint, and their OpenDocument equivalents
-• EPUB, HTML, saved web pages, email
+• EPUB, HTML, saved web pages, and email files
 • Images, read with on-device OCR
-• Data files — CSV, JSON, YAML and more
+• Data and text files — CSV, JSON, XML, Jupyter notebooks, RTF and more
 • The current browser tab, or just the text you have highlighted
 • Drop a .zip and it converts what is inside
 
