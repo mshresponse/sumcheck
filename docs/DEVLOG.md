@@ -7,6 +7,68 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-20 · harness cycle · correction — token counts, and which unit they were in
+
+Appended beside the round-2 and round-3 entries rather than rewriting them, on
+the same standard as the round-2 withdrawal: the claims stand in the log, so the
+correction stands next to them.
+
+### The cause
+
+`checkConstraints` in `grade.mjs` reported `total: lost.length` — the number of
+**distinct tokens** that lost ground. Every classification figure in rounds 2, 3
+and 4 summed **occurrences**. Both are honest measurements of different things,
+and the reports quoted them interchangeably.
+
+They agree on the 1826 book, where each distinct token happened to lose exactly
+one occurrence (41 = 41), which is why the mismatch stayed hidden. They diverge on
+`crm_analytics` — 4 distinct, 6 occurrences — and that is where 45 and 47 both
+entered the record naming the same bench state.
+
+### Every figure, in both units
+
+| bench state | occurrences | distinct tokens | documents |
+| --- | ---: | ---: | ---: |
+| round-2 grader, round-2 assignment | **88** | 61 | 6 |
+| round-3 grader (cell-aware), round-3 assignment | **47** | 45 | 2 |
+| with round-4 normalisations (measured, unapplied) | **42** | 42 | 2 |
+
+### Which prior figures mixed units
+
+- The **round-3 report** states the correction took the residual from "88 → 45".
+  That is occurrences against distinct tokens. In consistent units it is
+  **88 → 47** in occurrences, or **61 → 45** in distinct tokens.
+- The **round-4 README**'s effect table quoted 47 → 42, which is occurrences; it
+  is now labelled and carries both.
+- The **document count, 6 → 2, is correct in either unit** and needs no
+  correction.
+
+Everything else in those entries — the four-class decomposition, the per-document
+attribution, the raw-count evidence, the round-2 withdrawal — was measured in
+occurrences throughout and is unaffected.
+
+### The standard from here
+
+**Occurrences are the primary unit.** It is what the classification evidence was
+measured in, it answers the question the constraint is actually about — how much
+text lost ground — and it is the unit in which the record is internally
+consistent: 88 − 47 = 41, exactly the cell-asymmetry population the round-3
+correction was registered to remove. Distinct tokens may appear as a secondary
+figure, always labelled. Every token count in a DEVLOG entry, journal entry or
+escalation names its unit.
+
+### What this did not affect
+
+**No verdict changes.** The gate trips on any loss above zero and both units cross
+zero together, so every keep and discard in this cycle stands exactly as recorded.
+This was a reporting defect, not a scoring one — which is the only reason it could
+be corrected in place rather than invalidating the rounds it appeared in.
+
+`grade.mjs` unchanged at `3c869ccc…`; the labelled message is folded into the
+round-4 boundary patch, which is still unapplied.
+
+---
+
 ## 2026-08-20 · harness cycle · round 3 report — the correction worked, and the measure has four blind spots
 
 Round 3 kept nothing. The registered correction did exactly what it was
