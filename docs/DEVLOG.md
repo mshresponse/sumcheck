@@ -7,6 +7,79 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-21 · harness cycle · round-5 boundary — the recovery battery applied
+
+Recorded **before any round-5 tuning**. Nothing has run against this grader yet.
+
+### Applied
+
+`exam/round5/constraint.patch`, registered unapplied at the close of round 4 and
+approved on independent verification. The data-word-loss constraint keeps its
+form — **one-sided**, **occurrence counting, never presence** — and gains a
+recovery battery: a reported loss is *charged as destruction* only if it fails
+every test, and *cleared as representation* otherwise.
+
+- **R1**, tightened: exempt only tokens from a header row occurring in **two or
+  more** tables. The old rule exempted any token in any header, which on a
+  document whose columns mis-resolve is a blanket amnesty.
+- **R2**: occurrence count in a canonical stream with cell delimiters,
+  whitespace, hyphens and Markdown escapes stripped from both sides — a
+  **contiguity** test, so a word torn apart with its halves scattered does not
+  clear.
+- Tokens under four characters are excluded from R2 and **charge by default**.
+  The instrument fails closed.
+- `contentOnly()` sheds escape-normalisation and hyphenation to the battery,
+  which removes the rule that fabricated `calumA` in round 4.
+
+### The hashes, confirmed on application
+
+```
+grade.mjs      7527f03f0d568ea1724bf24d39d55e2ede7aacb124a863df74caec188644e2dd
+HARNESS FENCE  a8c9e5ef27c85d35fa31209337a466aecd161a3b08c49ee1b0f7ee96e88aecf1
+loop.mjs       f5e4425080379ff5c07e093f7ebce9570bdc868d8d9257afd179d3c0d428abfb  (unfenced, unchanged)
+```
+
+Both match the values pre-registered before application, to the character. Fence
+moved from `2aed6d09…` for this change and nothing else. `HARNESS_FILES` is
+unchanged — the battery folded into `grade.mjs` rather than adding a file, so the
+fence's definition is stable and only its value moved.
+
+### Validation suite, re-run against the applied grader
+
+| case | result |
+| --- | --- |
+| a. round-2 `[object Object]` destruction | **CHARGES** 51 occurrences, 3 documents |
+| b. synthetic deletion (one line removed) | **CHARGES** 20 occurrences |
+| c1. identical text | 0 *(weak by construction)* |
+| c2. round-1 hyperlink keep | **0** across 0 documents |
+| d. current assignment | 6 charged, 37 cleared |
+
+The applied `grade.mjs` reproduces the standalone battery exactly — 51/3 on the
+destruction bench, 6/2 on the assignment — so the instrument that was validated
+and the instrument now in force are the same one.
+
+**The battery is more sensitive to destruction than the constraint it replaces**,
+not less: 51 occurrences against the old 29, and 20 against 11. It clears
+representation and charges more of what it is for.
+
+### No re-baseline
+
+`contentOnly()`, `dataWords()` and `dataWordLoss()` are read by the hard
+constraint and by nothing else; no composite term reaches them. The tuning
+baseline stands unchanged at **1.9011**.
+
+### Round 5 as approved
+
+Re-gate the preserved clustering assignment. **If it keeps, it becomes the new
+baseline and the sealed read — carried unspent for three rounds — is spent
+validating it**, reported tuning and sealed side by side per the standing H5 rule.
+Then the six charged tokens as converter work, word-tearing class first.
+
+Targets **95%**, **seed 5**, sealed set and hashes unchanged. `dist/`
+byte-identical, scored corpus fingerprint `c88c7e82…` unmoved.
+
+---
+
 ## 2026-08-21 · harness cycle · round-5 pre-registration — the constraint gets a recovery battery, and its own regression corpus
 
 For review before anything is applied or run. `grade.mjs` is unchanged at
