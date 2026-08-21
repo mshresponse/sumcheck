@@ -18,11 +18,21 @@ Sumcheck — PDF & Document to Markdown
 
 ## Summary (132 characters max)
 
+> **This field is package-sourced and CANNOT be edited in the dashboard.** It is
+> `appDescription` in `_locales/en/messages.json`, reached by `manifest.json`'s
+> `description: "__MSG_appDescription__"`. Changing it requires a new zip.
+>
+> That is what the second Keyword Spam rejection ("Yellow Argon") was about. The
+> first rejection was fixed in the dashboard's Description field, which left this
+> one shipping untouched — and it is the string the reviewer quoted.
+
 ```
-Convert PDFs, Office files and web pages to Markdown, HTML, text or JSON. Runs entirely on your device — no uploads, ever.
+Convert documents to clean Markdown, entirely on your device — and see what the conversion was unsure about. No uploads, ever.
 ```
 
-121 characters.
+126 characters, shipped in `dist/sumcheck-1.7.2.zip`. **No format enumeration.**
+Two rejections establish the rule: a comma-run of format names reads as keyword
+stuffing regardless of how accurate each name is.
 
 ---
 

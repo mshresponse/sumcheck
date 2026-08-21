@@ -4,7 +4,7 @@
     "description": "Extension name, shown in the Chrome Web Store and the extensions page."
   },
   "appDescription": {
-    "message": "Convert PDF, Word, Excel, PowerPoint, EPUB, images and web pages to Markdown, HTML, text or JSON — entirely on your device.",
+    "message": "Convert documents to clean Markdown, entirely on your device — and see what the conversion was unsure about. No uploads, ever.",
     "description": "Extension description, shown in the Chrome Web Store."
   },
   "commandOpen": {

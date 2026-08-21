@@ -7,6 +7,106 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-21 · store listing · S0 — the rejected string was shipping inside the package
+
+`dist/sumcheck-1.7.2.zip` — `724d2fd04af89d779560294fe6ddd27e0002f8796be5d10a17009e425d43dce3`.
+Docs and metadata only; nothing under `src/` changed.
+
+### The second rejection, verbatim
+
+The Chrome Web Store rejected the submission again for **Keyword Spam**,
+reference **"Yellow Argon"**, quoting the extension's own summary:
+
+> Convert PDF, Word, Excel, PowerPoint, EPUB, images and web pages to Markdown,
+> HTML, text or JSON — entirely on your device.
+
+### The diagnosis: it ships from the package, not the dashboard
+
+That string is `appDescription` in `_locales/en/messages.json`, reached by
+`manifest.json`'s `description: "__MSG_appDescription__"`.
+
+The first rejection was fixed by softening the **dashboard's** Description field.
+That was the right fix for the field it was about, and it left this one untouched
+— still in the package, still enumerating six formats, and the dashboard has no
+control that can edit it. Only a new zip can.
+
+**The lesson is about surfaces, not wording.** The first fix treated "the
+listing" as one editable thing. It is two: the copy the owner types into the
+dashboard, and the copy compiled into the package. Fixing the visible one and
+declaring the problem solved is how the same defect survived a whole correction
+cycle.
+
+### The new summary
+
+> Convert documents to clean Markdown, entirely on your device — and see what the
+> conversion was unsure about. No uploads, ever.
+
+126 characters against the 132 cap, and **no format enumeration anywhere**. Two
+rejections establish the standing rule for this project: a comma-run of format
+names reads as keyword stuffing regardless of how accurate each name is. The
+precise format list lives in the README and the product UI, where it helps
+someone decide whether the tool reads their file and is not subject to store copy
+review.
+
+### The package survey, reported
+
+Every packaged manifest field and locale string was scanned for comma-runs of
+format names. Three findings:
+
+| where | text | ships to the listing? |
+| --- | --- | --- |
+| `appDescription` | the rejected string | **yes** — replaced |
+| `popupOpenHint` | `PDF, Word, Excel, slides, EPUB, images` | no — extension popup UI |
+| `appName` | `Sumcheck — PDF & Document to Markdown` | **yes** — not a comma-run |
+
+**`popupOpenHint` was found and deliberately not changed.** It ships inside the
+package but renders in the popup, not on the store listing, and the brief scoped
+this to listing-visible text. It is reported rather than quietly fixed because a
+reviewer inspecting the package could still read it, and that is the owner's call
+to make with the next submission rather than mine to make silently.
+
+`appName` contains two format-ish words joined by `&`, not a comma-run, and it is
+the product's registered name. Left alone.
+
+### The version bump moves no conversion output — verified, not assumed
+
+The pre-packaging condition was to stop if the bump moved any conversion output
+byte. It does not, and the check was run properly rather than reasoned about:
+
+- Tier A converted all 55 documents with the S0 changes and again without them.
+  **0 of 55 outputs differ.**
+- `generatorString()` reads `chrome.runtime.getManifest().version`, which is
+  unavailable in the harness page, so it falls back to `Sumcheck` and the version
+  never reaches harness output.
+
+**One honest caveat.** In the *installed extension* `chrome.runtime` is available,
+so a converted file's `generator:` line will read `… 1.7.2` where it read
+`… 1.7.1`. That is the version field doing exactly what it exists for, it is
+declared metadata rather than document content, and the harness cannot observe
+it. Recorded so the claim "moves no conversion output" is not read wider than it
+was tested.
+
+### Gates and artefacts
+
+`npm run check` green, **53/53** harness cases, **51/51** packaged-extension
+checks. The zip was opened and verified to carry the new 126-character string and
+`version: 1.7.2`.
+
+```
+724d2fd04af89d779560294fe6ddd27e0002f8796be5d10a17009e425d43dce3  dist/sumcheck-1.7.2.zip
+86670af2b0da21e07386e5855c6091b6d06e2254e02d8ce2759a748f128ea928  dist/sumcheck-1.6.0.zip   unchanged
+f17abe1f28359e1aa2526e773b45e8506bef4c84d285d3219139f1c1b27a4416  dist/sumcheck-1.7.0.zip   unchanged
+e2750b83fd5228034b6a4d410ca78f06a6a8e5e959b88da8da6d3103cc5d39c3  dist/sumcheck-1.7.1.zip   unchanged
+```
+
+**Nothing was uploaded.** The owner uploads 1.7.2 and submits.
+`store/LISTING.md`'s Summary section now records that the field is
+package-sourced; its Description section stays as it is until the owner has
+submitted and verified against the dashboard, per the standing rule that the
+dashboard is authoritative for copy this file only mirrors.
+
+---
+
 ## 2026-08-21 · harness cycle · round 5 report — the battery works, and it points upstream
 
 Round 5 kept nothing. The redesigned constraint did what it was built to do: it

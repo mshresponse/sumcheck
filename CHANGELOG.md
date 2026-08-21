@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.7.2
+
+Store-listing text only. No conversion behaviour changed — the converter is
+byte-for-byte the 1.7.1 build.
+
+### The package summary was the rejected string
+
+The Chrome Web Store rejected the submission a second time for **Keyword Spam**
+(reference "Yellow Argon"), quoting the extension's own summary:
+
+> Convert PDF, Word, Excel, PowerPoint, EPUB, images and web pages to Markdown,
+> HTML, text or JSON — entirely on your device.
+
+That string is `appDescription` in `_locales/en/messages.json`, reached by
+`manifest.json`'s `description: "__MSG_appDescription__"`. It ships **inside the
+package**, so the dashboard cannot edit it — the first rejection was fixed in the
+dashboard's own description field, which left this one untouched and still
+shipping. A new zip is the only way to change it.
+
+The summary is now:
+
+> Convert documents to clean Markdown, entirely on your device — and see what the
+> conversion was unsure about. No uploads, ever.
+
+126 characters against the store's 132 cap, and **no format enumeration
+anywhere**. Two rejections establish the rule this project now works to: a
+comma-run of format names reads as keyword stuffing regardless of how accurate
+each name is.
+
 ## 1.7.1
 
 One defect, three symptoms, and the measurements that found it was not the defect
