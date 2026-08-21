@@ -7,6 +7,124 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-21 · harness cycle · round-6 pre-registration — the gutter, and a baseline that must be corrected first
+
+For review before anything is applied or run. `grade.mjs` `7527f03f…`, fence
+`a8c9e5ef…`, tuning baseline composite 1.9011, nothing tuned.
+
+### (a) Boundary — a reviewed re-baseline of GFE 37–41, and nothing else
+
+**No grader change. The fence does not move.** The only boundary action is
+correcting a baseline defect I introduced in round 2.
+
+When the reviewer accepted five scored-corpus diffs, I copied the accepted
+outputs into `exam/baseline/gfe` and `exam/baseline/tuning`. Those outputs came
+from the **clustering assignment, which was never kept**. So both baselines hold
+text the kept build cannot reproduce:
+
+| | `Good Faith Estimate (37–41)` |
+| --- | --- |
+| both baselines hold | `… \| Quantity \| Charge \| Total \|` |
+| the kept build produces | `… \| Quantity Charge \|  \| Total \|` |
+
+Verified: the two baselines are byte-identical to each other on all five, so this
+is one defect, not two. It has been silently failing Tier A byte-stability ever
+since, which is how S0's pre-packaging check found it — the check fired, and the
+cause turned out to predate the thing being checked.
+
+**The correction restores the baselines to what the kept build actually emits** —
+which is the *worse* header. That is the point: a baseline records what the build
+does, not what we would prefer it did. The improvement returns when the clustering
+assignment lands, and at that moment it is a measured gain rather than a number
+already banked.
+
+Boundary steps, in order, before any tuning: restore the five files in both
+baselines from a fresh Tier A run of the kept build; confirm Tier A byte-stability
+passes at **zero**; run the instrument validation suite and record its results;
+record the corrected baseline's hashes in the DEVLOG.
+
+### (b) Primary assignment — the gutter discriminator
+
+Round 5 established that the six charged occurrences trace to failed two-column
+detection: `splitColumns()` declines to split when more than 20% of a page's lines
+cross the midline, but `buildLines()` assembles lines by y first, so on a
+double-column page **every** line crosses and the guard concludes the page is not
+two-column. Table detection then finds a two-column grid, because that is
+literally what is in front of it, and words hyphenated across the gutter are torn.
+
+**Hypothesis, pre-registered as stated by the reviewer:** two-column prose crosses
+with exactly **one** wide gap at a consistent x across the page; a real table
+crosses with **several**. Split gutter-crossing lines before table detection only
+on pages the discriminator classifies as print-column layout.
+
+Concretely: a page is print-column layout when a large majority of its crossing
+lines carry exactly one wide gap, those gaps cluster tightly in x, and the cluster
+sits near the middle of the used width. On such a page each crossing line is split
+at the gutter and the halves are ordered left-column-first, matching
+`splitColumns()`'s existing contract. Every other page is untouched.
+
+Winter '27's tables are the protective case and the reason the discriminator is
+shaped this way: their crossing lines carry four or five wide gaps, never one.
+
+**Fixtures first, RED before green:**
+
+1. **`two-column-prose.pdf`** — built from an 1826-style page: two prose columns
+   with a word hyphenated across the gutter. Asserts the word is rejoined and
+   **no table is emitted**. This fixture must fail before the change.
+2. **`wide-table.pdf`** — a five-column table page in the Winter '27 idiom.
+   Asserts **no split** and that the table still forms. This is the fixture that
+   makes the discriminator falsifiable rather than merely plausible.
+
+### (c) Targets
+
+Carried unchanged: **95%** fully-correct headers on Winter '27 and the
+Winter-'27-class documents, stranded header-only → 0, no other metric regressed,
+corpus byte-stable.
+
+Additive for round 6:
+
+| target | baseline | goal |
+| --- | ---: | --- |
+| the six charged occurrences | 6 | **0** |
+| fake two-column tables, 1826 book | 100 | reduced, and the figure reported |
+| Winter '27 table count | 104 | **unmoved** |
+| scored corpus | — | **unmoved** |
+
+The 1826 target is deliberately "reduced and reported" rather than a number. I do
+not know what the right count is for that document, and inventing one would be a
+target chosen to be hit.
+
+### (d) Order
+
+1. Gutter assignment. If it keeps, it becomes the new baseline.
+2. Re-gate the preserved clustering assignment on that new baseline.
+3. **If both keep, the sealed read is spent on the combined kept state**, tuning
+   and sealed reported side by side, per document, per the standing H5 rule.
+
+The read has been carried unspent through four rounds. It is spent on a kept
+state worth validating or not at all.
+
+### (e) `popupOpenHint` — decision recorded
+
+The S0 package survey found `PDF, Word, Excel, slides, EPUB, images` in
+`popupOpenHint`. It ships inside the package but renders in the extension popup,
+not on the store listing, and S0's brief scoped the fix to listing-visible text.
+
+**Decision: left unchanged, and recorded rather than quietly carried.** It is
+genuinely useful to a user deciding whether to drop a file in, and it is not copy
+a store reviewer reads on the listing. A reviewer inspecting the package could
+still see it, which is why it is written down here instead of forgotten — if a
+third rejection ever quotes it, this entry is the record that it was found,
+considered, and left.
+
+### (f) Unchanged
+
+**Seed 5.** The 22 sealed documents and their sha256s. **Sealed read budget one.**
+`dist/` byte-identical, with `1.7.2` (`724d2fd0…`) submitted and pending review.
+Scored corpus fingerprint `c88c7e82…`.
+
+---
+
 ## 2026-08-21 · store listing — 1.7.2 submitted, both surfaces corrected
 
 Docs only. `dist/` unchanged since S0 packaged it; nothing under `src/`.
