@@ -7,6 +7,75 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-21 · harness cycle · round-7 pre-registration AMENDED — approved with two modifications, and a disclosure
+
+The reviewer approved round 7 with two modifications. Both are recorded here
+before anything runs. `grade.mjs` `7527f03f…`, fence `a8c9e5ef…`, seed 5, sealed
+hashes unchanged.
+
+### Modification 1 — the falsifier is SYNTHETIC
+
+The fixture protecting the sparse-two-column-table case reproduces the
+**structural class**, not the instance: one wide gap per row, consistent x across
+rows, near mid-width, short cells on both sides. Original content throughout — no
+rows, headers, or phrases copied from the sealed document that exposed the defect.
+
+**Sealed content does not enter the fixture set, the journal, or the loop's
+working material.** The class is what needs protecting; the instance stays sealed.
+
+### Modification 1, applied backwards — a disclosure
+
+This rule arrived after I had already broken it. The round-6 report and issue #20
+both quoted the sealed document's actual table content to demonstrate the defect —
+six lines in this log, seven in the issue.
+
+- **Issue #20 is remediated.** Its body now describes the structural class only,
+  with the substitution stated in the issue rather than made silently. The defect
+  remains fully specified; nothing about its diagnosis depended on the literal rows.
+- **This log cannot be remediated**, because it is append-only and rewriting the
+  round-6 report to hide an error of process would be a worse breach than the one
+  being hidden. The quotation stays where it is and is disclosed here instead.
+
+The practical consequence is small — the sealed documents are public vendor
+documentation, not confidential material, so nothing was exposed that anyone could
+not fetch. The governance consequence is not small: **the value of a hold-out is
+that its contents have not shaped the work**, and content in the working record is
+content available to shape the work. The rule is right, it is now in force, and
+the breach is on the record rather than quietly cleaned up.
+
+### Modification 2 — the epistemic cost of the round-6 read
+
+**`tableau_next_8-20-2026` is now a TARGETED document.** Round 7 knows what broke
+in it and is fixing that specific thing.
+
+Its round-7 sealed reading on header metrics is therefore **a check that a known
+defect was repaired — not independent evidence that the fix generalizes.** That
+evidence rests on the **other 21 sealed documents**, which round 7 is not aiming at.
+
+This is the standing cost of spending a sealed read: findings from a hold-out
+inevitably shape the work that follows, and each document a finding names is
+converted from evidence into a test case. The ledger stays honest only if that
+conversion is written down when it happens. One of 22 documents is now targeted;
+21 remain independent.
+
+### The amended round 7, in full
+
+- **(a)** Characterization first, C1-standard: on the 1826 fake-table pages,
+  measure whether wide internal gaps **align in x across consecutive lines** (grid
+  evidence) or **scatter** (apparatus/OCR spacing). Both branches registered in
+  advance; the measurement decides which is taken. After round 6, no hypothesis
+  outranks a measurement.
+- **(b)** RED fixture for the 1826 shape; the **synthetic** sparse-table falsifier
+  per Modification 1, asserting NO split; **#20 in scope**, because one evidence
+  test must distinguish both cases or the fix re-breaks the sealed document.
+- **(c)** Targets as approved. `tableau_next ≥ 97` measured **only at round grade** —
+  no mid-round peeking at any sealed metric.
+- **(d)** Clustering re-gate under a waiver **re-issued against re-verified hashes**.
+  Sealed budget **one**, spent on a combined kept state or not at all.
+- **(e)** Seed 5, sealed hashes unchanged, fence `a8c9e5ef…` unmoved.
+
+---
+
 ## 2026-08-21 · harness cycle · round-7 pre-registration — measure the gaps before shaping the fix
 
 For review before anything runs. `grade.mjs` `7527f03f…`, fence `a8c9e5ef…`,
