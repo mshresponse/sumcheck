@@ -7,6 +7,298 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-21 · harness cycle · round-7 pre-registration — measure the gaps before shaping the fix
+
+For review before anything runs. `grade.mjs` `7527f03f…`, fence `a8c9e5ef…`,
+tuning baseline composite 1.9054, tree clean at `3441ea5`, nothing tuned.
+
+### (a) Characterization first — C1 standard, no hypothesis outranks a measurement
+
+Round 6 spent a whole assignment on a premise inferred from output shape and
+refuted by geometry. So round 7 measures before it designs.
+
+**The question:** on the 1826 book's fake-table pages, do the wide internal gaps
+**align in x across consecutive lines** — which is grid evidence, a real columnar
+structure — or do they **scatter**, which is footnote apparatus and OCR spacing on
+an 1826 printing?
+
+The probe already exists (`exam/probe/`) and reads assembled lines through the
+adapter's own `ctx.onLayout` hook, so nothing in the product changes to run it. It
+is extended to report, for the two-cell crossing lines on each page: the gap x
+positions, their spread across consecutive lines, and how many consecutive lines
+share a gap position within tolerance.
+
+**The fix's shape depends on the answer and is not pre-committed:**
+
+- **Gaps align** → the lines really are columnar and the defect is that a
+  two-column *grid* is being built from prose that merely aligns. The fix is
+  evidence about content, not geometry.
+- **Gaps scatter** → there is no grid, and the fix is a coherence test: a run whose
+  gap positions wander is not a table however each line looks alone.
+
+Registering both branches, with the measurement deciding, is the point.
+
+### (b) Assignment — suppress grid formation on single-column prose evidence
+
+Shaped by (a). Fixtures RED first, and this round the falsifier is the part that
+matters:
+
+1. **A RED fixture** reproducing the 1826 shape: single-column prose lines
+   carrying wide internal gaps, asserting no table is emitted.
+2. **A falsifier protecting a real sparse two-column table** — the case round 6
+   missed. `wide-table.pdf` passes but is a five-column table, which crosses with
+   four gaps and can never satisfy the one-gap test; it could not fail the way the
+   rule actually fails. The new falsifier reproduces `tableau_next`'s
+   `Date and Time Format | Example` table and asserts it survives intact.
+
+**Issue #20 is in scope for this round**, because the same evidence test governs
+both: whatever distinguishes 1826 prose from a grid must also distinguish a sparse
+two-column table from prose, or it will re-break `tableau_next`.
+
+### (c) Targets
+
+| target | baseline | goal |
+| --- | ---: | --- |
+| the six charged occurrences | 6 | **0** |
+| 1826 spurious tables | 100 | reduced, and the figure reported |
+| `tableau_next` correct headers (#20) | 95 | **≥ 97**, the pre-discriminator figure |
+| Winter '27 correct headers | 35.9% | **≥ 95%** (carried) |
+| Winter '27 table count / scored corpus | — | protected |
+
+Then the clustering assignment re-gates under a **re-issued waiver**, against
+re-verified hashes — round 6's expired with it.
+
+### (d) The sealed-read ledger, stated explicitly
+
+| round | read | spent on |
+| --- | --- | --- |
+| 1 | **spent** | the hyperlink prerequisite |
+| 2, 3, 4, 5 | carried | nothing kept |
+| 6 | **spent** | the gutter discriminator, HEAD `3441ea5` |
+| **7** | **one** | a combined kept state, or not at all |
+
+Two reads used in six rounds. Round 7's budget is one, spent only if something
+keeps and is worth validating — and round 6 is the argument for spending it: the
+hold-out found a real defect in a change that had already passed every tuning-side
+gate.
+
+### (e) Unchanged
+
+**Seed 5.** The 22 sealed documents and their sha256s. **Fence `a8c9e5ef…`** — no
+round-7 boundary correction is registered, and none is currently needed. `dist/`
+byte-identical.
+
+---
+
+## 2026-08-21 · harness cycle · round 6 report — one keep, a refuted premise, and the hold-out earning its keep
+
+Round 6 kept the gutter discriminator, missed three of four targets, refuted the
+diagnosis it was built on, and spent the sealed read — which immediately found a
+real defect in the kept change. The most productive miss of the cycle.
+
+### Boundary
+
+Reviewed re-baseline of GFE 37–41 and nothing else; no fence movement. Both
+baselines had been holding output from the never-kept clustering assignment —
+banked in round 2 as "the baseline" when it belonged to **a bench state**.
+Restored from the kept build, Tier A byte-stability back to **zero**, validation
+suite green.
+
+### The keep — experiment 20, `3441ea5`
+
+Composite **1.9011 → 1.9054**, every hard constraint holding.
+
+| tuning set | before | after |
+| --- | ---: | ---: |
+| fully-correct headers | 2,507 | **2,540** (+33) |
+| stranded header-only | 547 | **540** |
+| headings | 28,752 | **28,850** (+98) |
+
+Winter '27 fully-correct headers **27.0% → 35.9%**, stranded 20 → 16.
+
+Fixtures behaved: `two-column-prose.pdf` RED before and GREEN after;
+`wide-table.pdf` — the falsifier — green on both sides.
+
+### The targets, judged as written
+
+| target | verdict |
+| --- | --- |
+| Winter '27 ≥ 95% correct headers | **missed** — 35.9% |
+| the six charged occurrences → 0 | **missed** — diagnosis corrected, fix not attempted |
+| Winter '27 table count unmoved | **missed** — 122 → 117 |
+| 1826 spurious tables reduced and reported | **reported: 100 → 100, no change** |
+| scored corpus byte-stable | **met** — the GFE movement handled through the waiver protocol |
+
+The table-count miss has a character worth recording: the movement was spurious
+tables being *removed* (alongside headers 27.0% → 35.9% and stranded 20 → 16), and
+the falsifier shows real wide tables were protected. It is still recorded as
+missed. Re-reading a target as "obviously it meant the bad direction" after seeing
+the result is how targets stop meaning anything.
+
+### The premise was refuted, and the round-5 diagnosis with it
+
+Characterization outside the loop, through the adapter's `ctx.onLayout` hook, over
+587 pages: the 20% guard bails on 586, the gutter fires on **0**, and the crossing
+lines break down as **22,215 one-cell**, 2,710 two-cell, 967 three, 128 more.
+
+The prediction was that OCR noise opens *extra* gaps. The dominant population is
+the opposite — lines with **no internal gap at all** — and sampled from the body
+rather than the front matter they are complete sentences spanning the full text
+width:
+
+```
+x=13 x2=173  "beginning from stubborn anger, that furious desire of conten¬"
+x=28 x2=186  "the world, through all those intemperate azones of heat and"
+```
+
+**The 1826 book's body is single-column prose.** Round 5's reading of the torn row
+as "two print columns read across the gutter" fitted the shape of the output and
+was never checked against the geometry. Corrected append-only beside the round-5
+report. The spurious tables there come from lines with wide internal gaps being
+clustered into grids — a different defect, and round 7's assignment.
+
+The discriminator stands unamended: it is validated on the documents it describes,
+and the 1826 book is measured to be outside its premise. Tuning the 80% constant
+to make a rule fire on a document it does not describe is not a fix.
+
+### Round grade — the sealed read, spent
+
+Tier B over `exam/sealed/`, once, on HEAD `3441ea5`. **Read exactly twice in the
+whole cycle**: round 1 on the hyperlink prerequisite, and now.
+
+Because round 1's read was taken on the pre-gutter kept state, the two reads
+compare directly, and the comparison is the discriminator's effect on 22 documents
+it has never seen:
+
+| sealed set | round 1 | round 6 |
+| --- | ---: | ---: |
+| fully-correct headers | 596 | **632** (+36) |
+| stranded header-only | 236 | **228** (−8) |
+| tables | 1,206 | 1,203 |
+| headings / links / list items | — | **unchanged** |
+
+Three of 22 documents moved:
+
+| document | tables | correct headers | stranded |
+| --- | --- | --- | --- |
+| `salesforce_spring26_release_notes` | 229 → 232 | **107 → 124** | 28 → 25 |
+| `salesforce_winter26_release_notes` | 223 → 219 | **92 → 113** | 35 → 30 |
+| `tableau_next_8-20-2026` | 141 → 139 | **97 → 95** | 0 → 0 |
+
+Tuning-set and sealed-set both improve, by similar shape and magnitude — the
+change generalises.
+
+### And the hold-out found a real defect
+
+`tableau_next_8-20-2026` is harmed, and inspection shows why:
+
+```
+before   | Date and Time Format | Example |
+         | yyyy-MM-dd | 2021-06-22 |
+after    Date and Time Format
+         yyyy-MM-dd
+```
+
+A genuine sparse two-column table was split into prose, separating every format
+from its example. **No text is lost** — `yyyy-MM-dd` 20 → 20, `Example` 25 → 25 —
+which is exactly what makes it dangerous: the defect is invisible to the
+data-word-loss constraint, because that constraint compares text and this destroys
+structure.
+
+**A sparse two-column table satisfies the discriminator's description exactly**:
+every row is one wide gap, at a consistent x, near the middle. Indistinguishable
+from two columns of prose by that test alone.
+
+`wide-table.pdf` was written as the falsifier and passes — but it is a *five*-column
+table, which crosses with four gaps and can never satisfy the one-gap test. **The
+case that needed protecting was the two-column one, and no fixture covered it.**
+That is the sharpest lesson of the round: a falsifier that cannot fail the way the
+rule actually fails is not a falsifier.
+
+Filed as converter work: **#20**. The sealed set is not iterated against.
+
+### The waiver
+
+Issued for the GFE 37–41 movement, used for one re-gate measurement, and it
+**expires with this round**. Round 7 re-issues it against re-verified hashes.
+
+### Corpus and gates
+
+Fingerprint `c88c7e82…` unmoved. `dist/` byte-identical, `1.7.2` (`724d2fd0…`)
+submitted and pending. `grade.mjs` `7527f03f…`, fence `a8c9e5ef…`. 55/55 harness
+cases, 51/51 packaged-extension checks. 21 experiments: **2 kept, 19 discarded.**
+
+---
+
+## 2026-08-21 · correction — the round-5 diagnosis of the 1826 tearing was wrong
+
+Appended beside the round-5 report rather than rewriting it, on the standing
+standard: the claim stands in the log, so the correction stands next to it.
+
+### What round 5 said
+
+That the torn row
+
+```
+| disse; …apta sunt. git homines adeo… | / Invidia affli- |
+```
+
+was "the page's two print columns read across the gutter", and that `affligit`
+broke because `splitColumns()` failed to separate the columns.
+
+### What measurement says
+
+The round-6 characterization probe read the assembled lines directly, through the
+adapter's own `ctx.onLayout` hook, using `splitColumns()`'s own geometry. Across
+587 pages of the 1826 book:
+
+| crossing lines by cell count | |
+| --- | ---: |
+| **one cell** | **22,215** |
+| two | 2,710 |
+| three | 967 |
+| four or more | 128 |
+
+And the one-cell crossers, sampled from the body rather than the front matter:
+
+```
+x=13 x2=173  "beginning from stubborn anger, that furious desire of conten¬"
+x=28 x2=186  "the world, through all those intemperate azones of heat and"
+x=16 x2=177  "and eased of his pains, will go on still, his wealth increasing,"
+```
+
+Complete sentences spanning the full text width as a single cell. They count as
+"crossing" only because any full-width line crosses the page centre.
+
+**The 1826 book's body is single-column prose.** There is no gutter on those pages
+to fail to detect.
+
+### What the two cells actually are
+
+An internal wide gap on a single-column line — the book's footnote and marginal
+apparatus, or OCR spacing on an 1826 printing. The spurious tables come from
+**lines with wide internal gaps being clustered into grids**, which is a different
+defect with a different fix, and it is round 7's assignment.
+
+### Why the error was possible
+
+The round-5 diagnosis was inferred from the *shape of the output*: a two-column
+table, with a word split across the cell boundary, is exactly what mis-read print
+columns would produce. It was a good explanation of the artefact and it was never
+checked against the geometry that produced it.
+
+The lesson is the one this cycle keeps relearning in new costumes — round 2's
+`[object Object]`, round 3's `| Feature |` proxy, round 4's units, and now this.
+**An explanation that fits the output is a hypothesis, not a finding.** The
+standing C1 rule exists for exactly this and was not applied here until the ruling
+required it.
+
+Nothing built on the wrong diagnosis is affected: the gutter discriminator was
+validated on documents that genuinely are two-column, with a falsifier proving
+real wide tables are protected, and it is kept on its own evidence.
+
+---
+
 ## 2026-08-21 · harness cycle · round-6 boundary — the baseline corrected, and a round-2 attribution set right
 
 Recorded before any round-6 tuning. **No grader change; the fence does not move.**
