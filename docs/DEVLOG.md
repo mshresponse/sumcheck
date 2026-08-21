@@ -7,6 +7,193 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-20 · harness cycle · round 3 report — the correction worked, and the measure has four blind spots
+
+Round 3 kept nothing. The registered correction did exactly what it was
+registered to do, Tier A cleared for the first time, and the round still misses.
+The finding is a decomposition: **every remaining reported loss was classified,
+and four distinct blind spots in the measure came out of it.**
+
+### The boundary
+
+Applied before any tuning, as pre-registered: `exam/round3/contentOnly-cell-aware.patch`.
+
+```
+grade.mjs      3c869cccc5fa4cfa187c6e673527d69886797e3a194f1b22730e1928a662b4e3
+HARNESS FENCE  aca908f513e471b8796ff78afa5aca25a5871fa3d3d337aecc07f2f776933cc9   (was 6691f736…)
+loop.mjs       f5e4425080379ff5c07e093f7ebce9570bdc868d8d9257afd179d3c0d428abfb   (unfenced)
+```
+
+No re-baseline: `contentOnly` feeds `dataWords` feeds `dataWordLoss`, a hard
+constraint, and no composite term reads it. Baseline held at **1.9011**.
+
+### What the correction bought
+
+| | before | after |
+| --- | ---: | ---: |
+| documents reporting loss | 6 | **2** |
+| tokens reported | 88 | **45** |
+
+`eurlex_gdpr`, `marketing_cloud_next`, `salesforce_spring24` and
+`reports_and_dashboards` cleared entirely. **Tier A passed both hard constraints
+for the first time in the cycle.** Tier B still tripped, so experiment 16 was
+discarded and reverted.
+
+### The targets
+
+| # | target | baseline | measured | verdict |
+| --- | --- | ---: | ---: | --- |
+| 1 | Winter '27 fully-correct headers ≥ 95.0% | 27.0% | 42.3% | **miss** |
+| 2 | Winter-'27-class ≥ 95.0% (18 docs) | 67.0% | 69.4% | **miss** |
+| 3 | stranded header-only → 0 | 20 / 530 | **0** / 460 | met on Winter '27 only |
+| 4 | no regression in any other metric | — | — | **miss** |
+| 5 | corpus byte-stable | — | — | **met** |
+
+Composite would have been **1.9011 → 2.0066**. Target 1 misses at 42.3%
+regardless of any keep, which is why the round closes here rather than iterating.
+All figures are bench state — measured from a discarded change.
+
+### The four blind spots
+
+**1. Comma-joining** — the registered second class, now diagnosed. `dataWords()`
+splits on a class that keeps `,` inside a token, so `1,234` survives. The cost is
+that a joined cell yields `field,searchString,replacementString` as one token and
+`searchString` disappears from the counts while the text keeps it. Raw counts:
+`searchString` 15→15, `replacementString` 6→6, `valueToBeRemoved` 9→9.
+
+**2. Markdown escaping** — `ADD_MONTHS` in a table cell becomes `ADD\_MONTHS` in a
+list item; the backslash breaks the token. Accounting for it dropped
+`crm_analytics` from 25 apparent losses to 7. `ADD_MONTHS` and `ARRAY_JOIN` are
+both present in the output.
+
+**3. Hyphenation rejoining** — `peri-` and `tiam` both vanish because the
+converter correctly emits **`peritiam`**, a word the baseline never contained: 0
+occurrences before, 1 after. Also `barum`→`barbarum`, `fLau`→`fLausius`. The
+converter improving, charged as loss.
+
+**4. One-sidedness** — not a class but a property. On the 1826 book:
+
+| | data-word tokens |
+| --- | ---: |
+| baseline | 170,151 |
+| after the change | **170,156** |
+| net | **+5** |
+| lost / gained occurrences | 50 / 55 |
+
+**The document gains content and fails the constraint.** `dataWordLoss` sums the
+losing side of a churn and never nets the gains, so any large document that
+restructures shows losses somewhere. `Perjurata` really does go 1→0 — and
+`Cardan` goes 86→87, while `Bacchanalia`, `Mercator`, `Tragelapbo` and `mancipia`
+are unchanged.
+
+### Withdrawal of a round-2 characterisation
+
+Round 2 reported 47 tokens as "genuine converter loss", 41 of them on the 1826
+book. **That characterisation is withdrawn.** It rested on a raw-count test that
+did not account for Markdown escaping or hyphenation rejoining, and it did not
+net gains at all. Under classification, most of that population is measurement:
+the document ends with more content tokens than it started with.
+
+What survives as genuinely gone is a much smaller, scattered set — individual
+words like `Perjurata` and `excitetur` dropping during heavy restructuring of a
+589-page double-column OCR'd book. That is real and is round 4's work. It is not
+41 tokens of destruction.
+
+The correction is recorded rather than quietly dropped because the round-2 report
+is in this log as a claim, and a claim that measurement has since contradicted
+should not be left standing next to the measurement.
+
+### The one-sidedness ruling, and why it is right
+
+The reviewer ruled `dataWordLoss` **stays one-sided**: a net measure would let a
+destroyed paragraph be bought back by gained tokens, and "gains never buy back
+losses" is precisely the property that caught `[object Object]` silently
+replacing cell content in round 2. The false positives are real, but they are a
+normalisation problem, and normalisation is where they are fixed.
+
+That is the correct trade, and it is worth being explicit that it has a cost: the
+constraint will keep firing on large restructurings until each legitimate
+transform the converter performs has a matching normalisation on the measuring
+side. Three are registered for round 4. There may be more, and each will have to
+be earned the same way — by classification, with evidence.
+
+### Sealed set
+
+**Unspent again.** Round 3 kept nothing, so a sealed grade would have compared an
+unchanged build against itself. The set has been read exactly once, in round 1, on
+the kept hyperlink prerequisite. Budget one carries to round 4.
+
+### Corpus and gates
+
+Fingerprint `c88c7e82…` unmoved, checked before every experiment. `dist/`
+byte-identical. `exam/sealed/` still `dr-xr-xr-x`. `grade.mjs` unchanged since the
+boundary at `3c869ccc…`. Working tree clean. 53/53 harness cases, 51/51
+packaged-extension checks. 16 experiments journalled: **1 kept, 15 discarded.**
+
+---
+
+## Round 4 pre-registration — for review, before anything runs
+
+### (a) Boundary
+
+`exam/round4/normalisations.patch`, registered unapplied with its evidence in
+`exam/round4/README.md`. Applied at the round-4 boundary; new `grade.mjs` and
+harness fence hashes recorded in the DEVLOG **before any tuning**. Until then
+`grade.mjs` stays `3c869ccc…` and the fence `aca908f5…`.
+
+### (b) The three normalisations
+
+1. **Comma-splitting** in `dataWords()` — split on a comma not between digits.
+2. **Escape-normalisation** — undo Markdown backslash escaping, matching what
+   `flatten()` already does in `metrics.mjs`.
+3. **Hyphenation-aware comparison** — rejoin a word broken across a line end, on
+   both sides.
+
+Each mirrors a documented converter transform. Measured effect on round 3's
+discarded assignment: **47 → 42 tokens**, `crm_analytics` **6 → 1**.
+
+**An honest limit, registered rather than papered over.** The 1826 book does not
+move. Its hyphen breaks are not line-to-line — it has only 2 of those and none
+across a cell edge; the `peri-`/`tiam` break is separated by a stripped review
+marker, a blank line and a cell delimiter. Widening the rule to cross that would
+be a stronger claim than "a word wrapped", so it is **not written speculatively**.
+Round 4 either widens it with measurement attached, or treats the 1826 residual as
+converter work.
+
+### (c) No threshold is proposed
+
+The ruling permits a calibrated per-document-class threshold if irreducible
+jitter survives. The calibration evidence already exists and argues against one:
+
+| calibration | loss |
+| --- | ---: |
+| same build, two full runs (H3) | **0** across 115 documents |
+| a known-good accepted change (the hyperlink prerequisite) | **0** tokens |
+
+A correct change on this corpus produces zero losses. There is no measured floor
+to calibrate against, and a number introduced now would be one chosen to admit a
+pending change — the thing the ruling forbids. If a floor is demonstrated after
+the normalisations land, it can be calibrated then, with evidence, at a boundary.
+
+### (d) The assignment
+
+1. **Re-gate the preserved clustering change** —
+   `journal.d/round2-assignment-current.patch`: line-first resolution, exact
+   monotone assignment, the list-run guard, stacked-header link preservation with
+   the `[object Object]` fix.
+2. **Then the residual genuinely-gone words** — the `Perjurata` / `excitetur`
+   class on the 1826 book, and whatever survives on `crm_analytics`. Converter
+   work in `src/core/adapters/pdf.js`.
+
+### (e) Unchanged
+
+**Targets at 95%.** The round-3 report does not argue otherwise: 42.3% on
+Winter '27 is short on its own merits, not because the instrument blocked it.
+**Seed 5**, the 22 sealed documents and their sha256s, **sealed read budget one** —
+spent only on a kept state worth validating.
+
+---
+
 ## 2026-08-20 · harness cycle · round-3 boundary — the registered correction applied
 
 Recorded **before any round-3 tuning**, as pre-registered. Nothing has been run
