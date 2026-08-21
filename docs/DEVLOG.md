@@ -7,6 +7,157 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-21 · harness cycle · round-5 pre-registration — the constraint gets a recovery battery, and its own regression corpus
+
+For review before anything is applied or run. `grade.mjs` is unchanged at
+`f27d57f6…`, the fence at `2aed6d09…`, and nothing has been tuned.
+
+### What the redesign keeps
+
+**One-sided.** Gains never offset losses. A document that destroys a paragraph
+and gains a thousand tokens elsewhere still fails.
+
+**Occurrence counting, never presence.** Every tier compares counts. A word
+appearing 85 times that appears 84 times afterwards charges. A tier asking only
+"is this word still somewhere in the document" would clear real deletions in
+repetitive text, which is most of this corpus.
+
+### What changes: charge only what survives a recovery battery
+
+A reported loss is **charged as destruction** only if it fails every test;
+otherwise it is **cleared as representation**.
+
+**R1 — repeated-header vocabulary, tightened.** The original cleared any lost
+token appearing in *any* table header of the previous output. **The validation
+suite found this to be a hole, and it has been open since H2.** On a document
+whose columns mis-resolve, headers are prose and the exemption becomes a blanket
+amnesty: census carried 506 header words, omnistudio 713, the 1826 book **2,207**.
+The round-2 `[object Object]` destruction went **entirely uncharged** on census
+and omnistudio because the destroyed words happened to be "header vocabulary".
+
+The exemption's justification was always narrower than its implementation —
+merging a table that spans pages removes the *repeated* header rows. A token is
+now exempt only if it appears in a header whose row text occurs in two or more
+tables. A header appearing once was never duplicated, so no merge removed it.
+
+**R2 — canonical-stream occurrence count.** The token is sought in a stream with
+cell delimiters, whitespace, hyphens and Markdown escapes stripped from *both*
+sides. This subsumes cell splits, hyphenation rejoining and escaping in one rule.
+
+R2 is deliberately a **contiguity** test. `pro` + `verbium` present but separated
+does *not* clear: a word torn apart with its halves scattered is a converter
+defect, not the same text differently arranged.
+
+Tokens shorter than four characters are **excluded from R2 and charge by
+default**. In a stream with every delimiter removed a three-character token
+collides constantly, and a recovery test that clears by accident is worse than
+none. The instrument fails closed.
+
+### The normalisation stack shrinks
+
+Escape-normalisation and hyphenation are **retired from `contentOnly()`** and live
+only in the battery's canonical stream, where they are recovery concerns rather
+than token-definition concerns. That removes the newline-anchored dehyphenation
+that fabricated `calumA` in round 4 by firing on the baseline side and not across
+a cell boundary — **the artefact is eliminated at source rather than compensated
+for.** `contentOnly()` keeps only marker-stripping and ordered-list numbering.
+
+### Instrument validation suite — required, and run
+
+`exam/round5/validate.mjs`, against saved bench states. It runs at every future
+boundary.
+
+| | case | result |
+| --- | --- | --- |
+| **a** | CHARGES the round-2 `[object Object]` destruction | **51 occurrences across 3 documents** |
+| **b** | CHARGES a synthetic deletion (one line removed) | **20 occurrences** |
+| **c1** | PASSES identical text | **0** |
+| **c2** | PASSES the round-1 hyperlink keep | **0 across 0 documents** |
+| **d** | CLASSIFIES the current assignment | **6 charged, 37 cleared** |
+
+**(c1) is weak by construction** — identical input scores zero under any measure —
+and is recorded as such rather than counted as evidence. (c2) is the real
+zero-test: a change that was accepted and kept, scoring zero.
+
+**Tightening R1 is what made (a) and (b) work.** Before it, (a) charged 29
+occurrences on 1 of 3 destroyed documents and (b) charged 11. After, 51 across 3,
+and 20. The suite did not merely confirm the design — it found a defect in the
+constraint that four rounds of use had not.
+
+### (d) — the six charged, each naming the tests it failed
+
+```
+archive_org_anatomy_of_melancholy_1826    charged 5   cleared 37
+    1              ×1  failed: R1 | R2 (skipped: token shorter than 4)
+    accipiimt      ×1  failed: R1 | R2 canonical stream (1→0)
+    affligit       ×1  failed: R1 | R2 canonical stream (1→0)
+    formidantopes  ×1  failed: R1 | R2 canonical stream (1→0)
+    snbjecerit     ×1  failed: R1 | R2 canonical stream (1→0)
+crm_analytics_8-20-2026                   charged 1   cleared  0
+    casesensitive  ×1  failed: R1 | R2 canonical stream (45→44)
+```
+
+**These are converter work, not noise, and they go on the assignment list.** Four
+are the word-tearing class the ruling anticipated: a word split with its halves
+scattered so that no contiguous form survives. `casesensitive` is the same defect
+at phrase scale — "function is case-sensitive" interrupted by unrelated content.
+The `1` charges because R2 cannot adjudicate a short token and the instrument
+fails closed.
+
+### Auditability
+
+Every charged token in the grader's report names the recovery tests it failed, in
+the constraint message itself:
+
+```
+6 occurrence(s) across 6 distinct token(s), 2 document(s) — …: accipiimt [failed R1 repeated-header vocabulary; R2 canonical stream (1→0)], …
+```
+
+### Proposed hashes, and their provenance
+
+```
+PROSPECTIVE grade.mjs   7527f03f0d568ea1724bf24d39d55e2ede7aacb124a863df74caec188644e2dd
+PROSPECTIVE fence       a8c9e5ef27c85d35fa31209337a466aecd161a3b08c49ee1b0f7ee96e88aecf1
+
+current, unchanged      grade.mjs f27d57f6…   fence 2aed6d09…
+```
+
+Provenance, so the numbers are checkable rather than asserted:
+
+1. `exam/round5/constraint.patch` applies cleanly to `grade.mjs` at `f27d57f6…`.
+2. The patched file passes `node --check`.
+3. The patched `dataWordLoss` reproduces the standalone battery **exactly** — 51
+   occurrences / 3 documents on the destruction bench, 6 / 2 on the assignment —
+   so the folded implementation and the validated one are the same instrument.
+4. `HARNESS_FILES` is unchanged; the battery folds into `grade.mjs` rather than
+   adding a file, so the fence's *definition* is stable and only its value moves.
+
+Supporting artefacts: `battery.mjs` `6ff1031d…`, `validate.mjs` (updated),
+`constraint.patch` (updated) — all under `exam/round5/`.
+
+### Round 5 as proposed
+
+1. **Boundary**: apply `constraint.patch`; record the new hashes in the DEVLOG
+   before any tuning; re-run the validation suite and record its results.
+2. **Assignment**: re-gate the preserved clustering change, then the six charged
+   tokens as converter work in `src/core/adapters/pdf.js` — the word-tearing
+   class first.
+3. Targets **95%**, **seed 5**, sealed hashes unchanged, **sealed read budget
+   one** — carried unspent for three rounds, and still spent only on a kept state
+   worth validating.
+
+### One thing this does not claim
+
+The battery clears 37 of 43 reported occurrences on the current assignment. That
+is a large clearance and the reason to be careful about it is obvious: an
+instrument that stops reporting problems looks like an instrument that has been
+weakened. The defence is (a) and (b) — the same battery charges 51 occurrences of
+known destruction and 20 of a synthetic deletion, both **more** than the original
+constraint did. It is not less sensitive to destruction; it is more, and the
+suite exists so that claim is checkable at every boundary rather than argued.
+
+---
+
 ## 2026-08-20 · harness cycle · round 4 report — 42 reported losses, 0 text lost
 
 Round 4 kept nothing. The boundary predicted its own effect and was exactly right;
