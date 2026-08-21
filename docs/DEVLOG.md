@@ -7,6 +7,83 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-20 · harness cycle · round-4 boundary — three normalisations and a labelled message
+
+Recorded **before any round-4 tuning**, as pre-registered. Nothing has run against
+this grader yet.
+
+### Applied
+
+`exam/round4/normalisations.patch`, registered unapplied at the close of round 3
+with its evidence in `exam/round4/README.md`. Four changes, three of them
+measurement, one of them reporting:
+
+1. **Comma-splitting** in `dataWords()` — split on a comma that is not between
+   digits, so `1,234` survives as one number while a joined cell no longer hides
+   `searchString` inside `field,searchString,replacementString`. Evidence: raw
+   counts unchanged at `searchString` 15→15, `replacementString` 6→6,
+   `valueToBeRemoved` 9→9.
+2. **Escape-normalisation** — undo Markdown backslash escaping, the same
+   normalisation `flatten()` in `metrics.mjs` already applies. `ADD_MONTHS`
+   becomes `ADD\_MONTHS` in a list item and the token splits; accounting for it
+   alone dropped `crm_analytics` from 25 apparent losses to 7.
+3. **Hyphenation-aware comparison** — rejoin a word broken across a line end, on
+   both sides. `peri-` and `tiam` vanish because the converter correctly emits
+   `peritiam`: 0 occurrences before, 1 after.
+4. **The message names its unit** — `checkConstraints` now reports
+   `N occurrence(s) across M distinct token(s), K document(s)`, per document as
+   `N occ / M distinct`. **Reporting only**: nothing about what is measured or
+   gated changes, and the gate still trips on any loss above zero in either unit.
+   Folded in here because this boundary was still ahead of us; behind us, it would
+   have waited for round 5.
+
+Each of the first three mirrors a documented, legitimate converter transform.
+That is the standard, and it is why these are corrections rather than loosenings.
+
+### The new hashes
+
+```
+grade.mjs         f27d57f61999aaea02ae506fca10a6b2f977f25c7a0ec0f91d735d834c7e7354
+HARNESS FENCE     2aed6d097374454095fc7478e6bb4265dac3bd251460cc8917469a9ae30f1f2e
+loop.mjs          f5e4425080379ff5c07e093f7ebce9570bdc868d8d9257afd179d3c0d428abfb  (unfenced, unchanged)
+```
+
+Fence moved from the round-3 value `aca908f5…` for these four changes and nothing
+else. Round 3 was judged by the round-3 grader; this one governs round 4.
+
+### No re-baseline
+
+`contentOnly()` and `dataWords()` are read by `dataWordLoss()` and nothing else —
+a hard constraint, not a term in the objective — and the message change is
+reporting. Neither can move a composite. The tuning baseline stands unchanged at
+**1.9011**.
+
+### Expected effect, stated before it is measured
+
+Applying these to round 3's discarded assignment, measured offline: **47 → 42
+occurrences** (45 → 42 distinct), `crm_analytics` **6 → 1** (4 → 1 distinct). The
+1826 book is expected **not** to move, at 41 occurrences: its hyphen breaks are
+separated by a stripped review marker, a blank line and a table-cell delimiter,
+and the rule is anchored on a bare newline. Widening it to cross a table boundary
+is a stronger claim than "a word wrapped" and was deliberately not written.
+
+Stating the expectation here means the round-4 measurement can contradict it.
+
+### Round 4 as approved
+
+Assignment: re-gate `journal.d/round2-assignment-current.patch` to establish its
+measured state under the corrected instrument, then the genuinely-gone residual
+(the `Perjurata` / `excitetur` class, and `crm_analytics`'s survivor) as converter
+work in `src/core/adapters/pdf.js`. If the 1826 residual decomposes into a fifth
+evidenced class, it is registered for the round-5 boundary — or escalated if it
+blocks a keep.
+
+Targets **95%**, **seed 5**, sealed set and hashes unchanged, **sealed read budget
+one** — spent only on a kept state worth validating. `dist/` byte-identical,
+scored corpus fingerprint `c88c7e82…` unmoved.
+
+---
+
 ## 2026-08-20 · harness cycle · correction — token counts, and which unit they were in
 
 Appended beside the round-2 and round-3 entries rather than rewriting them, on
