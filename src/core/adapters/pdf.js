@@ -1736,6 +1736,86 @@ const normalizeHeading = (text) => text.replace(/\s+/g, ' ').trim().toLowerCase(
  * page's used width roughly in half. Anything more exotic (3+ columns, mixed
  * layouts) falls back to single-column reading order.
  */
+
+/**
+ * Is this page printed in two columns, with its lines assembled across the
+ * gutter? Returns the gutter's x, or null.
+ *
+ * The discriminator, and the reason a table is safe from it: **two-column prose
+ * crosses with exactly one wide gap, at a consistent x. A real table crosses
+ * with several.** A five-column table's lines carry four gaps and never satisfy
+ * the first test, whatever their alignment.
+ *
+ * Cells are already split at every gap wide enough to be a column, so a line's
+ * gap count is `cells.length - 1` and needs no re-measuring.
+ */
+function detectGutter(lines, crossing, mid, width) {
+  const twoCell = crossing.filter((l) => l.cells.length === 2);
+  // A large majority, not merely most: one gap is the whole signal, and a page
+  // where a third of the crossers are three-cell is a table, not prose.
+  if (twoCell.length < crossing.length * 0.8) return null;
+  if (twoCell.length < 5) return null;
+
+  const gaps = twoCell.map((l) => (l.cells[0].x2 + l.cells[1].x) / 2).sort((a, b) => a - b);
+  // Tightly clustered: a gutter is a straight vertical channel down the page.
+  // Ragged inter-cell gaps that merely average out are not one.
+  if (gaps[gaps.length - 1] - gaps[0] > width * 0.1) return null;
+
+  const centre = gaps[Math.floor(gaps.length / 2)];
+  // And it sits near the middle. An off-centre channel is a wide first column,
+  // which is a table shape.
+  if (Math.abs(centre - mid) > width * 0.15) return null;
+  return centre;
+}
+
+/**
+ * Rebuild one line from a subset of its cells, keeping everything else about it.
+ *
+ * The cells carry their own segments, so link markup and inline formatting
+ * survive the split — a hyperlink that happened to sit in the right-hand column
+ * would otherwise be flattened here.
+ */
+function lineFromCells(line, cells) {
+  const segments = cells.flatMap((cell, i) =>
+    (i ? [{ text: ' ' }] : []).concat(cell.segments || [{ text: cell.text }])
+  );
+  return {
+    ...line,
+    cells,
+    segments,
+    text: cells.map((c) => c.text).join(' '),
+    x: cells[0].x,
+    x2: cells[cells.length - 1].x2,
+  };
+}
+
+/**
+ * Split every gutter-crossing line in two and return the page in reading order:
+ * the whole left column, then the whole right column.
+ *
+ * That ordering is the point. Read across the gutter, the last line of the left
+ * column is followed by the first line of the right; read down each column, a
+ * word broken at the column foot rejoins with its other half.
+ */
+function splitAtGutter(lines, gutter) {
+  const heads = [];
+  const leftCol = [];
+  const rightCol = [];
+  for (const line of lines) {
+    const before = line.cells.filter((c) => c.x2 <= gutter);
+    const after = line.cells.filter((c) => c.x2 > gutter);
+    if (before.length && after.length) {
+      leftCol.push(lineFromCells(line, before));
+      rightCol.push(lineFromCells(line, after));
+    } else if (after.length) {
+      rightCol.push(line);
+    } else if (before.length) {
+      leftCol.push(line);
+    }
+  }
+  return [heads, leftCol, rightCol].filter((c) => c.length);
+}
+
 function splitColumns(page) {
   const lines = page.lines;
   if (lines.length < 12) return [lines];
@@ -1748,7 +1828,24 @@ function splitColumns(page) {
   const band = width * 0.06;
   const crossing = lines.filter((l) => l.x < mid - band && l.x2 > mid + band);
   // Full-width lines (titles, footnotes) are allowed, but not many of them.
-  if (crossing.length > lines.length * 0.2) return [lines];
+  if (crossing.length > lines.length * 0.2) {
+    /**
+     * Almost every line crosses — which is not "this page has many full-width
+     * lines", it is "this page's lines were assembled across the gutter".
+     *
+     * `buildLines()` groups glyph runs by y before this runs, so on a printed
+     * two-column page a single visual row spanning both columns arrives as one
+     * line carrying two cells. Every line then counts as crossing, this guard
+     * concludes the page is not two-column, and table detection is handed the
+     * gutter-spanning lines — finding a two-column grid, because that is exactly
+     * what they look like. On the audit corpus's 1826 book that produced 100
+     * spurious two-column tables and tore `affligit` into `affli` and `git`
+     * across the gutter.
+     */
+    const gutter = detectGutter(lines, crossing, mid, width);
+    if (gutter !== null) return splitAtGutter(lines, gutter);
+    return [lines];
+  }
 
   const leftCol = lines.filter((l) => l.x2 <= mid + band && !crossing.includes(l));
   const rightCol = lines.filter((l) => l.x >= mid - band && !crossing.includes(l));
