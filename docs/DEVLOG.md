@@ -7,6 +7,58 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-21 · store listing — 1.7.2 submitted, both surfaces corrected
+
+Docs only. `dist/` unchanged since S0 packaged it; nothing under `src/`.
+
+### Submitted
+
+The owner uploaded `dist/sumcheck-1.7.2.zip`
+(`724d2fd04af89d779560294fe6ddd27e0002f8796be5d10a17009e425d43dce3`), replaced
+the dashboard's Description with the prose version, and submitted. **Status:
+pending review.**
+
+Two fixes, one per surface:
+
+| surface | editable where | fix |
+| --- | --- | --- |
+| package summary (`appDescription`) | **only by shipping a new zip** | 126 chars, no format enumeration |
+| dashboard Description field | the developer console | prose, no format enumeration |
+
+### The rule now covers both surfaces
+
+`store/LISTING.md` carries the submitted description verbatim — pasted unmodified
+into the dashboard by the owner and confirmed — plus a guard note that names both
+surfaces explicitly. The earlier guard covered only the field a person types into,
+which is exactly the gap the second rejection found: the first correction fixed
+the visible surface and declared the problem solved while the compiled one went on
+shipping the offending string.
+
+The precise format list stays where it is useful and unreviewed — the README, the
+product UI, and sumcheck.app, which the description now points to instead of
+enumerating.
+
+### Owner's decision of record: submit lean, then iterate
+
+Recorded in both `store/LISTING.md` and `store/CHECKLIST.md`. Any future
+expansion of the description happens from a **live** listing, where a rejected
+edit costs an edit rather than taking the extension down. That asymmetry is the
+whole argument: an unpublished extension has nothing to lose from a rejection and
+everything to lose from a delay, and a published one has it the other way round.
+
+### Record-keeping
+
+Unlike the first correction, this description was **not reconstructed**. It is the
+text the owner pasted, confirmed verbatim, and `store/LISTING.md` says so along
+with the standing instruction to reconcile against the dashboard rather than
+memory. The Description section's earlier "reconstructed, dashboard is
+authoritative" caveat is retired because it no longer applies.
+
+`dist/sumcheck-1.7.2.zip` `724d2fd0…` unchanged; `1.6.0`, `1.7.0` and `1.7.1`
+byte-identical to their recorded hashes.
+
+---
+
 ## 2026-08-21 · store listing · S0 — the rejected string was shipping inside the package
 
 `dist/sumcheck-1.7.2.zip` — `724d2fd04af89d779560294fe6ddd27e0002f8796be5d10a17009e425d43dce3`.

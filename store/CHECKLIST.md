@@ -13,7 +13,7 @@ Legend: **✅ done** · **⬜ open** (needs a human decision or an account) ·
 
 | # | Requirement | Status |
 | --- | --- | --- |
-| 1 | ZIP format | ✅ `npm run package`. **Resubmitted with `dist/sumcheck-1.7.1.zip`** after the 1.5.0 rejection below; 1.5.0's local file is no longer the submitted artifact |
+| 1 | ZIP format | ✅ `npm run package`. **Submitted artifact is `dist/sumcheck-1.7.2.zip`** (`724d2fd0…`, 21 Aug 2026) — see *Rejections and corrections* |
 | 2 | Under the 2 GB package limit | ✅ **6.2 MB** |
 | 3 | Valid `manifest.json` | ✅ `npm run check` validates every referenced path |
 | 4 | Manifest V3 | ✅ `manifest_version: 3` |
@@ -28,7 +28,7 @@ Legend: **✅ done** · **⬜ open** (needs a human decision or an account) ·
 | --- | --- | --- |
 | 9 | Name, ≤ 45 characters | ✅ 36 — `store/LISTING.md` |
 | 10 | Summary, ≤ 132 characters | ✅ 121 — `store/LISTING.md` |
-| 11 | Detailed description | ✅ `store/LISTING.md` — **softened after a Keyword Spam rejection**; see *Rejection and correction* below before editing it |
+| 11 | Detailed description | ✅ `store/LISTING.md` — **two Keyword Spam rejections**; the copy lives on two surfaces and both are governed. Read *Rejections and corrections* before editing either |
 | 12 | Category | ✅ Productivity → Workflow & Planning |
 | 13 | Language | ✅ English (US); `_locales/en` ships and `default_locale` is set |
 | 14 | Store icon 128×128 PNG | ✅ `icons/icon-128.png` |
@@ -95,7 +95,7 @@ The product homepage is <https://sumcheck.app> and the source is public at
 what makes the listing's "verifiable by inspection" claim checkable rather than
 rhetorical.
 
-## Rejection and correction — Keyword Spam, 1.5.0
+## Rejections and corrections — Keyword Spam, twice
 
 The 1.5.0 submission was **rejected**. The stated reason was **"Keyword Spam"**,
 and the violating content identified was the format enumeration in the
@@ -126,6 +126,47 @@ deleted, only moved out of the listing.
 
 Nothing about the product changed. No permission, no capability and no claim was
 withdrawn; only the store description's wording.
+
+## The second rejection — Keyword Spam again, 1.7.1 submission
+
+Reference **"Yellow Argon"**. The reviewer quoted the extension's *own summary*:
+
+> Convert PDF, Word, Excel, PowerPoint, EPUB, images and web pages to Markdown,
+> HTML, text or JSON — entirely on your device.
+
+**That string ships inside the package.** It is `appDescription` in
+`_locales/en/messages.json`, reached by `manifest.json`'s
+`description: "__MSG_appDescription__"`. The first correction softened the
+*dashboard's* Description field — the right fix for the field it was about — and
+left this one untouched and still shipping. The dashboard has no control that can
+edit it; only a new zip can.
+
+**The listing is two surfaces, not one.** That is the finding, and it is why the
+same defect survived a full correction cycle.
+
+### The 1.7.2 resubmission — 21 August 2026
+
+| | |
+| --- | --- |
+| artifact | `dist/sumcheck-1.7.2.zip` |
+| sha256 | `724d2fd04af89d779560294fe6ddd27e0002f8796be5d10a17009e425d43dce3` |
+| status | submitted, pending review |
+
+Two fixes, one per surface:
+
+1. **Package summary** — `appDescription` replaced with a 126-character string
+   carrying no format enumeration, shipped in the new zip.
+2. **Dashboard description** — replaced with the prose version now recorded
+   verbatim in `store/LISTING.md`, describing what the tool handles without
+   listing formats.
+
+Nothing under `src/` changed; the converter is byte-for-byte the 1.7.1 build.
+Verified before packaging: a Tier A run with and without the change produced
+**0 of 55 differing outputs**.
+
+**Owner's decision of record: submit lean, then iterate.** Future description
+expansion happens from a live listing, where a rejected edit costs an edit rather
+than taking the extension down.
 
 ## Sources
 

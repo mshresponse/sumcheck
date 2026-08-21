@@ -38,21 +38,29 @@ stuffing regardless of how accurate each name is.
 
 ## Description
 
-> **Do not re-add file-format enumerations to these bullets.** The 1.5.0
-> submission was rejected for **Keyword Spam**, and the violating content was the
-> parenthetical `PNG, JPEG, TIFF, WebP, BMP, GIF)` in the Images bullet. The
-> "What it converts" list is deliberately loose: no format parenthetical on
-> Images, no extensions on the email/web-pages bullet, and a short "and more"
-> list for data files. A reviewer reads a run of format names as keyword
-> stuffing however accurate each one is. The full, precise format list belongs in
-> the README and the product UI, not in store copy.
+> **Two surfaces, one rule. Do not re-add file-format enumerations to either.**
 >
-> The text below is what was resubmitted with `dist/sumcheck-1.7.1.zip`,
-> **verified verbatim against the dashboard** on 2026-08-20. An earlier revision
-> of this file reconstructed the wording from a description of the submission and
-> got two bullets wrong; the caveat that the dashboard is authoritative did its
-> job and this copy now matches it exactly. Keep it that way — reconcile against
-> the dashboard, not against memory.
+> The listing's copy lives in two places and both were rejected for Keyword Spam
+> before this was understood:
+>
+> 1. **The dashboard's Description field** — editable by the owner. Softened after
+>    the first rejection.
+> 2. **The package's `appDescription`** in `_locales/en/messages.json`, reached by
+>    `manifest.json`'s `description: "__MSG_appDescription__"`. **Not editable in
+>    the dashboard.** It survived the first correction untouched and was the string
+>    the second rejection quoted. Changing it needs a new zip.
+>
+> A comma-run of format names reads as keyword stuffing regardless of how accurate
+> each name is. The precise list belongs in the README, the product UI and
+> sumcheck.app — surfaces that are not subject to store copy review.
+>
+> **Owner's decision of record: submit lean, then iterate.** Any future expansion
+> of this description happens from a *live* listing, where a rejected edit costs an
+> edit rather than taking the extension down.
+>
+> The text below is the authoritative submitted copy, pasted unmodified into the
+> dashboard by the owner and confirmed verbatim. Reconcile against the dashboard,
+> never against memory.
 
 ```
 Sumcheck turns documents into Markdown without sending them anywhere.
@@ -63,22 +71,20 @@ telemetry. That is not a promise about a server's behaviour; it is a property
 of the code, and you can check it: the package contains no network calls, and
 Chrome's own extension platform blocks remotely hosted code.
 
-WHAT IT CONVERTS
+WHAT IT HANDLES
 
-• PDF — including scanned pages, read with on-device OCR
-• Word, Excel, PowerPoint, and their OpenDocument equivalents
-• EPUB, HTML, saved web pages, and email files
-• Images, read with on-device OCR
-• Data and text files — CSV, JSON, XML, Jupyter notebooks, RTF and more
-• The current browser tab, or just the text you have highlighted
-• Drop a .zip and it converts what is inside
+Drop in a PDF — born-digital or scanned; scans are read with on-device OCR.
+Office documents, ebooks, saved web pages, images of documents and common
+data files convert the same way, and so does the browser tab you are looking
+at, or just the text you have highlighted. Drop a .zip and it converts what
+is inside. The full list of supported formats lives at sumcheck.app.
 
 WHAT YOU GET
 
-Markdown (GitHub-flavoured or CommonMark, with optional YAML front matter), a
-self-contained HTML file, plain text, or structured JSON that keeps each block's
-text, its Markdown and its page number — the shape a search or RAG pipeline
-wants.
+Clean Markdown, ready for your notes, your repo, or your pipeline. The same
+conversion can instead produce a self-contained HTML file, plain text, or
+structured JSON that keeps each block's text and its page number — the shape
+a search or RAG pipeline wants.
 
 IT TELLS YOU WHAT IT IS UNSURE ABOUT
 
@@ -88,11 +94,11 @@ the result looks perfectly reasonable.
 
 Sumcheck checks its own work and marks what it cannot vouch for:
 
-• Currency columns where one amount lost its "$"
-• Line items that do not add up to the stated total
-• A prominent total that matches nothing else on the page
-• Words that are not words — a confidently misread "included" as "inchided"
-• Regions of a page that carried content OCR could not read at all
+- Currency columns where one amount lost its "$"
+- Line items that do not add up to the stated total
+- A prominent total that matches nothing else on the page
+- Words that are not words — a confidently misread "included" as "inchided"
+- Regions of a page that carried content OCR could not read at all
 
 Every flag is written where a reader will see it. Nothing is ever silently
 rewritten: on a price list, a converter that quietly "corrects" a figure is
@@ -122,8 +128,6 @@ https://sumcheck.app  ·  https://github.com/mshresponse/sumcheck
 
 Third-party components are all permissively licensed and listed in the package.
 ```
-
----
 
 ## Homepage and privacy policy
 
