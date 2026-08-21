@@ -1,0 +1,64 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 1170 >>
+stream
+BT /F2 10 Tf 1 0 0 1 72 700 Tm (Feature) Tj ET
+BT /F2 10 Tf 1 0 0 1 210 700 Tm (Enabled for) Tj ET
+BT /F2 10 Tf 1 0 0 1 300 700 Tm (Requires) Tj ET
+BT /F2 10 Tf 1 0 0 1 396 700 Tm (Contact) Tj ET
+BT /F2 10 Tf 1 0 0 1 492 700 Tm (Available) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 678 Tm (Adaptive routing) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 678 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 678 Tm (No) Tj ET
+BT /F1 10 Tf 1 0 0 1 396 678 Tm (No) Tj ET
+BT /F1 10 Tf 1 0 0 1 492 678 Tm (GA) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 656 Tm (Bulk reassignment) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 656 Tm (No) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 656 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 396 656 Tm (No) Tj ET
+BT /F1 10 Tf 1 0 0 1 492 656 Tm (Beta) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 634 Tm (Predictive buffers) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 634 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 634 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 396 634 Tm (No) Tj ET
+BT /F1 10 Tf 1 0 0 1 492 634 Tm (GA) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 612 Tm (Capacity heatmap) Tj ET
+BT /F1 10 Tf 1 0 0 1 210 612 Tm (No) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 612 Tm (No) Tj ET
+BT /F1 10 Tf 1 0 0 1 396 612 Tm (Yes) Tj ET
+BT /F1 10 Tf 1 0 0 1 492 612 Tm (Pilot) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+7 0 obj
+<< /Title (Wide Table) /Creator (Sumcheck fixtures) >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000001473 00000 n 
+0000001570 00000 n 
+0000001672 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R /Info 7 0 R >>
+startxref
+1742
+%%EOF

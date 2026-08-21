@@ -1023,6 +1023,127 @@ function buildGroupedTablePdf() {
   return Buffer.from(out, 'latin1');
 }
 
+
+/**
+ * A two-column printed page, in the idiom of the 1826 book in the audit corpus.
+ *
+ * Both columns are prose at the same leading, so `buildLines()` assembles each
+ * visual row across the gutter into ONE line carrying two cells. Every line then
+ * "crosses the midline", `splitColumns()` sees 100% crossing, concludes the page
+ * is not two-column, and hands the gutter-spanning lines to table detection —
+ * which finds a two-column grid because that is literally what is in front of it.
+ *
+ * The last line of the left column ends `excite-` and the first line of the right
+ * column opens `tur,`. Read in the correct order those are one word; read across
+ * the gutter they are torn apart, which is what produced `affligit` → `affli` +
+ * `git` on the real document.
+ *
+ * The discriminator this fixture exists for: two-column prose crosses with
+ * exactly ONE wide gap, at a consistent x. See `buildWideTablePdf` for the
+ * falsifier.
+ */
+function buildTwoColumnProsePdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const left = [
+    'Est in unoquoque nostrum seminarium',
+    'aliquod stultitiae, quod si quando',
+    'excitetur, in infinitum facile',
+    'excrescit. Multos videmus propter',
+    'invidiam et odium in melancholiam',
+    'incidisse; et illos potissimum',
+    'quorum corpora ad hanc apta sunt.',
+    'Nam ut ait Hippocrates, animus',
+    'aegrotat cum corpore. Quod si quis',
+    'accuratius intueatur, reperiet',
+    'plurimos hoc morbo laborare, qui',
+    'nihil minus quam melancholici',
+    'videri volunt. Hoc unum monendum',
+    'restat, ne quis temere iudicet, excite-',
+  ];
+  const right = [
+    'tur, et in eandem sententiam',
+    'Invidia affligit homines adeo et',
+    'corrodit, ut hi melancholici penitus',
+    'fiant. Speciosissimi iuvenes liberis',
+    'dabunt operam, ut ait Plato, neque',
+    'enim aliter fieri potest quin animus',
+    'a corpore trahatur. Quocunque te',
+    'verteris, occurrent tibi exempla,',
+    'nec opus est ut longius abeamus,',
+    'cum domi nostrae satis supersit',
+    'materiae. Haec de causis dicta',
+    'sufficiant, nunc ad symptomata',
+    'transeamus, quae varia sunt et',
+    'multiplicia, prout affectus fuerit.',
+  ];
+
+  const content = [];
+  left.forEach((text, i) => content.push(line('F1', 10, 72, 700 - i * 18, text)));
+  right.forEach((text, i) => content.push(line('F1', 10, 340, 700 - i * 18, text)));
+  return assembleFixturePdf(content.join('\n'), 'Two Column Prose');
+}
+
+/**
+ * The falsifier: a five-column table in the Winter '27 idiom.
+ *
+ * Its lines also cross the midline — that is what a wide table does — but they
+ * cross with FOUR wide gaps, not one. If the gutter discriminator keys on
+ * "crosses the midline" rather than on the gap count and their alignment, it
+ * will split this table down the middle and the fixture fails.
+ *
+ * A discriminator without this fixture is a hypothesis; with it, it is testable.
+ */
+function buildWideTablePdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const xs = [72, 210, 300, 396, 492];
+  const rows = [
+    ['Feature', 'Enabled for', 'Requires', 'Contact', 'Available'],
+    ['Adaptive routing', 'Yes', 'No', 'No', 'GA'],
+    ['Bulk reassignment', 'No', 'Yes', 'No', 'Beta'],
+    ['Predictive buffers', 'Yes', 'Yes', 'No', 'GA'],
+    ['Capacity heatmap', 'No', 'No', 'Yes', 'Pilot'],
+  ];
+  const content = [];
+  rows.forEach((row, r) => {
+    row.forEach((cell, c) => {
+      content.push(line(r === 0 ? 'F2' : 'F1', 10, xs[c], 700 - r * 22, cell));
+    });
+  });
+  return assembleFixturePdf(content.join('\n'), 'Wide Table');
+}
+
+/** Shared PDF wrapper for the fixtures above. */
+function assembleFixturePdf(content, title) {
+  const objects = [];
+  const add = (body) => { objects.push(body); return objects.length; };
+  add('<< /Type /Catalog /Pages 2 0 R >>');
+  add('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      '/Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>');
+  add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const info = add(`<< /Title (${title}) /Creator (Sumcheck fixtures) >>`);
+
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 /* ------------------------------------------------------------------- PDF */
 
 function buildPdf() {
@@ -1344,6 +1465,8 @@ write('table-continuation.pdf', buildTableContinuationPdf());
 write('dropped-image.pdf', buildDroppedImagePdf());
 write('link-kinds.pdf', buildLinkKindsPdf());
 write('grouped-table.pdf', buildGroupedTablePdf());
+write('two-column-prose.pdf', buildTwoColumnProsePdf());
+write('wide-table.pdf', buildWideTablePdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own

@@ -1954,6 +1954,125 @@ async function runLinkKindsCase() {
  * neither, and if that distinction fails, two unrelated tables fuse and their
  * columns misalign. A closing paragraph is a one-cell line too.
  */
+/**
+ * Two-column printed prose must not be read across the gutter.
+ *
+ * `buildLines()` assembles a visual row spanning both print columns into one
+ * line carrying two cells, so every line "crosses the midline" and
+ * `splitColumns()` — which declines to split when more than 20% of lines cross —
+ * concludes the page is not two-column. Table detection then finds a two-column
+ * grid, because that is exactly what the assembled lines look like.
+ *
+ * The cost is not just a spurious table. Reading order reverses inside the row,
+ * and a word broken at the gutter is torn: on the audit corpus's 1826 book
+ * `affligit` came out as `affli` in one cell and `git` in another.
+ */
+async function runTwoColumnProseCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>two-column prose is not read across the gutter</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'two-column-prose', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/two-column-prose.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'two-column-prose.pdf' }, { outputs: ['md'] }, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    const lines = body.split('\n');
+    const LEFT = 'corpora ad hanc apta sunt';
+    const RIGHT = 'Invidia affligit homines';
+    const straddling = lines.filter((l) => l.includes('apta sunt') && l.includes('Invidia'));
+
+    renderChecks(
+      box,
+      record,
+      {
+        'no table is built from prose': () =>
+          !lines.some((l) => /^\s*\|\s*---/.test(l)) ||
+          'a GFM table was emitted from two columns of prose',
+        'no line carries text from both columns': () =>
+          straddling.length === 0 ||
+          `${straddling.length} line(s) read across the gutter, e.g. ${straddling[0].slice(0, 90)}`,
+        'the left column reads before the right': () =>
+          (body.indexOf(LEFT) !== -1 && body.indexOf(RIGHT) !== -1 &&
+            body.indexOf(LEFT) < body.indexOf(RIGHT)) ||
+          'column reading order is wrong or a column is missing',
+        /**
+         * The word broken at the gutter. `excite-` ends the left column and
+         * `tur,` opens the right, so in correct reading order they are adjacent
+         * and rejoin.
+         */
+        'a word broken at the gutter is rejoined': () =>
+          /excitetur/.test(body) ||
+          'excite- and tur were not rejoined across the column break',
+      },
+      md
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').textContent = `threw: ${err.message}`;
+  }
+}
+
+/**
+ * The falsifier for the rule above: a real wide table must NOT be split.
+ *
+ * Its lines cross the midline too — that is what a five-column table does — but
+ * they cross with four wide gaps rather than one. A discriminator keyed on
+ * "crosses the midline" instead of on the gap count would cut this table in half,
+ * and every Winter '27-class document in the corpus with it.
+ */
+async function runWideTableCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>a wide table is not split at the midline</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'wide-table', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/wide-table.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'wide-table.pdf' }, { outputs: ['md'] }, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    const rows = body.split('\n').filter((l) => l.startsWith('|'));
+    const widthOf = (r) => r.split('|').length - 2;
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the table still forms': () =>
+          rows.length > 0 || 'no table was emitted',
+        'the header keeps five columns': () =>
+          widthOf(rows[0] || '') === 5 ||
+          `header had ${widthOf(rows[0] || '')} columns: ${(rows[0] || '').slice(0, 80)}`,
+        'a row keeps its first and last value together': () =>
+          rows.some((r) => r.includes('Adaptive routing') && r.includes('GA')) ||
+          'the row was split — its first and last cells landed on different lines',
+        'every data row survives': () =>
+          ['Adaptive routing', 'Bulk reassignment', 'Predictive buffers', 'Capacity heatmap']
+            .every((label) => rows.some((r) => r.includes(label))) ||
+          'a data row was lost',
+      },
+      md
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').textContent = `threw: ${err.message}`;
+  }
+}
+
 async function runGroupedTableCase() {
   const box = document.createElement('div');
   box.className = 'case';
@@ -2072,6 +2191,8 @@ async function run() {
     ['dropped-image', runDroppedImageCase],
     ['link-kinds', runLinkKindsCase],
     ['grouped-table', runGroupedTableCase],
+    ['two-column-prose', runTwoColumnProseCase],
+    ['wide-table', runWideTableCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],
