@@ -7,6 +7,105 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-22 · harness cycle · round 9 report — the tear located, the repair defeated by its own hyphens
+
+Round 9 closes with **no keep**. The sealed read is **unspent for the fourth
+consecutive round** — correctly; there was never a kept state to validate.
+Baseline **1.9054**, fence `a8c9e5ef…` unmoved, corpus fingerprint `c88c7e82…`
+verified throughout, `dist/` untouched.
+
+### (a-i) The tear is located, and it is not resolution
+
+Traced from stored artefacts. Each of the four long tokens exists once in the
+baseline and zero times under the clustering assignment:
+
+```
+| ...fascibus snbje- | bInter inertes ... ha¬ |
+| cerit protervae... | Lib. 1. de contemt...  |
+```
+
+**A word wraps within its own column; the continuation is the cell directly
+below.** Dehyphenation rejoins it while the text is prose and cannot once the
+lines are table rows, because an intervening cell separates the halves in
+serialization order. `affligit` is the sharpest case — both halves survive, in an
+order that spells nothing.
+
+Quantified: **196 of 1103 table rows** in the 1826 book contain a cell ending
+mid-hyphenated-word; 256 under the assignment. **The class pre-exists the
+assignment** — which is exactly why the same six tokens charge identically across
+a complete resolver replacement (experiment 27).
+
+### (a-ii) The furniture signal is falsified
+
+The registered hypothesis was that a running header repeats verbatim across pages
+and a table header does not. Across 2660 table runs, 1291 (48.5%) have a first row
+repeating on three or more pages — and the **most repeated first row in the whole
+corpus, at 103 pages, is a genuine table header** (`Enabled for | Requires |
+Contact`). Repetition ranks the classes in the wrong order.
+
+y-gap ratios overlap too (furniture 2.7x, 1.7x, **0.74x**; genuine 0.61x, 0.16x,
+0.39x, **1.0x**) — but they were registered as descriptive, so they were not
+promoted. Furniture absorption is real and is **carried, not hunted**.
+
+### The fix: right mechanism, fatal detail
+
+`rejoinHyphenatedColumn()` pulls a wrapped continuation up from the cell directly
+below, guarded so a lowercase apparatus marker (`m Undecima nota`) can never be
+joined to a fragment.
+
+- RED fixture built first, both variants, **GREEN** under the fix.
+- **Pre-loop gate PASSED: zero new `table_fallback` across all 14 documents**,
+  every delta `+0`. Repairing inside rows leaves table formation untouched — which
+  is why run-rejection, the more obvious reading of the design principle, was
+  measured and rejected: it would have converted 196 rows in the 1826 book and 139
+  in census into fallbacks.
+
+**DISCARDED at the Tier A gate**, and correctly:
+
+```
+| to measure the economic well- |   ->  | to measure the economic wellbeing |
+| being of households, ...      |       | of households, ...                |
+```
+
+The rule strips the hyphen unconditionally. `well-` + `being` is a **genuine
+compound hyphen that merely fell at a line break**, and the same document proves
+it — `well-being` appears hyphenated in the very next paragraph. Five merged
+compounds resulted: `wellbeing` x3, `workrelated`, and one more. Real words
+destroyed, non-words created.
+
+`pro-` + `duces` -> `produces` and `follow-` + `ing` -> `following` are repaired
+correctly in the same diff. **The mechanism is right; the hyphen decision is
+missing.**
+
+### What the instrument did
+
+It caught a corruption the composite would have paid for: Tier A composite 2.3117
+with `headerCorrectness` 0.8786 and byte-stability holding. Only the one-sided
+data-word gate objected. That is now twice in three rounds — round 7's three
+sub-four-character charges were the visible edge of +339 destroyed tables, and here
+five occurrences were the visible edge of five destroyed compounds.
+
+### Targets, judged as written
+
+| target | outcome |
+| --- | --- |
+| six charged occurrences cleared | **MISSED** — fix discarded before they could be retested |
+| 1826 spurious tables reduced | **MISSED** |
+| `hyphen-across-cells.pdf` GREEN | **MET** under the fix; RED at HEAD by design |
+| sparse-table falsifier not made worse | **MET** — unchanged |
+| zero new `table_fallback` | **MET** — 14 of 14 documents at `+0` |
+| corpus byte-stable | **MET** |
+| `tableau_next >= 97` | **NOT MEASURED** — no kept state |
+
+### State
+
+`npm test` is **56/58** at HEAD: three round-7/9 fixtures, two RED by design.
+28 experiments journalled — 2 kept, 26 discarded. Sealed ledger: **2 reads in 9
+rounds.** Waiver mechanics validated end to end and extended to every decision
+point; the grader never learned about waivers and its hash never moved.
+
+---
+
 ## 2026-08-22 · harness cycle · round-9 pre-registration — resolution, not formation
 
 For review before anything runs. `grade.mjs` `7527f03f…`, fence `a8c9e5ef…`, seed 5,
