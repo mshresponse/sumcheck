@@ -7,6 +7,116 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-22 · harness cycle · round-8 pre-registration — measure the population the rule actually sees
+
+For review before anything runs. `grade.mjs` `7527f03f…`, fence `a8c9e5ef…`, seed
+5, sealed hashes unchanged, baseline **1.9054**. No instrument change is
+registered and none is needed.
+
+### What round 7 got wrong, stated as the thing to fix
+
+The coherence bound was fitted to a population the probe defined and wired into a
+population the product defines. Those differ in a specific, checkable way:
+
+- The probe reconstructed a run from the assignment map and counted **every line**
+  it consumed, wrapped continuations included.
+- `detectTables()` builds a run as entries of the form `{line, continuations[]}`.
+  `run.length` therefore counts **rows**, not lines, and a row that absorbed three
+  continuation lines still counts once.
+
+So `twoCell.length >= run.length * 0.8` gates on a ratio whose denominator means
+something different in each. The bound may be right; it was never tested against
+what it was attached to.
+
+### (a) Characterization — the rule's own population, no reconstruction
+
+Instrument the product's `detectTables()` directly through `ctx.onLayout` and
+report, **as the product sees them**:
+
+1. The MAD distribution of the second column's x, split by class — genuine tables
+   against apparatus and page furniture — over runs as `detectTables()` builds
+   them.
+2. **How `run.length`'s row-counting changes the 80% gate.** For every run:
+   `twoCell.length`, `run.length` (rows), and the line count including
+   continuations, so the ratio's behaviour under both denominators is visible
+   rather than inferred.
+3. The population size difference: how many runs the product-side predicate
+   selects that the probe-side one did not, and vice versa. Round 7's +339
+   fallbacks live in that gap and it should be measured, not estimated.
+
+Documents: at minimum the 14 that moved in round 7 — `crm_analytics` (+122),
+`omnistudio` (+51), `marketing_cloud_next` (+24), `arxiv_1409.0473`,
+`salesforce_summer25`, `health`, `salesforce_spring25`, Winter '27, `census`,
+`reports_and_dashboards`, `mulesoft`, `salesforce_summer24`, `eurlex`, and the
+1826 book. Tuning side only; no sealed document is read.
+
+**Both branches registered before measurement:**
+
+- If the two populations separate as cleanly under the product-side predicate as
+  they did under the probe-side one, the bound is **confirmed** and the round-7
+  failure was the predicate, not the threshold.
+- If they do not separate, the bound is **refit** to the measured population, and
+  the refit value is reported with its margin before any fix is applied.
+
+The measurement decides. After two rounds of hypotheses losing to measurements, no
+hypothesis outranks one here either.
+
+### (b) Assignment — three conditions, all of which must hold
+
+1. `footnote-apparatus.pdf` turns **GREEN**.
+2. `sparse-two-column-table.pdf` stays **GREEN** — it must not be traded for (1).
+   (It is RED today; see the note on #20 below.)
+3. **ZERO new table fallbacks in the +339 class** — an explicit check, not an
+   impression. This is now the known failure mode and it gets a named gate.
+
+Condition (3) is registered as a **measurement**, run before the loop: convert the
+14 documents and compare `table_fallback` in the front matter against
+`exam/baseline/tuning/`. Any document showing an increase fails the condition and
+the change is not proposed to the loop at all. A fixture cannot cover this — the
+failure is a corpus-scale over-fire, not a single-page shape — so it is a
+pre-loop gate with a recorded number rather than a test case.
+
+### On issue #20 and condition (2)
+
+#20 is the gutter discriminator splitting genuine sparse two-column tables, and
+that discriminator is **kept, measured, and load-bearing** — reverting it costs 7
+occurrences of stacked-header vocabulary. So `sparse-two-column-table.pdf` is RED
+today and condition (2) cannot be met while it stays RED.
+
+Round 8 therefore treats #20 as **carried, not assigned**: the round is judged on
+conditions (1) and (3) with (2) read as "not made worse". If the characterization
+happens to surface an evidence test that separates apparatus, furniture, AND the
+gutter's true positives in one predicate, #20 closes as a bonus and is reported as
+such. It is not promised, because promising it is what produced round 7's
+over-fire.
+
+### (c) Targets, carried
+
+| target | measure |
+| --- | --- |
+| 1826 spurious tables materially reduced | table count on the 1826 book |
+| no genuine table lost | the +339 class shows zero new fallbacks |
+| #20 closed, or its residual named | fixture state plus a written residual |
+| `tableau_next ≥ 97` | **round grade only** — one sealed read, no mid-round peeking |
+| 95% header correctness | carried, structural definition |
+| corpus byte-stable | GFE outputs identical |
+
+### (d) and (e)
+
+Clustering re-gate under **re-verified waiver hashes** if reached. Sealed budget
+**one**, spent on a kept state worth validating or not at all — it has now been
+carried unspent through two rounds and that is the correct outcome twice, not a
+reason to spend it. Seed 5, sealed hashes unchanged, fence `a8c9e5ef…`.
+
+### Keep-time obligations, per the ruling adopted at round 7
+
+Any keep in round 8 records, at keep time: **which documents and pages the change
+fired on**, and a **"gated blind" flag** if Tier A shows zero effect. A
+`detectTables` change very likely will show zero effect on Tier A, so that flag
+should be expected rather than treated as a surprise.
+
+---
+
 ## 2026-08-21 · harness cycle · round 7 report — the assignment missed, a premise restored, and a threshold validated on the wrong population
 
 Round 7 closes with **no keep**. The sealed read is **unspent** — there was no kept
