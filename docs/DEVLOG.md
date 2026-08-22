@@ -7,6 +7,262 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-22 · harness cycle · round-9 pre-registration — resolution, not formation
+
+For review before anything runs. `grade.mjs` `7527f03f…`, fence `a8c9e5ef…`, seed 5,
+sealed hashes unchanged, baseline **1.9054**. No instrument change registered or
+needed.
+
+### The reframing
+
+Rounds 7 and 8 both tried to decide, from a run's geometry, whether that run is a
+table. Both failed on the same population and for the same underlying reason: **a
+run is often not one object.** Round 8 (a2) found two distinct ways it isn't:
+
+1. `buildCells()` resolves TWO cells from a three-column wrapped row, so
+   consecutive rows report cells from different columns;
+2. runs ABSORB page furniture — `'CRM Analytics' | <doc title>` sitting above
+   `'Field' | 'Description'`.
+
+Geometry measured over such a run is measuring the wrong object, and no threshold
+over a mismeasured object can separate anything. Round 9 therefore asks the
+resolution question rather than the formation one.
+
+### (b) Ordering, and the position this pre-registration takes
+
+**RE-GATE THE PRESERVED CLUSTERING ASSIGNMENT FIRST, AND BUILD ON IT.**
+
+`journal.d/round2-assignment-current.patch` (`89d724f5…`, 208 added lines) is not
+adjacent to round 9's question — it **is** round 9's question already partly
+answered. It adds `resolveColumns()` (line-first column resolution seeded from the
+widest line), `alignRow()`, `assignMonotone()` (exact monotone assignment),
+`nearestColumn()`, and `isListRun()`.
+
+Three reasons for this ordering, and one risk:
+
+1. **Characterizing the current resolver would characterize a resolver already
+   slated for replacement.** Measure resolution behaviour against pooled/greedy
+   resolution, then wire a fix into line-first resolution, and that is round 7's
+   population mismatch in a new costume — the specific error this cycle has now
+   paid for twice.
+2. **It addresses mechanism (1) directly.** Seeding the grid from the widest line
+   is precisely a response to three-column wrapped rows: the widest line carries
+   the most evidence about how many columns exist.
+3. **It carries `isListRun()`**, which abandons list-like runs outright — a
+   furniture-rejection mechanism in the same family as mechanism (2).
+
+**Risk, stated:** the assignment has been blocked for rounds by the six charged
+occurrences, so re-gating first could stall the round before any characterization.
+
+**Bound on that risk:** ONE re-gate attempt, not a campaign. If it discards again,
+characterization proceeds on the current resolver with the caveat recorded that it
+describes a resolver we intend to replace. The waiver re-issues against
+**re-verified hashes** either way.
+
+There is a second reason this ordering is not merely convenient: **it tests (c)'s
+prediction directly.** If the resolution reframing is right, better column
+resolution should move the six charged occurrences. Re-gating first puts that
+prediction in front of the grader immediately rather than after a round of
+measurement.
+
+### (a) Characterization — the two mechanisms, branches registered before numbers
+
+On the failing populations from round 8, measure:
+
+**(a-i) Where do the lost columns go?** On runs whose rows resolve to two cells
+while the table has three or more columns: how many columns does `resolveColumns()`
+find, which cells land on which, and what becomes of the fragments that land on
+none. Reported per run with the true column count judged by inspection, never by
+document identity.
+
+**(a-ii) How often, and how, do runs absorb page furniture?** Count runs whose
+first row is a running header or title rather than a table row, and characterize
+what distinguishes it: y-gap to the next row, x-extent, repetition of the same
+text across pages. Repetition is the promising signal — a running header repeats
+verbatim on every page and a table header does not — but it is a hypothesis here,
+not a finding.
+
+**Branches, registered now:**
+
+- **Both mechanisms measurable and separable** → the fix targets whichever accounts
+  for more of the failing population, and the other is recorded for a later round.
+- **Only one measurable** → that one is the assignment; the other is reported as
+  unquantified with the reason.
+- **Neither separable** → round 9 closes on the finding. No third mechanism is
+  hunted; that would be feature-shopping at the level of mechanisms rather than
+  thresholds.
+
+### (c) Targets
+
+The **six charged occurrences remain the concrete target.** If the reframing is
+right, they, the 1826 spurious tables, and the fixture states should move
+together — a prediction that can fail, and its failure would be evidence the
+reframing is wrong.
+
+| target | measure |
+| --- | --- |
+| six charged occurrences cleared | the grader's own constraint report |
+| 1826 spurious tables materially reduced | table count on the 1826 book |
+| `footnote-apparatus.pdf` GREEN | fixture state |
+| `sparse-two-column-table.pdf` not made worse | fixture state; #20 carried, not promised |
+| zero new `table_fallback` on the 14 documents | pre-loop gate against `exam/baseline/tuning/` |
+| `tableau_next ≥ 97` | **round grade only**, one sealed read |
+| 95% header correctness | carried |
+| corpus byte-stable | GFE outputs identical, `dist/` unchanged |
+
+### (d)
+
+Seed 5, sealed hashes unchanged, fence `a8c9e5ef…`. Sealed budget **one**, spent on
+a kept state worth validating or not at all — unspent for three rounds running,
+which has been the correct outcome each time.
+
+Keep-time obligations stand: any keep records which documents and pages it fired
+on, and carries a **gated-blind** flag if Tier A shows zero effect.
+
+---
+
+## 2026-08-22 · harness cycle · round 8 report — two features, no separation, and the post-mortem of round 7's +339
+
+Round 8 closes with **no keep** and **no fix proposed to the loop**. The sealed read
+is **unspent for the third consecutive round** — correctly, there being no kept
+state to validate. Baseline **1.9054**, fence `a8c9e5ef…` unmoved throughout,
+scored-corpus fingerprint `c88c7e82…` verified, `dist/` byte-identical.
+
+The round produced two negative results and one post-mortem. All three are worth
+more than the fix would have been.
+
+### The post-mortem: round 7 fitted on 348 runs and wired the result to 1096
+
+Round 7's coherence bound was measured on runs reconstructed from
+`detectTables()`'s assignment map, then attached to `detectTables()` itself. Those
+are different populations:
+
+- the reconstruction counted every LINE a run consumed, continuations included;
+- `detectTables()` builds entries `{line, continuations[]}`, so `run.length`
+  counts ROWS — a row absorbing three continuation lines counts once.
+
+`twoCell.length >= run.length * 0.8` therefore gates on a ratio whose denominator
+differs between them.
+
+| | runs |
+| --- | ---: |
+| product-side predicate (what the rule governs) | **1096** |
+| probe-side predicate (what the bound was fitted on) | 348 |
+| product-only | **748** |
+| probe-only | **0** |
+
+**The probe-side population is a strict subset.** Two documents make it vivid:
+Winter '27 has 27 product-side runs and **0** probe-side; `salesforce_spring25`
+has 30 and **0**. Round 7 measured nothing whatever from either document and
+applied a rule to 57 runs inside them.
+
+That is the whole of round 7's +339 fallbacks. The missing 64% is precisely the
+wrapped-cell tables, and wrapped cells are what break the feature.
+
+### (a) Column-start dispersion (MAD) — NO SEPARATION
+
+Measured on the product-side population with `splitColumns`, the gutter
+discriminator, the run-building helpers and `detectTables()`'s run loop copied
+VERBATIM from the product.
+
+Genuine tables, each inspected rather than assumed from document identity, land at
+MAD **0.37, 2.01, 2.40, 2.83, 8.09, 14.52, 15.98, 16.03, 16.18** — inside the
+apparatus range of **0.07 – 16.27** at every point. Inside the 1826 book, **0 of
+19** runs score exactly zero, against round 7's probe-side view where genuine runs
+were uniformly 0.00.
+
+The mechanism:
+
+```
+'dayofyear'              | 'Returns the day of year'
+'component of the date/' | 'dayofyear(date)'
+```
+
+A **three-column** table. The second cell is the description on one row and the
+syntax on the next. The second column is not wandering — **there is no single
+second column**, and MAD measures dispersion across cells drawn from different
+columns.
+
+### (a2) Column-count coherence (`stray`) — ALSO NO SEPARATION
+
+Decision feature fixed in `round8/branches-a2.md` before any coherence number
+existed: the fraction of a run's cells landing on no surviving column anchor,
+using `buildTable()`'s own clustering and its `n >= 2` rule.
+
+| class | runs | at `stray == 0` | the rest |
+| --- | ---: | ---: | --- |
+| footnote apparatus | 19 | **0** | 0.021 – 0.300 |
+| genuine documents | 1077 | 844 | **0.059 – 0.333** |
+
+**Half the prediction held**: the apparatus never scores zero. But the only
+candidate cut, `stray == 0`, suppresses **233 genuine-document runs**, and they are
+real tables:
+
+```
+'Get Additional Guidance When' | 'Yes'        stray 0.250
+```
+
+That is the feature-availability table whose stacked header supplies the
+`developers` vocabulary — **the token whose loss discarded round 7's revert
+experiment.** The rule would destroy what round 7 proved is load-bearing.
+
+Any bound above zero is worse: the apparatus minimum is 0.021. **The margin is
+negative** — apparatus occupies [0.021, 0.300], genuine occupies {0} ∪ [0.059,
+0.333], straddling it completely.
+
+No third feature was tried. Iterating candidates against one population until a
+margin appears is threshold-shopping with extra steps.
+
+### What both failures share — the reframing
+
+The `stray = 0.333` cases are genuine tables that **absorbed a running page
+header**: `'CRM Analytics' | <doc title>` sitting above `'Field' | 'Description'`.
+The geometry is incoherent because the run contains **two different things**, not
+because the table is bad.
+
+Both features assume a run is a coherent object whose geometry can vouch for it.
+Where `buildCells()` resolves two cells from a three-column wrapped row, and where
+a run absorbs page furniture, geometry measured over the run is measuring the
+wrong object. **The defect may not be table formation at all.** That is round 9's
+question, pre-registered separately.
+
+### Targets, judged as written
+
+| target | outcome |
+| --- | --- |
+| 1826 spurious tables materially reduced | **MISSED** — no fix proposed |
+| no genuine table lost | **MISSED** — no fix proposed |
+| #20 closed or residual named | **residual NAMED** — it is the kept discriminator's own behaviour |
+| `tableau_next ≥ 97` at round grade | **NOT MEASURED** — no kept state, sealed read unspent |
+| 95% header correctness | **MISSED** — carried |
+| corpus byte-stable | **MET** — `dist/` and GFE outputs unchanged, no product edit survived the round |
+
+### Instrument and process notes
+
+The fail-closed rule was vindicated in round 7 and that is recorded in
+`round5/README.md`: three sub-four-character charges that looked like noise were
+the visible edge of +339 destroyed tables.
+
+Three probe defects were found and fixed before any (a) number was trusted: an
+extraction that shadowed the loop counter, orphaned headless Chromes from
+timed-out runs, and verbatim helpers extracted from mid-comment — the last passing
+`node --check` while the browser rejected the module, so the page sat at
+"starting…" against a 50-minute ceiling. `node --check` is not proof a probe is
+sound.
+
+Recorded also: concurrent probe batches share one dump filename, so the dump holds
+whichever wrote last. Per-batch printed reports are authoritative and reconcile
+exactly (852 + 225 = 1077 runs; 186 + 47 = 233 nonzero).
+
+### State
+
+`npm test` is **55/57** at HEAD — both round-7 fixtures RED by design, and they
+stay RED: nothing this round earned the right to turn them green. 24 experiments
+journalled across the cycle, 2 kept, 22 discarded. Sealed ledger: **2 reads in 8
+rounds.**
+
+---
+
 ## 2026-08-22 · harness cycle · round-8 pre-registration — measure the population the rule actually sees
 
 For review before anything runs. `grade.mjs` `7527f03f…`, fence `a8c9e5ef…`, seed
