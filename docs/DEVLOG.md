@@ -7,6 +7,142 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-21 · harness cycle · round 7 report — the assignment missed, a premise restored, and a threshold validated on the wrong population
+
+Round 7 closes with **no keep**. The sealed read is **unspent** — there was no kept
+state to spend it on. Baseline stays **1.9054**, fence `a8c9e5ef…` unmoved,
+scored-corpus fingerprint `c88c7e82…` verified throughout.
+
+### (a) Characterization — the third diagnosis of the 1826 residual, and the first measured
+
+Round 5 said two print columns read across a gutter. Round 6 refuted that. Round 7
+measured what the lines actually are: **footnote apparatus** — lettered marginal
+notes set at the page foot, one wide internal gap per line, the gap wandering row
+to row.
+
+```
+"a Examen cone.. Trident, de coelibatu sacerd." | "b Cap. de Satyr, et Priapis."
+```
+
+A second spurious class surfaced alongside it: `fed_fomc_projections` yields three
+runs that are **chart axis labels from two side-by-side histogram panels**, and
+`eurlex_gdpr` one that is the regulation's **signature block**. Neither is a table;
+both are page furniture that happens to be columnar.
+
+**The probe had the wide-table bug in it.** Its first version required two cells on
+every line, so any real table with a wrapped cell was fragmented before
+measurement — it reported ZERO genuine two-column tables in every reference
+document. That is a filter excluding the case, not an absence of the case, and it
+is the same error as a five-column falsifier for a one-gap rule. The geometry now
+reconstructs runs from the product's own assignment map.
+
+### (b) Fixtures — both RED, and one of them went GREEN
+
+`footnote-apparatus.pdf` reproduces the 1826 shape at the hardest measured
+geometry. `sparse-two-column-table.pdf` reproduces issue #20's structural class
+with **invented content** — sealed content stays out of the fixture set.
+
+The synthetic falsifier's first version had 11 lines and passed, because
+`splitColumns()` returns early below 12 and the rule was never consulted. **A
+fixture that green-lights for a reason unrelated to the rule proves nothing** —
+the fourth instance of that error this round. Its row count is now load-bearing
+and commented as such.
+
+### The tenth escalation — resolved by experiment, not by argument
+
+A probe attribution showed the round-6 gutter discriminator firing on 17 of 2030
+tuning pages, every firing a genuine table, with Tier A unaffected across all 55
+documents — and it could not locate round 6's reported +33 correct headers. The
+reviewer promoted this to a loop experiment rather than accepting or dismissing it.
+
+**REVERT THE GUTTER DISCRIMINATOR — DISCARD.** Composite **1.9011** against
+baseline 1.9054, and a hard constraint tripped: 7 occurrences of `developers`
+lost across three release notes. The token comes from the stacked header of the
+"How and When Do Features Become Available?" tables:
+
+```
+administrators administrator<br>/developers      (41 occurrences)
+```
+
+**The gutter split preserves stacked-header vocabulary that is otherwise torn.**
+That is a merge-stage effect, and it is invisible to a page-level probe: the
+probe's tally stops before `mergeContinuedTables` and final rendering, which is
+exactly where the header folds and the text survives. An approximate instrument
+disagreeing with a fenced one is evidence about the approximation.
+
+Run 1 of that experiment discarded on a novel `Failed to fetch` of the 1826 book —
+a 0-byte output cascading into a 170,571-occurrence charge. The re-run was bound to
+a prediction stated in advance, and **the prediction failed**: I anchored it to
+`r6-measure` as a with-discriminator baseline when that directory's PRODUCT state
+was never established. Recorded in `runs/PROVENANCE.md`.
+
+### The assignment fix — DISCARD, and the discard is right on the merits
+
+The rule: a sparse two-column run forms a table only if its second column starts at
+one x, measured as median absolute deviation in body-size units, bound **0.1**.
+
+The evidence looked strong. Across 77 runs in eight documents, every genuine table
+placed its second cell at an **identical** x — 64 of 65 at exactly 0.00 — while
+the apparatus (0.14–6.38) and the signature block (0.36) wandered. A 14× gap
+between populations, and a fact about the format rather than a fitted cut-point.
+
+`footnote-apparatus.pdf` went **GREEN**. No other case regressed. Composite
+1.9054 → **1.9051**, essentially flat. Blocked by three charged occurrences —
+`4Ni`, `4`, `5` — all sub-four-character tokens the recovery battery skips and
+charges by default.
+
+**It would have been easy to read that as the instrument failing closed on noise.
+It is not.** Diffing the outputs against the stored baseline:
+
+```
+baseline:  | JSON Node | Merge Field Syntax Example |
+           | }         | %ContactInfo:FirstName%   |
+with fix:  Omnistudio Build an Omniscript with Elements
+```
+
+Genuine tables destroyed. And at scale — **+339 additional table fallbacks across
+14 documents**, against a target of ~100 spurious tables in one book, where it
+only removed 53. Worst offenders `crm_analytics` +122, `omnistudio` +51,
+`marketing_cloud_next` +24 — the last being a document where the probe measured
+**all 23** of its sparse runs at MAD exactly 0.00.
+
+### Root cause — the threshold was validated on a different population than the rule sees
+
+The probe defined runs by reconstructing them from the assignment map, counting
+every line including absorbed continuations. The product defines a run as entries
+carrying their continuations SEPARATELY, so `run.length` counts rows, not lines.
+`twoCell.length >= run.length * 0.8` therefore selects a different population in
+the product than the one the 0.1 bound was fitted to.
+
+**I measured one population and acted on another.** The bound may well be right;
+it was never tested against the thing it was wired into. That is the assignment
+for round 8, and it needs the rule's own population measured directly — through
+`ctx.onLayout` with the product's `detectTables` instrumented, not a reconstruction
+of it.
+
+### Targets, judged as written
+
+| target | outcome |
+| --- | --- |
+| 1826 spurious tables materially reduced | **MISSED** — fix discarded |
+| no genuine table lost | **MISSED** — +339 fallbacks, genuine tables destroyed |
+| `tableau_next ≥ 97` at round grade | **NOT MEASURED** — no kept state, sealed read unspent |
+| corpus byte-stable | **MET** — all outputs identical, every experiment |
+| #20 closed | **MISSED** — remains open, fixture RED by ruling |
+
+### State
+
+`npm test` is **55/57** at HEAD: both round-7 fixtures RED by design. 24
+experiments journalled, 2 kept across the cycle, 22 discarded. Sealed ledger: **2
+reads in 7 rounds**, round 7's budget unspent.
+
+Ruling item 4 is adopted: every future keep records which documents and pages the
+change fired on, at keep time, and is flagged "gated blind" when Tier A cannot see
+it. Round 7 produced no keep, so neither applies yet — but the gutter
+discriminator would have carried both flags, and that is the point of them.
+
+---
+
 ## 2026-08-21 · harness cycle · round-7 pre-registration AMENDED — approved with two modifications, and a disclosure
 
 The reviewer approved round 7 with two modifications. Both are recorded here
