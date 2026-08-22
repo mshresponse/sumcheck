@@ -1467,6 +1467,8 @@ write('link-kinds.pdf', buildLinkKindsPdf());
 write('grouped-table.pdf', buildGroupedTablePdf());
 write('two-column-prose.pdf', buildTwoColumnProsePdf());
 write('wide-table.pdf', buildWideTablePdf());
+write('footnote-apparatus.pdf', buildFootnoteApparatusPdf());
+write('sparse-two-column-table.pdf', buildSparseTwoColumnTablePdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own
@@ -1548,3 +1550,118 @@ write(
 
 fs.rmSync(path.join(OUT, '.build'), { recursive: true, force: true });
 console.log('\n✓ fixtures ready');
+
+
+/**
+ * The 1826 residual, reproduced: **footnote apparatus, not a table.**
+ *
+ * Measured on the real book (round 7, step (a)): lettered marginal notes set at
+ * the page foot, each line carrying one wide internal gap. They are not printed
+ * two-column prose read across a gutter — that was round 5's diagnosis and it
+ * was wrong — and they are not a grid. The product builds tables from them
+ * anyway, ~100 of them across 587 pages.
+ *
+ * The geometry here is deliberately the HARDEST real case, not the typical one.
+ * The second cell's start x spans about 5 body-size units, which is INSIDE the
+ * range genuine tables occupy (measured: 0.00-5.91), so a rule keyed on the
+ * total spread alone cannot reject this fixture. What separates it is that the
+ * column start wanders row to row rather than sitting at one x with a couple of
+ * outliers — a robust centre sees that where max-minus-min cannot.
+ *
+ * A fixture built at the typical spread of ~14 units would pass under a rule
+ * that destroys real tables, and would therefore prove nothing.
+ */
+function buildFootnoteApparatusPdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  // Left: a short citation ending in a stop. Right: the note it belongs to,
+  // resuming in lower case. The scattered right-hand x is the whole point.
+  const rows = [
+    ['a Cap. 4. de morbis.', 260, 'quod si quis accuratius intueatur,'],
+    ['b Lib. 2. sect. 3.', 285, 'reperiet plurimos hoc morbo laborare,'],
+    ['c De occulta phil.', 305, 'qui nihil minus quam tales videri'],
+    ['d Tract. de bile.', 270, 'volunt, ut ait ille de suis civibus.'],
+    ['e Comment. in Gal.', 310, 'nam ut Hippocrates monet, animus'],
+    ['f Epist. ad Lucil.', 280, 'aegrotat cum corpore, neque aliter'],
+    ['g De sanitate tuenda.', 295, 'fieri potest quin utrumque simul'],
+    ['h Praefat. ad lect.', 265, 'laboret, quod experientia docet.'],
+  ];
+
+  const content = ['BT /F1 12 Tf 1 0 0 1 72 730 Tm (Notae marginales) Tj ET'];
+  rows.forEach(([left, rx, right], i) => {
+    const y = 690 - i * 16;
+    content.push(line('F1', 9, 72, y, left));
+    content.push(line('F1', 9, rx, y, right));
+  });
+  // Body text above the apparatus, so the page is a page and not a bare grid.
+  const body = [
+    'Est in unoquoque nostrum seminarium aliquod stultitiae, quod si',
+    'quando excitetur, in infinitum facile excrescit, ut multi volunt.',
+    'Multos videmus propter invidiam et odium in melancholiam',
+    'incidisse, et illos potissimum quorum corpora ad hanc apta sunt.',
+  ];
+  body.forEach((text, i) => content.push(line('F1', 10, 72, 560 - i * 14, text)));
+  return assembleFixturePdf(content.join('\n'), 'Footnote Apparatus');
+}
+
+/**
+ * The synthetic falsifier for issue #20: a **sparse two-column table**.
+ *
+ * One wide gap per row, the second column starting at ONE x on every row, near
+ * mid-width, short cells on both sides. That description is also, word for word,
+ * what the gutter discriminator treats as printed two-column prose — which is
+ * why it splits tables of this shape, separating every label from its value
+ * while losing no text at all.
+ *
+ * The content is invented. The document that exposed the defect is in the sealed
+ * hold-out, and sealed content does not enter the fixture set: the STRUCTURAL
+ * CLASS is what needs protecting, and the class is reproducible without copying
+ * the instance.
+ *
+ * `wide-table.pdf` was written as the falsifier for this rule and passes, but it
+ * is a FIVE-column table — it crosses the midline with four gaps and can never
+ * satisfy a one-gap test. It could not fail the way the rule actually fails.
+ * This fixture can.
+ */
+function buildSparseTwoColumnTablePdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const RIGHT_X = 300; // one x for every row: this is what makes it a column
+  const rows = [
+    ['Marker', 'Meaning'],
+    ['Solid ring', 'Measured directly'],
+    ['Dotted ring', 'Interpolated value'],
+    ['Open square', 'Projected value'],
+    ['Filled square', 'Withheld value'],
+    ['Half circle', 'Partial coverage'],
+    ['Cross mark', 'Not applicable'],
+    ['Double bar', 'Revised since issue'],
+    ['Single bar', 'Provisional figure'],
+    ['Shaded band', 'Estimated range'],
+    ['Hollow arrow', 'Trend continues'],
+    ['Solid arrow', 'Trend reverses'],
+    ['Left caret', 'Below the band'],
+    ['Right caret', 'Above the band'],
+    ['Small dot', 'Single observation'],
+    ['Large dot', 'Pooled observation'],
+    ['Open ring', 'Excluded from totals'],
+  ];
+
+  /**
+   * The row count is load-bearing. `splitColumns()` returns early on a page with
+   * fewer than 12 lines, so a shorter version of this fixture PASSES without the
+   * gutter discriminator ever being consulted — which is a fixture that proves
+   * nothing, exactly like the five-column falsifier it replaces. Keep it long.
+   */
+  const content = ['BT /F1 12 Tf 1 0 0 1 72 730 Tm (Chart marker reference) Tj ET'];
+  rows.forEach(([left, right], i) => {
+    const y = 700 - i * 14;
+    content.push(line('F1', 10, 72, y, left));
+    content.push(line('F1', 10, RIGHT_X, y, right));
+  });
+  return assembleFixturePdf(content.join('\n'), 'Sparse Two Column Table');
+}

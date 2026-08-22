@@ -2073,6 +2073,127 @@ async function runWideTableCase() {
   }
 }
 
+/**
+ * The 1826 residual: footnote apparatus must not become a table.
+ *
+ * Round 7 measured what these lines are — lettered marginal notes, each with one
+ * wide internal gap whose position wanders row to row. The product builds tables
+ * from them, which is a table that was never in the document.
+ *
+ * The fixture sits at the HARDEST measured geometry: its column-start spread is
+ * inside the range genuine tables occupy, so passing this case requires a rule
+ * that looks at how the starts are distributed, not merely how far apart the
+ * extremes are.
+ */
+async function runFootnoteApparatusCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>footnote apparatus is not a table</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'footnote-apparatus', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/footnote-apparatus.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'footnote-apparatus.pdf' }, { outputs: ['md'] }, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    const lines = body.split('\n');
+    const tableRows = lines.filter((l) => l.startsWith('|'));
+
+    renderChecks(
+      box,
+      record,
+      {
+        'no table is built from the apparatus': () =>
+          tableRows.length === 0 ||
+          `${tableRows.length} table row(s) were emitted, e.g. ${tableRows[0].slice(0, 90)}`,
+        // A rule that suppressed the table by dropping the lines would pass the
+        // check above and destroy the document. Both halves must still be here.
+        'every citation survives': () =>
+          ['Cap. 4. de morbis', 'Epist. ad Lucil', 'Praefat. ad lect']
+            .every((t) => body.includes(t)) || 'a citation was lost',
+        'every note survives': () =>
+          ['reperiet plurimos hoc morbo laborare', 'aegrotat cum corpore', 'quod experientia docet']
+            .every((t) => body.includes(t)) || 'a note was lost',
+        'the body text is untouched': () =>
+          body.includes('Est in unoquoque nostrum seminarium') ||
+          'the page body was damaged',
+      },
+      md
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').textContent = `threw: ${err.message}`;
+  }
+}
+
+/**
+ * Issue #20's structural class, synthesised: a sparse two-column table must
+ * survive the gutter discriminator.
+ *
+ * One wide gap per row, one x for the second column, near mid-width, short cells
+ * — the same description the discriminator uses for printed two-column prose.
+ * Split, every label is separated from its value and NO text is lost, which is
+ * why the data-word constraint cannot see this defect and a structural check
+ * must.
+ *
+ * Content invented: the document that exposed this is sealed, and the class is
+ * what needs protecting.
+ */
+async function runSparseTwoColumnTableCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>a sparse two-column table is not split at the gutter</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'sparse-two-column-table', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/sparse-two-column-table.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'sparse-two-column-table.pdf' }, { outputs: ['md'] }, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    const rows = body.split('\n').filter((l) => l.startsWith('|'));
+    const widthOf = (r) => r.split('|').length - 2;
+    const paired = (label, value) =>
+      rows.some((r) => r.includes(label) && r.includes(value));
+
+    renderChecks(
+      box,
+      record,
+      {
+        'the table forms': () => rows.length > 0 || 'no table was emitted',
+        'the header keeps two columns': () =>
+          widthOf(rows[0] || '') === 2 ||
+          `header had ${widthOf(rows[0] || '')} columns: ${(rows[0] || '').slice(0, 80)}`,
+        // The defect: every marker separated from its meaning, text intact.
+        'each marker stays with its meaning': () =>
+          [['Solid ring', 'Measured directly'], ['Open square', 'Projected value'],
+           ['Double bar', 'Revised since issue'], ['Shaded band', 'Estimated range']]
+            .every(([l, r]) => paired(l, r)) ||
+          'a marker was separated from its meaning — the table was split',
+        'every row survives': () =>
+          ['Solid ring', 'Dotted ring', 'Open square', 'Filled square', 'Half circle',
+           'Cross mark', 'Double bar', 'Single bar', 'Shaded band']
+            .every((label) => rows.some((r) => r.includes(label))) || 'a data row was lost',
+      },
+      md
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').textContent = `threw: ${err.message}`;
+  }
+}
+
 async function runGroupedTableCase() {
   const box = document.createElement('div');
   box.className = 'case';
@@ -2193,6 +2314,8 @@ async function run() {
     ['grouped-table', runGroupedTableCase],
     ['two-column-prose', runTwoColumnProseCase],
     ['wide-table', runWideTableCase],
+    ['footnote-apparatus', runFootnoteApparatusCase],
+    ['sparse-two-column-table', runSparseTwoColumnTableCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],

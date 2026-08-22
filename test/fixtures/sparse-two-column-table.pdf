@@ -1,0 +1,74 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 1878 >>
+stream
+BT /F1 12 Tf 1 0 0 1 72 730 Tm (Chart marker reference) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 700 Tm (Marker) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 700 Tm (Meaning) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 686 Tm (Solid ring) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 686 Tm (Measured directly) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 672 Tm (Dotted ring) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 672 Tm (Interpolated value) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 658 Tm (Open square) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 658 Tm (Projected value) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 644 Tm (Filled square) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 644 Tm (Withheld value) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 630 Tm (Half circle) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 630 Tm (Partial coverage) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 616 Tm (Cross mark) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 616 Tm (Not applicable) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 602 Tm (Double bar) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 602 Tm (Revised since issue) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 588 Tm (Single bar) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 588 Tm (Provisional figure) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 574 Tm (Shaded band) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 574 Tm (Estimated range) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 560 Tm (Hollow arrow) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 560 Tm (Trend continues) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 546 Tm (Solid arrow) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 546 Tm (Trend reverses) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 532 Tm (Left caret) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 532 Tm (Below the band) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 518 Tm (Right caret) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 518 Tm (Above the band) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 504 Tm (Small dot) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 504 Tm (Single observation) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 490 Tm (Large dot) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 490 Tm (Pooled observation) Tj ET
+BT /F1 10 Tf 1 0 0 1 72 476 Tm (Open ring) Tj ET
+BT /F1 10 Tf 1 0 0 1 300 476 Tm (Excluded from totals) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+7 0 obj
+<< /Title (Sparse Two Column Table) /Creator (Sumcheck fixtures) >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000002181 00000 n 
+0000002278 00000 n 
+0000002380 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R /Info 7 0 R >>
+startxref
+2463
+%%EOF
