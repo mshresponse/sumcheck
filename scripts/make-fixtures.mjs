@@ -1469,6 +1469,7 @@ write('two-column-prose.pdf', buildTwoColumnProsePdf());
 write('wide-table.pdf', buildWideTablePdf());
 write('footnote-apparatus.pdf', buildFootnoteApparatusPdf());
 write('sparse-two-column-table.pdf', buildSparseTwoColumnTablePdf());
+write('hyphen-across-cells.pdf', buildHyphenAcrossCellsPdf());
 
 /**
  * A zip on disk, so the UI can be driven with one. The harness builds its own
@@ -1664,4 +1665,78 @@ function buildSparseTwoColumnTablePdf() {
     content.push(line('F1', 10, RIGHT_X, y, right));
   });
   return assembleFixturePdf(content.join('\n'), 'Sparse Two Column Table');
+}
+
+
+/**
+ * Round 9's assignment, reproduced: **a hyphenated word torn across a cell
+ * boundary.**
+ *
+ * Traced in round 9 (a-i) on the 1826 book. A word broken at a line end is
+ * rejoined by dehyphenation while the text renders as prose in reading order.
+ * Once the same lines become table rows, the halves land in different cells and
+ * the rejoining cannot cross a cell boundary. The canonical stream strips
+ * delimiters and hyphens, so halves that end up ADJACENT still rejoin — only
+ * halves that end up separated or out of order are lost. Both variants are here,
+ * because a fixture carrying only the easy one would pass a fix that repairs
+ * nothing.
+ *
+ * VARIANT A — separated. A cell ends `dissimu-` and its continuation `lantur`
+ * appears two rows later, with unrelated apparatus in between. Serialized, the
+ * halves are far apart and no contiguous form survives.
+ *
+ * VARIANT B — reverse-serialized. A row's SECOND cell ends `procras-` while the
+ * continuation `tinatur` opens the SAME row's FIRST cell. Reading cell 1 then
+ * cell 2 puts the tail before the head. This is the `affligit` case: both halves
+ * survive, in an order that spells nothing.
+ *
+ * Content invented. The row count is load-bearing for the same reason as the
+ * sparse-table fixture: too few lines and the run never reaches table detection.
+ */
+function buildHyphenAcrossCellsPdf() {
+  const esc = (s) => s.replace(/([()\\])/g, '\\$1');
+  const line = (font, size, x, y, text) =>
+    `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${esc(text)}) Tj ET`;
+
+  const RIGHT_X = 300;
+  /**
+   * Geometry copied from the measured 1826 tear, not invented:
+   *
+   *   | …fascibus snbje- | bInter inertes … ha¬ |
+   *   | cerit protervae… | Lib. 1. de contemt…  |
+   *
+   * The word wraps WITHIN ITS OWN COLUMN — the continuation is the cell directly
+   * below. A first version of this fixture put the continuation two rows away in
+   * the other column, which no page layout produces; it stayed red against a
+   * correct fix and would have condemned it.
+   *
+   * VARIANT A, left column: `dissimu-` at the end of one line, `lantur` opening
+   * the next line of the SAME column, with unrelated right-column text between
+   * them once the rows serialize.
+   *
+   * VARIANT B, right column: `procras-` wrapping the same way one row later, so
+   * a repair that only ever looks at the first column cannot pass this.
+   */
+  const rows = [
+    ['a Prima nota marginalis.', 'b Secunda nota sequitur.'],
+    ['c Verba quae saepe dissimu-', 'd Tertia nota adest.'],
+    ['lantur ab auctoribus veteribus.', 'e Quarta nota interposita.'],
+    ['f Quinta nota marginalis.', 'g Nam saepe procras-'],
+    ['h Sexta nota adest.', 'tinatur opus ab otiosis hominibus.'],
+    ['i Septima nota marginalis.', 'k Octava nota sequitur.'],
+    ['l Nona nota adest.', 'm Decima nota adest.'],
+    ['n Undecima nota marginalis.', 'o Duodecima nota adest.'],
+    ['p Tertia decima nota.', 'q Quarta decima nota.'],
+    ['r Quinta decima nota adest.', 's Sexta decima nota.'],
+    ['t Septima decima nota.', 'u Duodevicesima nota.'],
+    ['v Undevicesima nota.', 'x Vicesima nota marginalis.'],
+  ];
+
+  const content = ['BT /F1 12 Tf 1 0 0 1 72 730 Tm (Notae in margine positae) Tj ET'];
+  rows.forEach(([l, r], i) => {
+    const y = 700 - i * 15;
+    content.push(line('F1', 9, 72, y, l));
+    content.push(line('F1', 9, RIGHT_X, y, r));
+  });
+  return assembleFixturePdf(content.join('\n'), 'Hyphen Across Cells');
 }

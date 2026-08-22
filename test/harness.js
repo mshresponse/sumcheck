@@ -2194,6 +2194,71 @@ async function runSparseTwoColumnTableCase() {
   }
 }
 
+/**
+ * Round 9's assignment: a hyphenated word must not be lost to a cell boundary.
+ *
+ * Traced in (a-i): dehyphenation rejoins a line-broken word while the text is
+ * prose, and cannot once the lines become table rows. The canonical stream
+ * strips delimiters, so halves landing ADJACENT still rejoin — the losses are
+ * halves that end up separated, or in an order that spells nothing.
+ *
+ * Both variants are asserted. A fix that repairs only the adjacent case would
+ * pass a one-variant fixture while leaving the measured defect in place, which
+ * is the falsifier lesson this cycle has now paid for four times.
+ */
+async function runHyphenAcrossCellsCase() {
+  const box = document.createElement('div');
+  box.className = 'case';
+  box.innerHTML = `<h2>a hyphenated word survives a cell boundary</h2><div class="body">running…</div>`;
+  container.appendChild(box);
+
+  const record = { name: 'hyphen-across-cells', pass: false, failures: [], warnings: [] };
+  results.push(record);
+
+  try {
+    const bytes = new Uint8Array(await (await fetch('fixtures/hyphen-across-cells.pdf')).arrayBuffer());
+    const result = await convertFile({ bytes, name: 'hyphen-across-cells.pdf' }, { outputs: ['md'] }, {});
+    const md = result.outputs[0].content;
+    record.warnings = result.warnings;
+    const body = md.replace(/^---[\s\S]*?\n---\n/, '');
+    record.md = body;
+
+    // The canonical stream's own normalisation: delimiters, whitespace, hyphens
+    // and Markdown escapes removed from both sides. A word survives if it is
+    // CONTIGUOUS here — which is what the grader's R2 test asks.
+    const stream = body
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      .replace(/[|]/g, ' ')
+      .replace(/[-¬]\s*/g, '')
+      .replace(/\\/g, '')
+      .replace(/\s+/g, '');
+
+    renderChecks(
+      box,
+      record,
+      {
+        'variant A — separated halves rejoin': () =>
+          stream.includes('dissimulantur') ||
+          'dissimu- and lantur did not rejoin: the halves are separated by other cells',
+        'variant B — reverse-serialized halves rejoin': () =>
+          stream.includes('procrastinatur') ||
+          'procras- and tinatur did not rejoin: the tail serialized before the head',
+        'no apparatus text is lost': () =>
+          ['Prima nota', 'Quinta decima nota', 'Vicesima nota marginalis']
+            .every((t) => body.includes(t)) || 'apparatus text was lost',
+        'both fragments are still present somewhere': () =>
+          (body.includes('dissimu') && body.includes('lantur') &&
+           body.includes('procras') && body.includes('tinatur')) ||
+          'a fragment vanished entirely — this is deletion, not a tear',
+      },
+      md
+    );
+  } catch (err) {
+    record.failures.push(`threw: ${err.message}`);
+    box.querySelector('.body').textContent = `threw: ${err.message}`;
+  }
+}
+
 async function runGroupedTableCase() {
   const box = document.createElement('div');
   box.className = 'case';
@@ -2316,6 +2381,7 @@ async function run() {
     ['wide-table', runWideTableCase],
     ['footnote-apparatus', runFootnoteApparatusCase],
     ['sparse-two-column-table', runSparseTwoColumnTableCase],
+    ['hyphen-across-cells', runHyphenAcrossCellsCase],
     ['i18n-fallback', runI18nFallbackCase],
     ['ocr.png', runOcrCase],
     ['scanned.pdf', runScannedPdfCase],
