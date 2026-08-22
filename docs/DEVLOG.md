@@ -7,6 +7,172 @@ there was a temptation to break.
 
 ---
 
+## 2026-08-22 · harness cycle · round-10 pre-registration — the hyphen decision
+
+For review before anything runs. `grade.mjs` `7527f03f…`, fence `a8c9e5ef…`, seed
+5, sealed hashes unchanged, baseline **1.9054**, sealed budget **one**. No
+instrument change is registered or proposed.
+
+### The state this inherits
+
+Round 9's mechanism is validated: the RED fixture goes GREEN, and the pre-loop
+gate passed at **zero new `table_fallback` across all 14 documents**. One detail
+defeated it — the repair strips the hyphen unconditionally, destroying 7 distinct
+genuine compounds across 11 occurrences while correctly repairing 7 line-break
+breaks. Round 10 supplies the missing decision and changes nothing else.
+
+### One fact established before registering, because it changes the shape
+
+**There is no prose dehyphenation in the product.** A search of the converter
+finds none, and the baseline output confirms it — prose lines carry un-joined
+line-break hyphens verbatim:
+
+```
+'diploma increased 5.3 percent- work experience groups. to-year change.'
+```
+
+The grader's `canonicalStream()` strips hyphens and whitespace, so `pro- duces`
+and `produces` are the same string to it, which is why these have never charged.
+**The tear only becomes a LOSS when the halves are separated by intervening cell
+content** — which is exactly the table case round 9 measured.
+
+Two consequences for the ruling's instruction:
+
+1. There is no shared decision point to fix, because there is no existing decision.
+   Round 9's `rejoinHyphenatedColumn()` is the product's **first and only**
+   dehyphenation. The fix stays where it is; nothing is duplicated.
+2. **The defect is not latent in a prose path — there is no prose path.** If the
+   characterization shows prose would benefit from the same decision, that is a
+   separate proposal for a later round, not smuggled in here.
+
+### (a) Characterization — the two hyphen populations
+
+On the tuning corpus, at every line/cell break where a hyphen ends a fragment,
+classify by evidence the DOCUMENT supplies, and measure how well each candidate
+separates:
+
+- **E1 — attested hyphenated elsewhere.** `well-being` appears intact in the same
+  document; a soft break like `sta-tistically` never does.
+- **E2 — attested merged elsewhere.** `percentage` appears whole elsewhere;
+  `wellbeing` never does.
+- **E3 — both halves are standalone words in the document.** `well` and `being`
+  each occur alone; `sta` and `tistically` do not.
+
+Reported for each: how many breaks it decides, how many it leaves undecided, and
+its error rate against the ground truth of a hand-classified sample drawn from the
+14 documents — sample classified BEFORE the evidence is computed, and recorded.
+
+**Branches, registered now:**
+
+1. **One evidence type separates cleanly** → it is the decision rule; margin
+   stated numerically.
+2. **A combination separates, with a registered precedence** → the precedence is
+   fixed in writing before it is measured against the corpus, not chosen after.
+3. **NO SEPARATION** → round 10 closes on the finding, and the round-9 mechanism
+   stays unshipped rather than shipping with a guessed hyphen decision. **The
+   default on an undecided break is to KEEP THE HYPHEN**, because that preserves
+   the document's own bytes and the round-9 evidence shows unconditional stripping
+   is the damaging direction.
+
+No fourth evidence type is hunted if these three fail — the round-8 rule against
+feature-shopping applies unchanged.
+
+### (b) Assignment
+
+Add the hyphen decision to round 9's `rejoinHyphenatedColumn()`. Nothing else
+changes; the mechanism is otherwise validated.
+
+**New fixture, RED first: the compound class.** A `well-being`-style break must
+rejoin **as hyphenated**, not merged. Built from measured geometry, as round 9's
+was, and asserting the hyphen survives — a structural assertion, because
+`canonicalStream()` cannot see the difference (recorded in the round-9 correction:
+compound merging is invisible to `dataWordLoss`).
+
+All round-9 conditions carry: `hyphen-across-cells.pdf` stays GREEN, the
+sparse-table falsifier is not made worse, **zero new `table_fallback` across the 14
+documents as the pre-loop gate**, corpus byte-stable, GFE waiver semantics
+unchanged.
+
+### (c) Conditional path, verbatim from the round-9 ruling
+
+Fix keeps **and** the 1826 five clear → a fresh clustering re-gate is authorized in
+the same round → if both keep, combined kept state → **sealed read spent on it**,
+tuning and sealed reported side by side, keep-time attribution and gated-blind
+flags per standing rule.
+
+### (d)
+
+Targets carried. `tableau_next >= 97` at **round grade only**. Seed 5, sealed
+hashes unchanged, fence `a8c9e5ef…` unmoved, sealed budget one — unspent for four
+rounds, which has been the correct outcome each time.
+
+---
+
+## 2026-08-22 · correction beside the round-9 report — the compound count was wrong, and the instrument did not catch it
+
+Append-only. The reviewer asked me to name the fifth merged compound. There is no
+fifth: **the figure itself was wrong, and so was the claim attached to it.**
+
+### The count
+
+"Five compounds" came from a detection using a fixed suffix list
+(`being|term|based|related|income|level`), which is a list of the endings I had
+already noticed. Re-detected properly — every word present in the candidate,
+absent from the baseline, whose hyphenated split is attested in the baseline:
+
+**Genuine compounds destroyed — 7 distinct, 11 occurrences:**
+
+```
+anti-poverty        -> antipoverty          x1
+female-householder  -> femalehouseholder    x1
+full-time           -> fulltime             x3
+inflation-adjusted  -> inflationadjusted    x1
+well-being          -> wellbeing            x3
+work-related        -> workrelated          x1
+year-olds           -> yearolds             x1
+```
+
+**Correctly repaired line-break hyphens — 2 distinct, 7 occurrences:**
+
+```
+per-centage         -> percentage           x4
+sta-tistically      -> statistically        x3
+```
+
+So the repair got 7 occurrences right and 11 wrong, against a reported "five".
+
+### The claim was wrong too, and this matters more
+
+The round-9 report says the instrument "caught a corruption the composite would
+have paid for." **It did not.** `canonicalStream()` strips hyphens:
+
+```js
+.replace(/[|\s­-]+/g, '');
+```
+
+`well-being` and `wellbeing` canonicalise to the SAME string. Every one of the 11
+compound merges is **invisible** to the data-word gate. The five charged
+occurrences were `tions` and `ments` — fragment tokens — and the compound damage
+rode along unseen.
+
+The gate discarded the change for an adjacent reason, not for the real one. That
+is luck, not detection, and recording it as detection would have credited the
+instrument with a capability it does not have.
+
+### What follows
+
+The one-sided gate's record stands on rounds 7 and 8, where the charges WERE the
+visible edge of real damage. This round is not a third instance and must not be
+counted as one.
+
+**A new instrument blindness is now on the record: compound merging is
+undetectable by `dataWordLoss` as constructed.** It is registered as an instrument
+question for a future boundary — evidence first, no change now — and it is why
+round 10's compound fixture is a structural assertion rather than something the
+text gate could ever enforce.
+
+---
+
 ## 2026-08-22 · harness cycle · round 9 report — the tear located, the repair defeated by its own hyphens
 
 Round 9 closes with **no keep**. The sealed read is **unspent for the fourth
